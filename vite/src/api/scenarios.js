@@ -74,3 +74,35 @@ export function updateAudioMarker(audioId, body) {
         body,
     });
 }
+
+export function reorderScenarioThumbnails(id, thumbnailIds) {
+    return apiFetch(`/api/scenarios/${id}/thumbnails/reorder`, {
+        method: "PATCH",
+        body: {thumbnailIds},
+    });
+}
+
+export function updateAudioGloss(audioId, body) {
+    return apiFetch(`/api/audios/${audioId}/gloss`, {
+        method: "PATCH",
+        body,
+    });
+}
+
+export function deleteScenario(id) {
+    return apiFetch(`/api/scenarios/${id}`, {
+        method: "DELETE",
+    });
+}
+
+export function deleteThumbnail(thumbnailId) {
+    return apiFetch(`/api/thumbnails/${thumbnailId}`, {
+        method: "DELETE",
+    });
+}
+
+export function deleteAudio(audioId) {
+    return apiFetch(`/api/audios/${audioId}`, {
+        method: "DELETE",
+    });
+}

@@ -208,7 +208,7 @@ onMounted(loadScenarios);
 .admin-scenario-card {
   border-radius: 22px;
   padding: 24px 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.96));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 240, 0.96));
   box-shadow: var(--shadow);
 }
 
