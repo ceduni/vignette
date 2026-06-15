@@ -265,7 +265,7 @@ onMounted(loadUsers);
 .admin-user-card {
   border-radius: 22px;
   padding: 24px 26px;
-  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 240, 0.96));
   box-shadow: var(--shadow);
 }
 
@@ -294,8 +294,8 @@ onMounted(loadUsers);
 }
 
 .badge--accent {
-  background: var(--accent-warm);
-  border-color: rgba(192, 74, 8, 0.18);
+  background: var(--accent-cool);
+  border-color: rgba(91, 25, 40, 0.18);
 }
 
 .admin-user-card__roles {
@@ -318,18 +318,18 @@ onMounted(loadUsers);
   flex-direction: column;
   gap: 4px;
   transition: 160ms ease;
-  box-shadow: 0 6px 16px rgba(42, 21, 0, 0.04);
+  box-shadow: 0 6px 16px rgba(30, 8, 18, 0.04);
 }
 
 .role-pill:hover:not(:disabled) {
   transform: translateY(-1px);
-  border-color: rgba(192, 74, 8, 0.28);
-  background: #fff7ef;
+  border-color: rgba(91, 25, 40, 0.28);
+  background: #fbfefe;
 }
 
 .role-pill.is-active {
-  background: linear-gradient(180deg, #fff3e8 0%, #ffe8d0 100%);
-  border-color: rgba(192, 74, 8, 0.35);
+  background: linear-gradient(180deg, #DFE8DA 0%, #F5E7E4 100%);
+  border-color: rgba(91, 25, 40, 0.35);
 }
 
 .role-pill.is-locked {

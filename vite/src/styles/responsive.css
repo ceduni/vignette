@@ -29,8 +29,16 @@
     .app-nav__link {
         justify-content: flex-start;
         border-radius: 12px;
-        background: #fff;
-        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        color: #fff;
+    }
+
+    .app-nav__link:hover,
+    .app-nav__link.is-active {
+        background: rgba(255, 255, 255, 0.20);
+        border-color: rgba(255, 255, 255, 0.28);
+        color: #fff;
     }
 
     .app-header__actions {
@@ -47,9 +55,17 @@
         grid-template-columns: 1fr;
     }
 
-    .hero-stats,
     .app-footer__grid {
         grid-template-columns: 1fr;
+    }
+
+    .hero--enhanced {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-globe {
+        max-width: 320px;
+        margin: 0 auto;
     }
 }
 
