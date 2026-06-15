@@ -115,7 +115,8 @@ class AdminApiControllerTest {
                 "PRESET",
                 "GRID_3",
                 3,
-                List.of()
+                List.of(),
+                null
         );
 
         when(scenarioService.listAllScenarios()).thenReturn(List.of());

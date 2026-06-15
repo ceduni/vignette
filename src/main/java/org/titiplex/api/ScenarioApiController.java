@@ -470,4 +470,45 @@ public class ScenarioApiController {
     ) {
         scenarioService.deleteScenario(id);
     }
+        @Operation(
+        summary = "Fork a scenario",
+        description = "Creates a copy of a published scenario for the authenticated user."
+        )
+        @UserOperation
+        @ApiResponses({
+        @ApiResponse(
+                responseCode = "201",
+                description = "Fork created successfully",
+                content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = CreateScenarioResponse.class)
+                )
+        ),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Scenario is not published",
+                content = @Content(schema = @Schema(implementation = ApiError.class))
+        ),
+        @ApiResponse(
+                responseCode = "401",
+                description = "Authentication required",
+                content = @Content(schema = @Schema(implementation = ApiError.class))
+        ),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Scenario not found",
+                content = @Content(schema = @Schema(implementation = ApiError.class))
+        )
+        })
+        @PostMapping("/{id}/fork")
+        @ResponseStatus(HttpStatus.CREATED)
+        public CreateScenarioResponse fork(
+        @Parameter(description = "ID of the scenario to fork", required = true)
+        @PathVariable Long id,
+        @Parameter(hidden = true)
+        Authentication auth
+        ) {
+        Long forkId = scenarioService.forkScenario(id, auth).getId();
+        return new CreateScenarioResponse(forkId);
+        }
 }

@@ -304,7 +304,7 @@ onMounted(loadAll);
 .admin-community-panel {
   border-radius: 22px;
   padding: 24px 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.96));
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(255, 248, 240, 0.96));
   box-shadow: var(--shadow);
 }
 
@@ -356,8 +356,8 @@ onMounted(loadAll);
 }
 
 .badge--info {
-  background: var(--accent-cool);
-  border-color: rgba(15, 118, 110, 0.18);
+  background: var(--accent-warm);
+  border-color: rgba(192, 74, 8, 0.18);
 }
 
 .separator {

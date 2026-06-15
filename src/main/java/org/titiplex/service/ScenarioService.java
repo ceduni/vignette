@@ -232,7 +232,8 @@ public class ScenarioService {
                 s.getStoryboardLayoutMode().name(),
                 s.getStoryboardPreset(),
                 s.getStoryboardColumns(),
-                scenarioTagService.toNames(s.getTags())
+                scenarioTagService.toNames(s.getTags()),
+                s.getParentScenarioId()
         );
     }
 
@@ -267,5 +268,42 @@ public class ScenarioService {
         return listMyScenarios(authentication).stream()
                 .map(this::toDto)
                 .toList();
+    }
+    public List<ScenarioDto> listScenariosByLanguageId(String languageId) {
+        return repo.findAllByLanguageIdWithTagsOrderByCreatedAtDesc(languageId)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+    public Scenario forkScenario(Long originalId, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new InsufficientAuthenticationException("Authentication required");
+        }
+
+        Scenario original = getRequiredScenario(originalId);
+
+        if (original.getVisibilityStatus() != ScenarioVisibilityStatus.PUBLISHED) {
+            throw new IllegalArgumentException("Cannot fork an unpublished scenario");
+        }
+
+        String username = authentication.getName();
+        Long userId = userService.getUserByUsername(username).getId();
+
+        Scenario fork = new Scenario();
+        fork.setTitle("Fork of " + original.getTitle());
+        fork.setDescription(original.getDescription());
+        fork.setAuthor_id(userId);
+        fork.setLanguage_id(original.getLanguage_id());
+        fork.setCreatedAt(Instant.now());
+        fork.setAuthor(userService.getUserById(userId));
+        fork.setLanguage(original.getLanguage());
+        fork.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
+        fork.setStoryboardLayoutMode(original.getStoryboardLayoutMode());
+        fork.setStoryboardPreset(original.getStoryboardPreset());
+        fork.setStoryboardColumns(original.getStoryboardColumns());
+        fork.setTags(new LinkedHashSet<>(original.getTags()));
+        fork.setParentScenarioId(originalId);
+
+        return repo.save(fork);
     }
 }

@@ -79,4 +79,12 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
             where s.id = :id
             """)
     Optional<Scenario> findByIdWithTags(@Param("id") Long id);
+    @EntityGraph(attributePaths = {"tags"})
+    @Query("""
+            select s
+            from Scenario s
+            where s.language.id = :languageId
+            order by s.createdAt desc
+            """)
+    List<Scenario> findAllByLanguageIdWithTagsOrderByCreatedAtDesc(@Param("languageId") String languageId);
 }
