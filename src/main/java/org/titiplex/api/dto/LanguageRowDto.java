@@ -10,6 +10,8 @@ public record LanguageRowDto(
         String name,
         @Schema(description = "Language level", examples = {"Dialect", "Language", "Family"})
         String level,
+        @Schema(description = "Country IDs where the language is present (raw backend field).", example = "FR BE CH")
+        String countryIds,
         @Schema(description = "Name of the family to which the language belongs.")
         String family,
         @Schema(description = "Name of the parent language/group/family.")

@@ -79,4 +79,13 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
             where s.id = :id
             """)
     Optional<Scenario> findByIdWithTags(@Param("id") Long id);
+
+    @Query("""
+            select s
+            from Scenario s
+            where s.language_id = :languageId
+              and s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
+            order by s.createdAt asc, s.id asc
+            """)
+    List<Scenario> findPublishedByLanguageIdOrderByCreatedAtAscIdAsc(@Param("languageId") String languageId);
 }

@@ -159,9 +159,9 @@
 }
 
 .badge--neutral {
-    background: #f8fafc;
-    color: #475467;
-    border-color: #dbe3ee;
+    background: #fbf6f0;
+    color: #6a4a28;
+    border-color: var(--border);
 }
 
 .badge--info {

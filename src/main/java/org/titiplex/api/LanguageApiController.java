@@ -22,6 +22,7 @@ import org.titiplex.service.LanguageService;
 import org.titiplex.service.ScenarioService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/languages")
@@ -96,6 +97,7 @@ public class LanguageApiController {
                 l.getId(),
                 l.getName(),
                 l.getLevel(),
+                l.getCountryIds(),
                 l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
                 l.getParent() != null ? l.getParent().getName() : l.getParentId()
         ));
@@ -188,6 +190,22 @@ public class LanguageApiController {
             @RequestParam(defaultValue = "50") @Min(1) int size
     ) {
         return languageService.searchOptions(q, page, size);
+    }
+
+    @Operation(
+            summary = "List languages grouped by country (ISO_A3)",
+            description = "Returns a map keyed by ISO_A3 country code, each value being a list of language rows."
+    )
+    @PublicOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Language map retrieved successfully"
+            )
+    })
+    @GetMapping("/by-country")
+    public Map<String, List<LanguageRowDto>> listByCountry() {
+        return languageService.listLanguagesByCountryIsoA3();
     }
 
     @Operation(
@@ -334,6 +352,7 @@ public class LanguageApiController {
                         l.getId(),
                         l.getName(),
                         l.getLevel(),
+                        l.getCountryIds(),
                         l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
                         l.getParent() != null ? l.getParent().getName() : l.getParentId()
                 )).toList();

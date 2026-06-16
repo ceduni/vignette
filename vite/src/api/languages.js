@@ -36,6 +36,10 @@ export function fetchLanguageScenarios(id) {
     return apiFetch(`/api/languages/${id}/scenarios`);
 }
 
+export function fetchLanguagePreviewAudio(id) {
+    return apiFetch(`/api/languages/${id}/preview-audio`);
+}
+
 export function fetchLanguageOptions(params) {
     return apiFetch(`/api/languages/options?${params.toString()}`);
 }
