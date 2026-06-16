@@ -70,7 +70,7 @@
     position: absolute;
     inset: 0;
     border-radius: 999px;
-    background: rgba(15, 118, 110, 0.22);
+    background: rgba(91, 25, 40, 0.22);
     animation: markerPulse 1.8s ease-out infinite;
 }
 
@@ -84,7 +84,7 @@
     transform: translate(-50%, -50%);
     background: var(--primary);
     border: 2px solid #ffffff;
-    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.22);
+    box-shadow: 0 2px 10px rgba(30, 8, 18, 0.22);
 }
 
 .marker-dot--active .marker-dot__pulse {
