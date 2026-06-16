@@ -64,9 +64,8 @@ async function checkExistingRequest() {
   }
 }
 
-import {useRouter} from "vue-router";
-
 const router = useRouter();
+const route = useRoute();
 
 const forking = ref(false);
 

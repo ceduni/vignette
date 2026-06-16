@@ -8,6 +8,8 @@ import {buildApiUrl} from "../api/rest";
 import {useAuth} from "../composables/useAuth";
 import {useToast} from "../composables/useToast";
 import {useLanguageFollows} from "../composables/useLanguageFollows";
+import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
+import {useScenarioReader} from "../composables/useScenarioReader";
 import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
@@ -20,6 +22,7 @@ const props = defineProps({
 
 const {loadMe, isAuthenticated} = useAuth();
 const toast = useToast();
+const { openReader, activeScenario, closeReader } = useScenarioReader();
 
 const language = ref(null);
 const scenarios = ref([]);
@@ -494,6 +497,18 @@ watch(
                         <div class="carousel-card__image-badge">
                           <BaseBadge :variant="s.visibilityStatus === 'PUBLISHED' ? 'success' : 'warning'">{{ s.visibilityStatus ?? "DRAFT" }}</BaseBadge>
                         </div>
+                        <button
+                          v-if="!isDemoMode && s.visibilityStatus === 'PUBLISHED'"
+                          type="button"
+                          class="carousel-card__read-btn"
+                          title="Read scenario"
+                          @click.prevent.stop="openReader(s)"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                          </svg>
+                          Read
+                        </button>
                       </div>
                       <div class="carousel-card__body">
                         <p class="carousel-card__title">{{ s.title ?? "Untitled scenario" }}</p>
@@ -568,6 +583,18 @@ watch(
               </div>
               <div class="lang-scenario-card__right">
                 <BaseBadge :variant="s.visibilityStatus === 'PUBLISHED' ? 'success' : 'warning'">{{ s.visibilityStatus ?? "DRAFT" }}</BaseBadge>
+                <button
+                  v-if="!isDemoMode && s.visibilityStatus === 'PUBLISHED'"
+                  type="button"
+                  class="lang-scenario-card__read-btn"
+                  title="Read scenario"
+                  @click.prevent.stop="openReader(s)"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Read
+                </button>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-soft)"><path d="m9 18 6-6-6-6"/></svg>
               </div>
             </component>
@@ -578,6 +605,7 @@ watch(
       </div>
     </template>
   </main>
+  <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
 </template>
 
 <style scoped>
@@ -1007,5 +1035,54 @@ watch(
   .lang-hero__right { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
   .lang-hero__icon { width: 60px; height: 60px; font-size: 1.2rem; }
   .lang-tabs { overflow-x: auto; }
+}
+
+/* Read buttons */
+.carousel-card__read-btn {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(20, 8, 4, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.carousel-card__read-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.lang-scenario-card__read-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(192, 74, 8, 0.3);
+  background: rgba(192, 74, 8, 0.06);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.lang-scenario-card__read-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
 }
 </style>
