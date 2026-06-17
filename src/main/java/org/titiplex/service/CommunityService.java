@@ -215,6 +215,15 @@ public class CommunityService {
                 }
                 yield audioRepository.existsById(audioId);
             }
+            case SCENARIO -> {       // ← ajoute ce cas
+                long scenarioId;
+                try {
+                    scenarioId = Long.parseLong(targetId);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Scenario targetId must be numeric");
+                }
+                yield scenarioRepository.existsById(scenarioId);
+            }
         };
 
         if (!exists) throw new IllegalArgumentException("Unknown target");

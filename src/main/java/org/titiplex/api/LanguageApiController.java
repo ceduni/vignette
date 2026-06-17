@@ -315,12 +315,11 @@ public class LanguageApiController {
     })
     @GetMapping("/{id}/scenarios")
     public List<ScenarioDto> getOneScenarios(
-            @Parameter(description = "ID of the language to retrieve scenarios for", required = true)
-            @PathVariable String id
+        @Parameter(description = "ID of the language to retrieve scenarios for", required = true)
+        @PathVariable String id
     ) {
-        return languageService.getLanguage(id).getScenarios()
-                .stream().map(scenarioService::toDto).toList();
-    }
+        return scenarioService.listScenariosByLanguageId(id);
+     }
 
     @Operation(
             summary = "List languages by family",

@@ -2,6 +2,7 @@
 import {computed, nextTick, onMounted, ref, watch} from "vue";
 import {RouterLink, useRoute, useRouter} from "vue-router";
 import {fetchLanguage} from "../api/languages";
+import {apiFetch} from "../api/rest";
 import {
   deleteAudio,
   deleteThumbnail,
@@ -21,6 +22,7 @@ import {buildApiUrl} from "../api/rest";
 import {useAuth} from "../composables/useAuth";
 import {useToast} from "../composables/useToast";
 import {useScenarioAutoplay} from "../composables/useScenarioAutoplay";
+import {useScenarioInteractions} from "../composables/useScenarioInteractions";
 import ThumbnailCard from "../components/ThumbnailCard.vue";
 import AudioPanel from "../components/AudioPanel.vue";
 import StudioRecorderPanel from "../components/StudioRecorderPanel.vue";
@@ -29,6 +31,7 @@ import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import BaseBadge from "../components/ui/BaseBadge.vue";
+import DiscussionThread from "../components/community/DiscussionThread.vue";
 import {
   buildPlaybackQueue,
   buildSelectedAudios,
@@ -41,15 +44,72 @@ import {
   sortByIdxThenId,
   storyboardItemStyle,
 } from "@/utils/scenarioStoryboard.js";
+import {createAccreditationRequest, fetchAccreditationRequests} from "../api/community";
+
+const requestingAccreditation = ref(false);
+const accreditationRequested = ref(false);
+const hasExistingRequest = ref(false);
+
+async function checkExistingRequest() {
+  try {
+    const requests = await fetchAccreditationRequests(
+      "SCENARIO_EDIT", "SCENARIO", props.id
+    );
+    hasExistingRequest.value = requests.some(
+      (r) => r.requesterUsername === currentUser.value?.username
+           && (r.status === "PENDING" || r.status === "APPROVED")
+    );
+  } catch {
+    // silencieux
+  }
+}
+
+const router = useRouter();
+const route = useRoute();
+
+const forking = ref(false);
+
+async function forkScenario() {
+  forking.value = true;
+  try {
+    const response = await apiFetch(`/api/scenarios/${props.id}/fork`, {
+      method: "POST",
+    });
+    toast.success("Scenario forked successfully. Redirecting to your copy...");
+    await router.push(`/scenarios/${response.id}`);
+  } catch (e) {
+    toast.error(e.message || "Failed to fork scenario.");
+  } finally {
+    forking.value = false;
+  }
+}
+
+async function requestScenarioAccreditation() {
+  requestingAccreditation.value = true;
+  try {
+    await createAccreditationRequest({
+      permissionType: "SCENARIO_EDIT",
+      scopeType: "SCENARIO",
+      targetId: String(props.id),
+      motivation: "Requesting contribution access for this scenario.",
+    });
+    accreditationRequested.value = true;
+    hasExistingRequest.value = true;
+    toast.success("Contribution request submitted.");
+  } catch (e) {
+    toast.error(e.message || "Failed to submit request.");
+  } finally {
+    requestingAccreditation.value = false;
+  }
+}
 
 const props = defineProps({
   id: {type: String, required: true},
 });
 
-const route = useRoute();
-const router = useRouter();
-const {currentUser, loadMe} = useAuth();
+const {currentUser, loadMe, isAuthenticated} = useAuth();
 const toast = useToast();
+const { isLiked, toggleLike, isBookmarked, toggleBookmark, fetchStatus } = useScenarioInteractions();
 
 const scenario = ref(null);
 const languageName = ref("");
@@ -351,7 +411,6 @@ watch(
         selectedLayoutForm.value = {gridColumn: "", gridRow: "", gridColumnSpan: 1, gridRowSpan: 1};
         return;
       }
-
       selectedLayoutForm.value = {
         gridColumn: thumb.gridColumn ?? "",
         gridRow: thumb.gridRow ?? "",
@@ -1317,7 +1376,6 @@ function applyTrimSelection() {
 
 function focusPlaybackItem(item) {
   const thumb = thumbnails.value.find((t) => String(t.id) === String(item.thumbnailId)) ?? null;
-
   selectedThumb.value = thumb;
   activeAudioId.value = item.audioId ?? null;
   ensureSelectedThumbnailPanelOpen();
@@ -1340,12 +1398,8 @@ const autoplay = useScenarioAutoplay(playbackQueue, {
   gapMs: 320,
   autoContinue: true,
   loopScenario: false,
-  onItemChange: (item) => {
-    focusPlaybackItem(item);
-  },
-  onStop: () => {
-    activeAudioId.value = null;
-  },
+  onItemChange: (item) => { focusPlaybackItem(item); },
+  onStop: () => { activeAudioId.value = null; },
   onEndedAll: () => {
     activeAudioId.value = null;
     toast.success("Automatic playback finished.");
@@ -1354,25 +1408,16 @@ const autoplay = useScenarioAutoplay(playbackQueue, {
 
 function toggleAutoContinue() {
   autoplay.toggleAutoContinue();
-  toast.info(
-      autoplay.autoContinue.value
-          ? "Auto-continue enabled."
-          : "Auto-continue disabled."
-  );
+  toast.info(autoplay.autoContinue.value ? "Auto-continue enabled." : "Auto-continue disabled.");
 }
 
 function toggleLoopScenario() {
   autoplay.toggleLoopScenario();
-  toast.info(
-      autoplay.loopScenario.value
-          ? "Loop scenario enabled."
-          : "Loop scenario disabled."
-  );
+  toast.info(autoplay.loopScenario.value ? "Loop scenario enabled." : "Loop scenario disabled.");
 }
 
 function findStartIndex() {
   if (!playbackQueue.value.length) return 0;
-
   if (selectedThumb.value && activeAudioId.value != null) {
     const exactIndex = playbackQueue.value.findIndex(
         (item) =>
@@ -1381,14 +1426,12 @@ function findStartIndex() {
     );
     if (exactIndex >= 0) return exactIndex;
   }
-
   if (selectedThumb.value) {
     const thumbIndex = playbackQueue.value.findIndex(
         (item) => String(item.thumbnailId) === String(selectedThumb.value.id)
     );
     if (thumbIndex >= 0) return thumbIndex;
   }
-
   return 0;
 }
 
@@ -1418,7 +1461,6 @@ async function setActiveAudio(audio) {
           String(item.thumbnailId) === String(selectedThumb.value.id) &&
           String(item.audioId) === String(audio.id)
   );
-
   if (idx >= 0) {
     ensureSelectedThumbnailPanelOpen();
     await autoplay.playFromIndex(idx);
@@ -1433,7 +1475,6 @@ async function playAudioFromMarker(audio) {
           String(item.thumbnailId) === String(selectedThumb.value?.id) &&
           String(item.audioId) === String(audio.id)
   );
-
   if (idx >= 0) {
     ensureSelectedThumbnailPanelOpen();
     await autoplay.playFromIndex(idx);
@@ -1446,7 +1487,6 @@ async function playSelectedAudioPreview() {
 
 async function loadScenario() {
   scenario.value = await fetchScenario(props.id);
-
   if (scenario.value?.languageId) {
     try {
       const lang = await fetchLanguage(scenario.value.languageId);
@@ -1461,7 +1501,6 @@ async function loadScenario() {
 
 async function loadThumbs() {
   thumbnails.value = await fetchScenarioThumbnails(props.id);
-
   const map = {};
   await Promise.all(
       thumbnails.value.map(async (t) => {
@@ -1473,9 +1512,7 @@ async function loadThumbs() {
         }
       })
   );
-
   audioMap.value = map;
-
   if (!selectedThumb.value && sortedThumbnails.value.length) {
     selectedThumb.value = sortedThumbnails.value[0];
   } else if (
@@ -1484,7 +1521,6 @@ async function loadThumbs() {
   ) {
     selectedThumb.value = sortedThumbnails.value[0] || null;
   }
-
   if (
       activeAudioId.value != null &&
       !selectedAudios.value.some((audio) => String(audio.id) === String(activeAudioId.value))
@@ -1506,11 +1542,10 @@ async function loadAll() {
 
     await loadMe();
     await loadScenario();
-
     isOwner.value =
         !!currentUser.value &&
         currentUser.value.username === scenario.value.authorUsername;
-
+    await Promise.all([loadThumbs(), checkExistingRequest()]);
     await loadThumbs();
     applyUnclaimedDraftAudio();
   } catch (e) {
@@ -1593,7 +1628,6 @@ async function deleteCurrentScenario() {
 
 async function publishCurrentScenario() {
   if (!scenario.value || publishing.value) return;
-
   publishing.value = true;
   try {
     scenario.value = await publishScenario(props.id);
@@ -1607,7 +1641,6 @@ async function publishCurrentScenario() {
 
 async function saveStoryboardSettings() {
   if (!scenario.value || savingStoryboard.value) return;
-
   savingStoryboard.value = true;
   const layoutMode = String(storyboardForm.value.layoutMode || "PRESET").toUpperCase();
   const preset = String(storyboardForm.value.preset || "GRID_3").toUpperCase();
@@ -1643,7 +1676,6 @@ async function applyStoryboardPreset(preset) {
 
 async function saveSelectedThumbnailLayout() {
   if (!selectedThumb.value || savingLayout.value) return;
-
   savingLayout.value = true;
   try {
     const nextLayout = {
@@ -2135,19 +2167,12 @@ function closeQuickRecordingDialog() {
 }
 
 async function ensureQuickRecorder() {
-  if (quickMediaRecorder && quickMediaStream) {
-    return;
-  }
-
+  if (quickMediaRecorder && quickMediaStream) return;
   quickMediaStream = await navigator.mediaDevices.getUserMedia({audio: true});
   quickMediaRecorder = new MediaRecorder(quickMediaStream);
-
   quickMediaRecorder.ondataavailable = (event) => {
-    if (event.data && event.data.size > 0) {
-      quickRecordingChunks.push(event.data);
-    }
+    if (event.data && event.data.size > 0) quickRecordingChunks.push(event.data);
   };
-
   quickMediaRecorder.onstop = () => {
     quickRecordingBlob.value = new Blob(quickRecordingChunks, {
       type: quickMediaRecorder.mimeType || "audio/webm",
@@ -2190,7 +2215,6 @@ function stopQuickRecording() {
     quickRecordingThumbId.value = null;
     return;
   }
-
   quickMediaRecorder.stop();
 }
 
@@ -2206,35 +2230,28 @@ async function toggleQuickRecording(thumb) {
     stopQuickRecording();
     return;
   }
-
   if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") {
     toast.error("Another quick recording is already in progress.");
     return;
   }
-
   await startQuickRecording(thumb);
 }
 
 async function confirmQuickRecordingUpload() {
   quickRecordingError.value = "";
-
   try {
     const targetThumb = thumbnails.value.find(
         (thumb) => String(thumb.id) === String(quickRecordingTargetThumbId.value ?? selectedThumb.value?.id ?? "")
     ) ?? selectedThumb.value;
     if (!targetThumb?.id) throw new Error("No thumbnail selected.");
     if (!quickRecordingBlob.value) throw new Error("No quick recording available.");
-
     quickRecordingUploading.value = true;
-
     const extension = quickRecordingMimeType.value.includes("ogg")
         ? "ogg"
         : quickRecordingMimeType.value.includes("mp4")
             ? "m4a"
             : "webm";
-
     const fileName = `quick-recording.${extension}`;
-
     const fd = new FormData();
     fd.append("title", quickRecordingTitle.value || "");
     fd.append("audio", quickRecordingBlob.value, fileName);
@@ -2257,7 +2274,6 @@ async function confirmQuickRecordingUpload() {
     }
 
     await uploadThumbnailAudio(targetThumb.id, fd);
-
     toast.success("Quick recording uploaded successfully.");
     closeQuickRecordingDialog();
     await refreshAudios();
@@ -2282,18 +2298,13 @@ watch(quickRecordingBlob, (blob) => {
     URL.revokeObjectURL(quickRecordingPreviewUrl.value);
     quickRecordingPreviewUrl.value = "";
   }
-
-  if (blob) {
-    quickRecordingPreviewUrl.value = URL.createObjectURL(blob);
-  }
+  if (blob) quickRecordingPreviewUrl.value = URL.createObjectURL(blob);
 });
 
 watch(
     () => props.id,
     () => {
-      if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") {
-        quickMediaRecorder.stop();
-      }
+      if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") quickMediaRecorder.stop();
       quickRecordingThumbId.value = null;
       closeQuickRecordingDialog();
     }
@@ -2305,10 +2316,7 @@ onMounted(loadAll);
 <template>
   <main class="page page--studio">
     <BaseLoader v-if="loading">Loading storyboard...</BaseLoader>
-
-    <BaseAlert v-else-if="error" type="error">
-      {{ error }}
-    </BaseAlert>
+    <BaseAlert v-else-if="error" type="error">{{ error }}</BaseAlert>
 
     <template v-else-if="scenario">
                 <div
@@ -3491,189 +3499,80 @@ onMounted(loadAll);
               <div class="autoplay-panel__header">
                 <div>
                   <h2>Scenario player</h2>
-                  <p class="muted">
-                    Automatic playback through all audio clips in thumbnail order.
-                  </p>
+                  <p class="muted">Automatic playback through all audio clips in thumbnail order.</p>
                 </div>
-
                 <BaseBadge variant="info">
-                  {{
-                    autoplay.currentIndex >= 0 ? `${autoplay.currentIndex + 1}/${playbackQueue.length}` : `0/${playbackQueue.length}`
-                  }}
+                  {{ autoplay.currentIndex >= 0 ? `${autoplay.currentIndex + 1}/${playbackQueue.length}` : `0/${playbackQueue.length}` }}
                 </BaseBadge>
               </div>
-
               <div class="transport-card transport-card--compact">
                 <div class="transport-card__top transport-card__top--compact">
                   <div class="transport-card__meta">
                     <p class="transport-card__title">
                       <template v-if="autoplay.currentItem">
-                        {{
-                          autoplay.currentItem.audioTitle?.trim()
-                          || (autoplay.currentItem.audioId != null ? `Audio #${autoplay.currentItem.audioId}` : "Untitled audio")
-                        }}
+                        {{ autoplay.currentItem.audioTitle?.trim() || (autoplay.currentItem.audioId != null ? `Audio #${autoplay.currentItem.audioId}` : "Untitled audio") }}
                       </template>
-                      <template v-else>
-                        No audio selected
-                      </template>
+                      <template v-else>No audio selected</template>
                     </p>
-
                     <p class="muted transport-card__subtitle">
                       <template v-if="autoplay.currentItem">
-                        {{
-                          autoplay.currentItem.thumbnailIdx != null
-                              ? `Thumb #${autoplay.currentItem.thumbnailIdx}`
-                              : (autoplay.currentItem.thumbnailId != null ? `Thumb #${autoplay.currentItem.thumbnailId}` : "Thumb unknown")
-                        }}
-                        <span v-if="autoplay.currentItem.audioIdx != null">
-            · #{{ autoplay.currentItem.audioIdx }}
-          </span>
+                        {{ autoplay.currentItem.thumbnailIdx != null ? `Thumb #${autoplay.currentItem.thumbnailIdx}` : (autoplay.currentItem.thumbnailId != null ? `Thumb #${autoplay.currentItem.thumbnailId}` : "Thumb unknown") }}
+                        <span v-if="autoplay.currentItem.audioIdx != null"> · #{{ autoplay.currentItem.audioIdx }}</span>
                         · {{ playerStateLabel }}
                       </template>
-                      <template v-else>
-                        Idle
-                      </template>
+                      <template v-else>Idle</template>
                     </p>
                   </div>
-
                   <div class="transport-toggles transport-toggles--compact">
-                    <button
-                        type="button"
-                        class="btn btn--small"
-                        :class="autoplay.autoContinue ? 'btn--primary' : 'btn--ghost'"
-                        @click="toggleAutoContinue"
-                    >
-                      Auto
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn btn--small"
-                        :class="autoplay.loopScenario ? 'btn--primary' : 'btn--ghost'"
-                        @click="toggleLoopScenario"
-                    >
-                      Loop
-                    </button>
+                    <button type="button" class="btn btn--small" :class="autoplay.autoContinue ? 'btn--primary' : 'btn--ghost'" @click="toggleAutoContinue">Auto</button>
+                    <button type="button" class="btn btn--small" :class="autoplay.loopScenario ? 'btn--primary' : 'btn--ghost'" @click="toggleLoopScenario">Loop</button>
                   </div>
                 </div>
-
                 <div class="transport-progress">
-                  <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      :value="autoplay.progressPercent"
-                      @input="autoplay.seekToPercent($event.target.value)"
-                  />
+                  <input type="range" min="0" max="100" step="0.1" :value="autoplay.progressPercent" @input="autoplay.seekToPercent($event.target.value)"/>
                   <div class="transport-progress__times">
                     <span>{{ autoplay.formatTime(autoplay.currentTime) }}</span>
                     <span>{{ autoplay.formatTime(autoplay.duration) }}</span>
                   </div>
                 </div>
-
                 <div class="transport-controls transport-controls--compact">
-                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length"
-                          @click="autoplay.previous">
-                    Prev
-                  </button>
-
-                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length"
-                          @click="autoplay.replayCurrent">
-                    Replay
-                  </button>
-
-                  <button
-                      v-if="!autoplay.isPlaying"
-                      type="button"
-                      class="btn btn--primary btn--small"
-                      :disabled="!playbackQueue.length || autoplay.isLoading"
-                      @click="autoplay.isPaused ? autoplay.resume() : playAllFromContext()"
-                  >
-                    {{ autoplay.isPaused ? "Resume" : "Play" }}
-                  </button>
-
-                  <button
-                      v-else
-                      type="button"
-                      class="btn btn--primary btn--small"
-                      @click="autoplay.pause"
-                  >
-                    Pause
-                  </button>
-
-                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length"
-                          @click="autoplay.next">
-                    Next
-                  </button>
-
-                  <button type="button" class="btn btn--ghost btn--small" :disabled="autoplay.currentIndex < 0"
-                          @click="autoplay.stop">
-                    Stop
-                  </button>
+                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length" @click="autoplay.previous">Prev</button>
+                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length" @click="autoplay.replayCurrent">Replay</button>
+                  <button v-if="!autoplay.isPlaying" type="button" class="btn btn--primary btn--small" :disabled="!playbackQueue.length || autoplay.isLoading" @click="autoplay.isPaused ? autoplay.resume() : playAllFromContext()">{{ autoplay.isPaused ? "Resume" : "Play" }}</button>
+                  <button v-else type="button" class="btn btn--primary btn--small" @click="autoplay.pause">Pause</button>
+                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length" @click="autoplay.next">Next</button>
+                  <button type="button" class="btn btn--ghost btn--small" :disabled="autoplay.currentIndex < 0" @click="autoplay.stop">Stop</button>
                 </div>
               </div>
             </section>
 
             <section v-if="selectedThumb" class="card selected-thumbnail-panel collapsible-card">
-              <button
-                  type="button"
-                  class="collapsible-card__header"
-                  @click="toggleSelectedThumbnailPanel"
-              >
+              <button type="button" class="collapsible-card__header" @click="toggleSelectedThumbnailPanel">
                 <div class="collapsible-card__title-block">
-                  <h2 class="collapsible-card__title">
-                    Selected thumbnail
-                  </h2>
+                  <h2 class="collapsible-card__title">Selected thumbnail</h2>
                   <p class="muted collapsible-card__summary">
                     {{ selectedThumb.title || `Thumbnail #${selectedThumb.idx ?? selectedThumb.id}` }}
                     · {{ selectedAudios.length }} audio clip(s)
                     · {{ selectedAudioMarkers.length }} marker(s)
                   </p>
                 </div>
-
                 <div class="collapsible-card__header-right">
                   <BaseBadge variant="success">Selected</BaseBadge>
                   <span class="collapsible-card__chevron" :class="{ 'is-open': selectedThumbnailPanelOpen }">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"
-                         stroke-linejoin="round">
-                      <path d="m6 9 6 6 6-6"></path>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                   </span>
                 </div>
               </button>
-
               <div v-if="selectedThumbnailPanelOpen" class="collapsible-card__body">
                 <div class="selected-thumbnail-panel__header">
                   <div>
-                    <h3>
-                      {{ selectedThumb.title || `Thumbnail #${selectedThumb.idx ?? selectedThumb.id}` }}
-                    </h3>
-                    <p class="muted">
-                      Index {{ selectedThumb.idx ?? "-" }} ·
-                      {{ selectedAudios.length }} audio clip(s) ·
-                      {{ selectedAudioMarkers.length }} marker(s)
-                    </p>
+                    <h3>{{ selectedThumb.title || `Thumbnail #${selectedThumb.idx ?? selectedThumb.id}` }}</h3>
+                    <p class="muted">Index {{ selectedThumb.idx ?? "-" }} · {{ selectedAudios.length }} audio clip(s) · {{ selectedAudioMarkers.length }} marker(s)</p>
                   </div>
                 </div>
-
                 <div class="selected-thumbnail-panel__stage">
-                  <img
-                      :src="thumbnailContentUrl(selectedThumb)"
-                      :alt="selectedThumb.title || 'Selected thumbnail'"
-                      class="selected-thumbnail-panel__image"
-                  />
-
-                  <button
-                      v-for="audio in selectedAudioMarkers"
-                      :key="audio.id"
-                      type="button"
-                      class="marker-dot"
-                      :class="{ 'marker-dot--active': isMarkerActive(audio) }"
-                      :style="markerStyle(audio)"
-                      :title="audio.markerLabel || audio.title || `Audio #${audio.id}`"
-                      @click="playAudioFromMarker(audio)"
-                  >
+                  <img :src="thumbnailContentUrl(selectedThumb)" :alt="selectedThumb.title || 'Selected thumbnail'" class="selected-thumbnail-panel__image"/>
+                  <button v-for="audio in selectedAudioMarkers" :key="audio.id" type="button" class="marker-dot" :class="{ 'marker-dot--active': isMarkerActive(audio) }" :style="markerStyle(audio)" :title="audio.markerLabel || audio.title || `Audio #${audio.id}`" @click="playAudioFromMarker(audio)">
                     <span class="marker-dot__pulse"></span>
                     <span class="marker-dot__core"></span>
                   </button>
@@ -3682,58 +3581,26 @@ onMounted(loadAll);
             </section>
 
             <section v-if="isOwner && selectedThumb" class="card collapsible-card">
-              <button
-                  type="button"
-                  class="collapsible-card__header"
-                  @click="toggleSelectedLayoutPanel"
-              >
+              <button type="button" class="collapsible-card__header" @click="toggleSelectedLayoutPanel">
                 <div class="collapsible-card__title-block">
                   <h2 class="collapsible-card__title">Selected thumbnail layout</h2>
-                  <p class="muted collapsible-card__summary">
-                    Custom grid placement and span settings
-                  </p>
+                  <p class="muted collapsible-card__summary">Custom grid placement and span settings</p>
                 </div>
-
                 <span class="collapsible-card__chevron" :class="{ 'is-open': selectedLayoutPanelOpen }">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"
-                       stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6"></path>
-                  </svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </span>
               </button>
-
               <div v-if="selectedLayoutPanelOpen" class="collapsible-card__body">
                 <div class="storyboard-settings-grid">
-                  <label>
-                    Column
-                    <input v-model="selectedLayoutForm.gridColumn" type="number" min="1" placeholder="auto"/>
-                  </label>
-
-                  <label>
-                    Row
-                    <input v-model="selectedLayoutForm.gridRow" type="number" min="1" placeholder="auto"/>
-                  </label>
-
-                  <label>
-                    Column span
-                    <input v-model="selectedLayoutForm.gridColumnSpan" type="number" min="1"/>
-                  </label>
-
-                  <label>
-                    Row span
-                    <input v-model="selectedLayoutForm.gridRowSpan" type="number" min="1"/>
-                  </label>
+                  <label>Column<input v-model="selectedLayoutForm.gridColumn" type="number" min="1" placeholder="auto"/></label>
+                  <label>Row<input v-model="selectedLayoutForm.gridRow" type="number" min="1" placeholder="auto"/></label>
+                  <label>Column span<input v-model="selectedLayoutForm.gridColumnSpan" type="number" min="1"/></label>
+                  <label>Row span<input v-model="selectedLayoutForm.gridRowSpan" type="number" min="1"/></label>
                 </div>
-
                 <div class="toolbar">
-                  <button class="btn btn--primary" :disabled="savingLayout" @click="saveSelectedThumbnailLayout">
-                    {{ savingLayout ? "Saving..." : "Save thumbnail layout" }}
-                  </button>
+                  <button class="btn btn--primary" :disabled="savingLayout" @click="saveSelectedThumbnailLayout">{{ savingLayout ? "Saving..." : "Save thumbnail layout" }}</button>
                 </div>
-
-                <p class="muted">
-                  In custom mode, these values control the persisted storyboard composition for this thumbnail.
-                </p>
+                <p class="muted">In custom mode, these values control the persisted storyboard composition for this thumbnail.</p>
               </div>
             </section>
 
@@ -4588,7 +4455,7 @@ onMounted(loadAll);
   height: 42px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: #FFFCF7;
   color: var(--text);
   display: inline-flex;
   align-items: center;
@@ -4606,6 +4473,39 @@ onMounted(loadAll);
 .icon-button svg {
   width: 18px;
   height: 18px;
+}
+
+/* Like / Bookmark buttons */
+.interaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: #FFFCF7;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.interaction-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(192, 74, 8, 0.06);
+}
+
+.interaction-btn--active {
+  background: rgba(192, 74, 8, 0.10);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.interaction-btn--active svg {
+  fill: var(--primary);
 }
 
 .dialog-backdrop {

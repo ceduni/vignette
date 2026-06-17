@@ -309,7 +309,7 @@ onMounted(loadUsers);
   appearance: none;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: #fff;
+  background: #FFFCF7;
   color: var(--text);
   padding: 0.8rem 1rem;
   min-width: 180px;

@@ -30,6 +30,8 @@ public record ScenarioDto(
         @Schema(description = "Storyboard columns.", example = "3")
         Integer storyboardColumns,
         @Schema(description = "List of tags associated with the scenario.")
-        List<String> tags
+        List<String> tags,
+        @Schema(description = "ID of the parent scenario if this is a fork, null otherwise.")
+        Long parentScenarioId
 ) {
 }

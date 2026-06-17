@@ -73,6 +73,9 @@ public class Scenario {
     @Column(name = "storyboard_columns", nullable = false)
     private Integer storyboardColumns = 3;
 
+    @Column(name = "parent_scenario_id")
+    private Long parentScenarioId;
+
     @ManyToMany
     @JoinTable(
             name = "scenario_tag_link",

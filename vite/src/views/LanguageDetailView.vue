@@ -4,6 +4,9 @@ import {RouterLink} from "vue-router";
 import worldCountries from "world-countries";
 import {ArrowLeft, ArrowUpRight, BookOpenText, Globe2, MapPin, MapPinned, PencilLine} from "lucide-vue-next";
 import {fetchLanguage, fetchLanguageScenarios, fetchMyLanguagePermissions, updateLanguage} from "../api/languages";
+import {fetchDiscussionMessages} from "../api/community";
+import {fetchScenarioThumbnails} from "../api/scenarios";
+import {buildApiUrl} from "../api/rest";
 import {useAuth} from "../composables/useAuth";
 import {useToast} from "../composables/useToast";
 import LanguagePresenceMap from "../components/maps/LanguagePresenceMap.vue";
@@ -16,30 +19,180 @@ const props = defineProps({
 
 const {loadMe, isAuthenticated} = useAuth();
 const toast = useToast();
+const { openReader, activeScenario, closeReader } = useScenarioReader();
 
 const language = ref(null);
 const scenarios = ref([]);
 const permissions = ref({canEdit: false});
+const messages = ref([]);
 const error = ref("");
 const loading = ref(false);
 const saving = ref(false);
 const saveError = ref("");
 const saveSuccess = ref("");
+const activeTab = ref("overview");
 
-const editForm = ref({
-  name: "",
-  level: "",
-  bookkeeping: false,
-  iso639P3code: "",
-  latitude: "",
-  longitude: "",
-  countryIds: "",
-  familyId: "",
-  parentId: "",
-  description: "",
-  markupDescription: "",
+// --- Suivre ---
+const { isFollowing: isFollowingFn, toggleFollow: toggleFollowFn, followedIdsArray } = useLanguageFollows();
+
+// ref local synchronisé — garantit la réactivité dans ce composant
+const isFollowing = ref(isFollowingFn(props.id));
+
+// Re-sync quand followedIdsArray change (ex: toggle depuis un autre composant)
+watch(followedIdsArray, () => {
+  isFollowing.value = isFollowingFn(props.id);
+}, { deep: false });
+
+function loadFollowState(id) {
+  isFollowing.value = isFollowingFn(id);
+}
+
+async function toggleFollow() {
+  if (!isAuthenticated.value) return;
+  const wasFollowing = isFollowing.value;
+  await toggleFollowFn(props.id, language.value?.name ?? null);
+  // Sync local après le toggle
+  isFollowing.value = isFollowingFn(props.id);
+  toast.success(!wasFollowing
+    ? `Following ${language.value?.name ?? "this language"}.`
+    : `Unfollowed ${language.value?.name ?? "this language"}.`
+  );
+}
+
+// --- Placeholders démo ---
+const DEMO_DISCUSSIONS = [
+  { id: "d1", authorUsername: "linguist_sara", content: "Does this language have a tonal system? I noticed some patterns in the recordings that suggest pitch distinctions.", parentMessageId: null, createdAt: new Date(Date.now() - 3600000 * 2).toISOString() },
+  { id: "d2", authorUsername: "prof_martinez", content: "The phonological inventory is fascinating — especially the click consonants documented in scenario 3.", parentMessageId: null, createdAt: new Date(Date.now() - 3600000 * 5).toISOString() },
+  { id: "d3", authorUsername: "community_nana", content: "My grandmother speaks this language natively. Happy to contribute recordings if needed!", parentMessageId: null, createdAt: new Date(Date.now() - 3600000 * 24).toISOString() },
+  { id: "d4", authorUsername: "linguist_sara", content: "Reply to the tonal question", parentMessageId: "d1", createdAt: new Date(Date.now() - 3600000).toISOString() },
+  { id: "d5", authorUsername: "prof_martinez", content: "Another reply", parentMessageId: "d1", createdAt: new Date(Date.now() - 1800000).toISOString() },
+];
+
+const DEMO_SCENARIOS = [
+  { id: "s1", title: "Market conversation", authorUsername: "prof_martinez", visibilityStatus: "PUBLISHED", createdAt: new Date(Date.now() - 3600000 * 48).toISOString(), description: "A typical exchange at a local market, covering greetings, numbers and basic transactions." },
+  { id: "s2", title: "Family gathering", authorUsername: "community_nana", visibilityStatus: "PUBLISHED", createdAt: new Date(Date.now() - 3600000 * 72).toISOString(), description: "Vocabulary and phrases used during a traditional family gathering." },
+  { id: "s3", title: "Nature and seasons", authorUsername: "linguist_sara", visibilityStatus: "PUBLISHED", createdAt: new Date(Date.now() - 3600000 * 96).toISOString(), description: "Environmental vocabulary and seasonal expressions." },
+];
+
+const DEMO_CONTRIBUTORS = ["linguist_sara", "prof_martinez", "community_nana", "ariane_l", "researcher_ko"];
+
+// --- Données dérivées ---
+const effectiveMessages = computed(() =>
+  messages.value.length > 0 ? messages.value : DEMO_DISCUSSIONS
+);
+
+const effectiveScenarios = computed(() =>
+  scenarios.value.length > 0 ? scenarios.value : DEMO_SCENARIOS
+);
+
+const isDemoMode = computed(() =>
+  messages.value.length === 0 && scenarios.value.length === 0
+);
+
+const rootMessages = computed(() =>
+  effectiveMessages.value.filter((m) => m.parentMessageId == null)
+);
+
+const replyCountById = computed(() => {
+  const counts = {};
+  for (const m of effectiveMessages.value) {
+    if (m.parentMessageId != null) {
+      const pid = String(m.parentMessageId);
+      counts[pid] = (counts[pid] ?? 0) + 1;
+    }
+  }
+  return counts;
 });
 
+const popularDiscussions = computed(() =>
+  [...rootMessages.value]
+    .sort((a, b) => (replyCountById.value[String(b.id)] ?? 0) - (replyCountById.value[String(a.id)] ?? 0))
+    .slice(0, 3)
+);
+
+const recentScenarios = computed(() =>
+  [...effectiveScenarios.value]
+    .filter((s) => s.visibilityStatus === "PUBLISHED")
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5)
+);
+
+const activeContributors = computed(() => {
+  if (isDemoMode.value) return DEMO_CONTRIBUTORS;
+  const seen = new Set();
+  const contributors = [];
+  for (const m of [...messages.value].reverse()) {
+    if (m.authorUsername && !seen.has(m.authorUsername)) {
+      seen.add(m.authorUsername);
+      contributors.push(m.authorUsername);
+    }
+    if (contributors.length >= 6) break;
+  }
+  return contributors;
+});
+
+// --- Carousel ---
+const carouselIndex = ref(0);
+const CARD_WIDTH = 220;
+const CARD_GAP = 14;
+const PEEK = 28;
+
+const carouselOffset = computed(() =>
+  -(carouselIndex.value * (CARD_WIDTH + CARD_GAP)) + PEEK
+);
+
+function carouselScroll(dir) {
+  const next = carouselIndex.value + dir;
+  if (next < 0 || next >= recentScenarios.value.length) return;
+  carouselIndex.value = next;
+}
+
+function carouselGoTo(i) {
+  carouselIndex.value = i;
+}
+
+const scenarioThumbnailUrls = ref({});
+
+async function loadCarouselThumbnails(scenarioList) {
+  const urls = {};
+  await Promise.all(
+    scenarioList.map(async (s) => {
+      try {
+        const thumbs = await fetchScenarioThumbnails(s.id);
+        if (thumbs?.length) {
+          const sorted = [...thumbs].sort((a, b) => (a.idx ?? a.id) - (b.idx ?? b.id));
+          urls[s.id] = buildApiUrl(`/api/thumbnails/${sorted[0].id}/content`);
+        }
+      } catch { /* silencieux */ }
+    })
+  );
+  scenarioThumbnailUrls.value = urls;
+}
+
+function avatarColor(username) {
+  const colors = ["#C04A08", "#982800", "#7A3812", "#D4580A", "#b45309", "#065f46", "#6d28d9", "#1e40af"];
+  if (!username) return colors[0];
+  return colors[username.charCodeAt(0) % colors.length];
+}
+
+function authorInitials(username) {
+  if (!username) return "?";
+  return username.slice(0, 2).toUpperCase();
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+// --- Formulaire d'édition ---
+const editForm = ref({
+  name: "", level: "", bookkeeping: false, iso639P3code: "",
+  latitude: "", longitude: "", countryIds: "", familyId: "",
+  parentId: "", description: "", markupDescription: "",
+});
 const isEditing = ref(false);
 
 const iso2ToIso3 = new Map(
@@ -56,16 +209,11 @@ const iso3ToCountryName = new Map(
 
 function hydrateForm(lang) {
   editForm.value = {
-    name: lang?.name ?? "",
-    level: lang?.level ?? "",
-    bookkeeping: !!lang?.bookkeeping,
-    iso639P3code: lang?.iso639P3code ?? "",
-    latitude: lang?.latitude ?? "",
-    longitude: lang?.longitude ?? "",
-    countryIds: lang?.countryIds ?? "",
-    familyId: lang?.familyId ?? "",
-    parentId: lang?.parentId ?? "",
-    description: lang?.description ?? "",
+    name: lang?.name ?? "", level: lang?.level ?? "",
+    bookkeeping: !!lang?.bookkeeping, iso639P3code: lang?.iso639P3code ?? "",
+    latitude: lang?.latitude ?? "", longitude: lang?.longitude ?? "",
+    countryIds: lang?.countryIds ?? "", familyId: lang?.familyId ?? "",
+    parentId: lang?.parentId ?? "", description: lang?.description ?? "",
     markupDescription: lang?.markupDescription ?? "",
   };
 }
@@ -128,32 +276,27 @@ const spokenCountries = computed(() => {
 async function load(id) {
   loading.value = true;
   error.value = "";
-  saveError.value = "";
-  saveSuccess.value = "";
   language.value = null;
   scenarios.value = [];
+  messages.value = [];
   permissions.value = {canEdit: false};
 
   try {
     await loadMe();
-
-    const baseCalls = [
-      fetchLanguage(id),
-      fetchLanguageScenarios(id),
-    ];
-
-    const canCheckPermissions = isAuthenticated.value;
-    if (canCheckPermissions) {
-      baseCalls.push(fetchMyLanguagePermissions(id));
-    }
-
+    const baseCalls = [fetchLanguage(id), fetchLanguageScenarios(id)];
+    if (isAuthenticated.value) baseCalls.push(fetchMyLanguagePermissions(id));
     const results = await Promise.all(baseCalls);
-
     language.value = results[0];
     scenarios.value = results[1];
-    permissions.value = canCheckPermissions ? results[2] : {canEdit: false};
-
+    permissions.value = isAuthenticated.value ? results[2] : {canEdit: false};
     hydrateForm(language.value);
+    messages.value = await fetchDiscussionMessages("LANGUAGE", id);
+    await loadCarouselThumbnails(
+      [...scenarios.value]
+        .filter((s) => s.visibilityStatus === "PUBLISHED")
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5)
+    );
   } catch (e) {
     error.value = e.message || "Failed to load language details.";
   } finally {
@@ -163,26 +306,19 @@ async function load(id) {
 
 async function saveLanguage() {
   if (!language.value) return;
-
   saving.value = true;
   saveError.value = "";
   saveSuccess.value = "";
-
   try {
     const payload = {
-      name: editForm.value.name,
-      level: editForm.value.level,
-      bookkeeping: editForm.value.bookkeeping,
-      iso639P3code: editForm.value.iso639P3code,
+      name: editForm.value.name, level: editForm.value.level,
+      bookkeeping: editForm.value.bookkeeping, iso639P3code: editForm.value.iso639P3code,
       latitude: editForm.value.latitude === "" ? null : Number(editForm.value.latitude),
       longitude: editForm.value.longitude === "" ? null : Number(editForm.value.longitude),
-      countryIds: editForm.value.countryIds,
-      familyId: editForm.value.familyId,
-      parentId: editForm.value.parentId,
-      description: editForm.value.description,
+      countryIds: editForm.value.countryIds, familyId: editForm.value.familyId,
+      parentId: editForm.value.parentId, description: editForm.value.description,
       markupDescription: editForm.value.markupDescription,
     };
-
     language.value = await updateLanguage(language.value.id, payload);
     hydrateForm(language.value);
     isEditing.value = false;
@@ -204,11 +340,14 @@ function cancelEdit() {
 }
 
 watch(
-    () => props.id,
-    (id) => {
-      load(id);
-    },
-    {immediate: true}
+  () => props.id,
+  (id) => {
+    load(id);
+    loadFollowState(id);
+    activeTab.value = "overview";
+    carouselIndex.value = 0;
+  },
+  { immediate: true }
 );
 </script>
 

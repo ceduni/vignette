@@ -79,7 +79,8 @@ class ScenarioApiControllerWebMvcTest {
                 "PRESET",
                 "GRID_3",
                 3,
-                List.of()
+                List.of(),
+                null
         );
 
         when(scenarioService.listVisibleScenarios(any())).thenReturn(List.of(scenario));
@@ -120,7 +121,8 @@ class ScenarioApiControllerWebMvcTest {
                 "PRESET",
                 "GRID_3",
                 3,
-                List.of()
+                List.of(),
+                null
         );
 
         when(scenarioService.getVisibleScenario(eq(11L), any())).thenReturn(scenario);

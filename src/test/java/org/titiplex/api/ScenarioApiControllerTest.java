@@ -85,7 +85,8 @@ class ScenarioApiControllerTest {
                 "PRESET",
                 "GRID_3",
                 3,
-                List.of()
+                List.of(),
+                null
         );
 
         when(scenarioService.getVisibleScenario(9L, auth)).thenReturn(scenario);
@@ -112,14 +113,15 @@ class ScenarioApiControllerTest {
                 1L, "First", "D1", "chuj", "bob",
                 Instant.parse("2026-03-20T10:15:30Z"),
                 "DRAFT", null, "PRESET", "GRID_3", 3,
-                List.of()
+                List.of(), null
         );
         ScenarioDto dto2 = new ScenarioDto(
                 2L, "Second", "D2", "kiche", "bob",
                 Instant.parse("2026-03-21T10:15:30Z"),
                 "PUBLISHED", Instant.parse("2026-03-22T10:15:30Z"),
                 "CUSTOM", "MANGA", 4,
-                List.of()
+                List.of(),
+                null
         );
 
         when(scenarioService.listVisibleScenarios(auth)).thenReturn(List.of(s1, s2));
@@ -144,7 +146,8 @@ class ScenarioApiControllerTest {
                 15L, "Story", "Desc", "chuj", "alice",
                 Instant.parse("2026-03-20T10:15:30Z"),
                 "DRAFT", null, "CUSTOM", "MANGA", 4,
-                List.of()
+                List.of(),
+                null
         );
 
         UpdateScenarioStoryboardRequest request = new UpdateScenarioStoryboardRequest("CUSTOM", "MANGA", 4);
@@ -172,7 +175,8 @@ class ScenarioApiControllerTest {
                 Instant.parse("2026-03-20T10:15:30Z"),
                 "PUBLISHED", Instant.parse("2026-03-22T10:15:30Z"),
                 "PRESET", "GRID_3", 3,
-                List.of()
+                List.of(),
+                null
         );
 
         when(scenarioService.publishScenario(21L, auth)).thenReturn(published);
@@ -214,7 +218,7 @@ class ScenarioApiControllerTest {
 
         when(scenarioService.listMyScenarios(auth)).thenReturn(List.of(scenario));
         when(scenarioService.toDto(scenario)).thenReturn(new ScenarioDto(
-                1L, "Mine", null, "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of()
+                1L, "Mine", null, "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null
         ));
 
         List<ScenarioDto> result = controller.listMine(auth);
@@ -239,7 +243,7 @@ class ScenarioApiControllerTest {
 
         when(scenarioService.updateScenarioMetadata(5L, req, auth)).thenReturn(updated);
         when(scenarioService.toDto(updated)).thenReturn(new ScenarioDto(
-                5L, "New title", "New description", "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of()
+                5L, "New title", "New description", "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null
         ));
 
         ScenarioDto result = controller.updateMetadata(5L, req, auth);
