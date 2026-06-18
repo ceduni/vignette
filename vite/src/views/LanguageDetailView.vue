@@ -8,6 +8,8 @@ import {fetchDiscussionMessages} from "../api/community";
 import {fetchScenarioThumbnails} from "../api/scenarios";
 import {buildApiUrl} from "../api/rest";
 import {useAuth} from "../composables/useAuth";
+import {useLanguageFollows} from "../composables/useLanguageFollows";
+import {useScenarioReader} from "../composables/useScenarioReader";
 import {useToast} from "../composables/useToast";
 import LanguagePresenceMap from "../components/maps/LanguagePresenceMap.vue";
 import BaseLoader from "../components/ui/BaseLoader.vue";
@@ -239,17 +241,6 @@ function parseCountryIds(raw) {
   return Array.from(new Set(normalized));
 }
 
-function formatDate(value) {
-  if (!value) return "Date unknown";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-  return parsed.toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function normalizeLevel(level) {
   const normalized = String(level ?? "").trim().toLowerCase();
   if (normalized.includes("dialect")) return "dialect";
@@ -290,13 +281,23 @@ async function load(id) {
     scenarios.value = results[1];
     permissions.value = isAuthenticated.value ? results[2] : {canEdit: false};
     hydrateForm(language.value);
-    messages.value = await fetchDiscussionMessages("LANGUAGE", id);
-    await loadCarouselThumbnails(
-      [...scenarios.value]
-        .filter((s) => s.visibilityStatus === "PUBLISHED")
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5)
-    );
+
+    try {
+      messages.value = await fetchDiscussionMessages("LANGUAGE", id);
+    } catch {
+      messages.value = [];
+    }
+
+    try {
+      await loadCarouselThumbnails(
+        [...scenarios.value]
+          .filter((s) => s.visibilityStatus === "PUBLISHED")
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5)
+      );
+    } catch {
+      scenarioThumbnailUrls.value = {};
+    }
   } catch (e) {
     error.value = e.message || "Failed to load language details.";
   } finally {

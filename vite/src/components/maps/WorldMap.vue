@@ -87,6 +87,22 @@ const countryByIso = new Map(countryFeatures.map((country) => [country.isoA3, co
 const viewBoxValue = computed(() => `${currentView.x} ${currentView.y} ${currentView.w} ${currentView.h}`);
 
 const highlightedSet = computed(() => new Set(store.highlightedCountryIds.value));
+const activeLanguagePinPoint = computed(() => {
+  const pin = store.activeLanguagePin.value;
+  if (!pin) return null;
+  if (!Number.isFinite(pin.latitude) || !Number.isFinite(pin.longitude)) return null;
+  if (pin.latitude < -90 || pin.latitude > 90 || pin.longitude < -180 || pin.longitude > 180) return null;
+
+  const point = projection([pin.longitude, pin.latitude]);
+  if (!point || point.length < 2) return null;
+
+  return {
+    x: point[0],
+    y: point[1],
+    name: pin.name,
+  };
+});
+
 const clusterFeatures = computed(() => {
   return countryFeatures
       .map((country) => ({
@@ -314,6 +330,18 @@ function centerOnCountries(isoCodes: string[]) {
   });
 }
 
+function centerOnPoint(x: number, y: number) {
+  const nextW = 320;
+  const nextH = nextW / ASPECT;
+
+  setTargetView({
+    x: x - nextW / 2,
+    y: y - nextH / 2,
+    w: nextW,
+    h: nextH,
+  });
+}
+
 function onWheel(event: WheelEvent) {
   if (!MAP_ZOOM_ENABLED) return;
   event.preventDefault();
@@ -488,10 +516,22 @@ watch(
 watch(
     () => store.activeLanguageId.value,
     (languageId) => {
+      if (store.activeLanguagePin.value && activeLanguagePinPoint.value) {
+        centerOnPoint(activeLanguagePinPoint.value.x, activeLanguagePinPoint.value.y);
+        return;
+      }
       if (!languageId) return;
       if (store.focusMode.value !== "language") return;
       if (!store.highlightedCountryIds.value.length) return;
       centerOnCountries(store.highlightedCountryIds.value);
+    }
+);
+
+watch(
+    () => activeLanguagePinPoint.value,
+    (point) => {
+      if (!point) return;
+      centerOnPoint(point.x, point.y);
     }
 );
 
@@ -524,7 +564,7 @@ onBeforeUnmount(() => {
         <input
             v-model="countrySearch"
             type="text"
-            placeholder="Rechercher un pays..."
+            placeholder="Search for a country..."
             autocomplete="off"
             aria-label="Rechercher un pays sur la carte"
             @input="onSearchInput"
@@ -584,6 +624,17 @@ onBeforeUnmount(() => {
             @keydown.enter.prevent="onCountryClick(country.isoA3)"
             @keydown.space.prevent="onCountryClick(country.isoA3)"
         />
+      </g>
+
+      <g
+          v-if="activeLanguagePinPoint"
+          class="active-language-pin"
+          :transform="`translate(${activeLanguagePinPoint.x}, ${activeLanguagePinPoint.y})`"
+          aria-label="Active language location"
+      >
+        <circle class="active-language-pin__pulse" r="12"/>
+        <circle class="active-language-pin__ring" r="6.8"/>
+        <circle class="active-language-pin__core" r="4.2"/>
       </g>
 
       <g class="cluster-group">
@@ -722,10 +773,8 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   background:
-      radial-gradient(circle at 18% 12%, rgba(253, 232, 200, 0.95), rgba(253, 232, 200, 0) 36rem),
-      radial-gradient(circle at 82% 18%, rgba(248, 224, 208, 0.88), rgba(248, 224, 208, 0) 30rem),
-      radial-gradient(circle at 50% 100%, rgba(248, 224, 208, 0.42), rgba(248, 224, 208, 0) 24rem),
-      linear-gradient(180deg, var(--bg) 0%, #f5ece0 100%);
+      linear-gradient(rgba(245, 231, 228, 0.24), rgba(245, 231, 228, 0.24)),
+      url("/fond3.avif") center / cover no-repeat;
 }
 
 .map-ocean::before {
@@ -766,8 +815,8 @@ onBeforeUnmount(() => {
 }
 
 .country-shape {
-  fill: var(--surface);
-  stroke: color-mix(in srgb, var(--text-soft) 38%, var(--border) 62%);
+  fill: #e8caa8;
+  stroke: color-mix(in srgb, #e8caa8 58%, var(--border) 42%);
   stroke-width: 0.82;
   vector-effect: non-scaling-stroke;
   filter: url(#continent-shadow);
@@ -787,16 +836,23 @@ onBeforeUnmount(() => {
 }
 
 
-.country-shape:hover,
-.country-shape:focus-visible {
-  fill: var(--surface-alt);
-  stroke: var(--primary);
+.country-shape:hover
+{
+  fill:  rgba(18, 66, 18, 0.35);
 }
 
-.country-shape.has-cluster {
-  fill: color-mix(in srgb, var(--surface-alt) 72%, var(--primary) 28%);
-  stroke: color-mix(in srgb, var(--primary) 58%, var(--border) 42%);
+.country-shape.is-highlighted {
+  fill: var(--primary);
+  stroke: var(--primary-strong);
+  stroke-width: 0.96;
 }
+
+.country-shape.is-highlighted:hover,
+.country-shape.is-highlighted:focus-visible {
+  fill: color-mix(in srgb, var(--primary) 86%, #ffffff 14%);
+  stroke: var(--primary-strong);
+}
+
 
 .country-shape.is-selected,
 .country-shape.is-selected.is-highlighted {
@@ -805,14 +861,33 @@ onBeforeUnmount(() => {
   stroke-width: 1.1;
 }
 
-.country-shape.is-highlighted {
-  fill: color-mix(in srgb, var(--surface-alt) 54%, var(--primary) 46%);
-  stroke: var(--primary);
-}
+
 
 .cluster-badge {
   cursor: pointer;
   animation: pulse-badge 2.3s ease-in-out infinite;
+}
+
+.active-language-pin {
+  pointer-events: none;
+}
+
+.active-language-pin__pulse {
+  fill: rgba(91, 25, 40, 0.24);
+  transform-origin: center;
+  animation: pin-pulse 1800ms ease-out infinite;
+}
+
+.active-language-pin__ring {
+  fill: #fff7f1;
+  stroke: #5B1928;
+  stroke-width: 1.2;
+}
+
+.active-language-pin__core {
+  fill: #5B1928;
+  stroke: #fff7f1;
+  stroke-width: 0.9;
 }
 
 .cluster-badge circle {
@@ -874,6 +949,21 @@ onBeforeUnmount(() => {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes pin-pulse {
+  0% {
+    opacity: 0.64;
+    transform: scale(0.86);
+  }
+  75% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.65);
   }
 }
 

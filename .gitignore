@@ -36,3 +36,8 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Local runtime / workspace ###
+data/
+.tools/
+/fond*.avif

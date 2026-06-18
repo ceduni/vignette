@@ -1546,7 +1546,6 @@ async function loadAll() {
         !!currentUser.value &&
         currentUser.value.username === scenario.value.authorUsername;
     await Promise.all([loadThumbs(), checkExistingRequest()]);
-    await loadThumbs();
     applyUnclaimedDraftAudio();
   } catch (e) {
     if (studioFrontendOnly) {
@@ -2303,10 +2302,16 @@ watch(quickRecordingBlob, (blob) => {
 
 watch(
     () => props.id,
-    () => {
+    async () => {
       if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") quickMediaRecorder.stop();
       quickRecordingThumbId.value = null;
+      scenario.value = null;
+      thumbnails.value = [];
+      audioMap.value = {};
+      selectedThumb.value = null;
+      activeAudioId.value = null;
       closeQuickRecordingDialog();
+      await loadAll();
     }
 );
 

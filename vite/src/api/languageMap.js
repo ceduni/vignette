@@ -17,6 +17,7 @@ function normalizeLanguageRows(rows) {
         level: String(row.level ?? "unknown"),
         family: String(row.family ?? "unknown"),
         parent: String(row.parent ?? "unknown"),
+        countryIds: String(row.countryIds ?? ""),
       }));
 }
 

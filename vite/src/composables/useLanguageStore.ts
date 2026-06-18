@@ -22,6 +22,14 @@ type ScenarioAction = {
   ctaLabel: string;
 };
 
+type LanguagePin = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  countryIds?: string;
+};
+
 type FocusMode = "idle" | "country" | "language";
 type ActionSource = "map" | "list" | "system";
 
@@ -55,6 +63,7 @@ const catalogLanguages = ref<LanguageRow[]>([]);
 // Anti-boucle : états séparés + source explicite.
 const activeCountryId = ref("");
 const activeLanguageId = ref("");
+const activeLanguagePin = ref<LanguagePin | null>(null);
 const focusMode = ref<FocusMode>("idle");
 const lastActionSource = ref<ActionSource>("system");
 
@@ -207,6 +216,7 @@ function setCatalogLanguages(rows: LanguageRow[]) {
 function clearFocus(source: ActionSource = "system") {
   activeCountryId.value = "";
   activeLanguageId.value = "";
+  activeLanguagePin.value = null;
   focusMode.value = "idle";
   lastActionSource.value = source;
 }
@@ -226,6 +236,7 @@ function activateCountryFromMap(isoA3: string) {
 
   activeCountryId.value = next;
   activeLanguageId.value = "";
+  activeLanguagePin.value = null;
   focusMode.value = "country";
   lastActionSource.value = "map";
 }
@@ -250,12 +261,17 @@ function activateLanguageFromList(language: {id?: string | number; countryIds?: 
   }
 
   activeLanguageId.value = nextId;
+  activeLanguagePin.value = null;
 
   const inferredCountries = languageCountriesIndex.value[nextId] ?? toIsoA3Tokens(language?.countryIds);
   activeCountryId.value = inferredCountries[0] ?? "";
 
   focusMode.value = "language";
   lastActionSource.value = "list";
+}
+
+function setActiveLanguagePin(pin: LanguagePin | null) {
+  activeLanguagePin.value = pin;
 }
 
 async function loadMapData() {
@@ -283,6 +299,7 @@ export function useLanguageStore() {
     catalogLanguages,
     activeCountryId,
     activeLanguageId,
+    activeLanguagePin,
     focusMode,
     lastActionSource,
     clusterCountByIso,
@@ -298,6 +315,7 @@ export function useLanguageStore() {
     clearFocus,
     activateCountryFromMap,
     activateLanguageFromList,
+    setActiveLanguagePin,
     loadMapData,
   };
 }

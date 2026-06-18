@@ -14,6 +14,8 @@ let thetaOffset = 0
 let isPaused = false
 let globe = null
 let animationId = null
+let resizeObserver = null
+let fadeInTimer = null
 
 function onPointerDown(e) {
   pointerInteracting = { x: e.clientX, y: e.clientY }
@@ -57,40 +59,59 @@ onMounted(() => {
       width, height: width,
       phi: 0, theta: 0.2,
       dark: 0, diffuse: 1.2,
+      scale: 1,
+      offset: [0, 0],
       mapSamples: 16000, mapBrightness: 6,
       baseColor:   [0.99, 0.97, 0.96],
       markerColor: [0.36, 0.10, 0.16],
       glowColor:   [0.96, 0.91, 0.89],
       markers: [],
+      onRender: (state) => {
+        if (!isPaused) phi += props.speed
+        state.phi = phi + phiOffset + dragOffset.phi
+        state.theta = 0.2 + thetaOffset + dragOffset.theta
+        state.width = width
+        state.height = width
+      },
     })
-
-    function animate() {
-      if (!isPaused) phi += props.speed
-      globe.update({
-        phi:   phi + phiOffset   + dragOffset.phi,
-        theta: 0.2 + thetaOffset + dragOffset.theta,
-      })
-      animationId = requestAnimationFrame(animate)
-    }
-    animate()
-    setTimeout(() => { if (canvas) canvas.style.opacity = '1' })
+    fadeInTimer = window.setTimeout(() => {
+      if (canvas) canvas.style.opacity = '1'
+    })
   }
 
   if (canvas.offsetWidth > 0) {
     init()
   } else {
-    const ro = new ResizeObserver(entries => {
-      if (entries[0]?.contentRect.width > 0) { ro.disconnect(); init() }
+    resizeObserver = new ResizeObserver(entries => {
+      if (entries[0]?.contentRect.width > 0) {
+        resizeObserver?.disconnect()
+        resizeObserver = null
+        init()
+      }
     })
-    ro.observe(canvas)
+    resizeObserver.observe(canvas)
   }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup',   onPointerUp)
-  if (animationId) cancelAnimationFrame(animationId)
-  if (globe) globe.destroy()
+  if (fadeInTimer) {
+    clearTimeout(fadeInTimer)
+    fadeInTimer = null
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+  if (animationId) {
+    cancelAnimationFrame(animationId)
+    animationId = null
+  }
+  if (globe) {
+    globe.destroy()
+    globe = null
+  }
 })
 </script>
 

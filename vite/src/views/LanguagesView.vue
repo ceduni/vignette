@@ -24,7 +24,7 @@ const error = ref("");
 const page = ref(Number(route.query.page ?? 0));
 const totalPages = ref(0);
 const PAGE_SIZE = 20;
-const languagesMenuOpen = ref(false);
+const languagesMenuOpen = ref(true);
 const countryBubbleOpen = ref(false);
 const languageInfoOpen = ref(false);
 const languageInfoLoading = ref(false);
@@ -324,6 +324,33 @@ function onSelectLanguage(item) {
   languageStore.activateLanguageFromList(item);
 }
 
+async function focusLanguageLocation(item) {
+  const languageId = String(item?.id ?? "");
+  if (!languageId) return;
+
+  try {
+    const language = await fetchLanguage(languageId);
+    const latitude = Number(language?.latitude);
+    const longitude = Number(language?.longitude);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      toast.info("No precise coordinates are available for this language yet.");
+      return;
+    }
+
+    languageStore.activateLanguageFromList(item);
+    languageStore.setActiveLanguagePin({
+      id: languageId,
+      name: String(language?.name ?? item?.name ?? ""),
+      latitude,
+      longitude,
+      countryIds: String(language?.countryIds ?? item?.countryIds ?? ""),
+    });
+  } catch (e) {
+    toast.info(e?.message || "Unable to locate this language on the map.");
+  }
+}
+
 function toggleLevelVisibility(filterKey) {
   visibleLevels.value = {
     ...visibleLevels.value,
@@ -476,7 +503,7 @@ onBeforeUnmount(() => {
             @click="toggleCountryBubble"
         >
           <span class="icon" aria-hidden="true">◎</span>
-          <span>{{ selectedCountryBubble.name }}</span>
+          <span class="country-bubble-toggle__label">{{ selectedCountryBubble.name }}</span>
           <span class="toggle-chevron" :class="{ open: countryBubbleOpen }">⌄</span>
         </button>
       </div>
@@ -533,7 +560,7 @@ onBeforeUnmount(() => {
                 :key="`${selectedCountryBubble.isoA3}-${language.id}`"
             >
               <div class="bubble-item-main">
-                <span class="name">{{ language.name , language.latitude}}</span>
+                <span class="name">{{ language.name }}</span>
               </div>
 
               <div class="bubble-item-actions">
@@ -600,7 +627,7 @@ onBeforeUnmount(() => {
         >
           <div class="languages-main">
             <div class="search-panel">
-              <div class="toolbar">
+              <div class="toolbar search-toolbar">
                 <input
                     v-model="search"
                     type="text"
@@ -668,7 +695,7 @@ onBeforeUnmount(() => {
                     :selected-language-id="selectedLanguageId"
                     @select-language="onSelectLanguage"
                     @open-info="openLanguageInfo"
-                    @focus-location="onSelectLanguage"
+                    @focus-location="focusLanguageLocation"
                     @preview-audio="previewLanguageAudio"
                 />
               </div>
@@ -841,16 +868,34 @@ onBeforeUnmount(() => {
   z-index: 3;
   bottom: 1rem;
   width: min(360px, calc(100% - 2rem));
-  padding: 0.78rem 0.82rem;
-  border-radius: 12px;
+  min-height: 332px;
+  max-height: 332px;
+  padding: 0.92rem;
+  border-radius: 20px;
   pointer-events: auto;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: 0 10px 24px rgba(96, 56, 24, 0.08);
+  border: 1px solid color-mix(in srgb, var(--border) 74%, #ffffff 26%);
+  background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 240, 238, 0.92));
+  box-shadow:
+      0 22px 40px rgba(30, 8, 18, 0.16),
+      0 2px 8px rgba(30, 8, 18, 0.08);
   transition: left 220ms ease, right 220ms ease;
   left: 1rem;
   right: auto;
   box-sizing: border-box;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.country-bubble::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, #5B1928 0%, #485B38 100%);
+  pointer-events: none;
 }
 
 .country-bubble * {
@@ -869,16 +914,38 @@ onBeforeUnmount(() => {
 }
 
 .country-bubble-toggle {
-  border: 1px solid var(--border);
+  border: 1px solid rgba(72, 91, 56, 0.18);
   border-radius: 999px;
-  background: #fbf6f0;
-  color: #6a4a28;
+  background: linear-gradient(135deg, rgba(72, 91, 56, 0.96), rgba(93, 118, 72, 0.92));
+  color: #fffdf8;
   display: inline-flex;
   align-items: center;
   gap: 0.52rem;
   padding: 0.45rem 0.78rem;
   font-size: 0.84rem;
   font-weight: 700;
+  letter-spacing: 0;
+  box-shadow: 0 14px 28px rgba(72, 91, 56, 0.18);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.country-bubble-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 32px rgba(72, 91, 56, 0.22);
+}
+
+.country-bubble-toggle .icon {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  color: #f6f1e7;
+}
+
+.country-bubble-toggle__label {
+  white-space: nowrap;
 }
 
 .bubble-header {
@@ -886,45 +953,50 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.7rem;
+  padding-bottom: 0.72rem;
+  border-bottom: 1px solid rgba(229, 208, 204, 0.78);
+  flex-shrink: 0;
 }
 
 .bubble-label {
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  font-size: 0.69rem;
   font-weight: 700;
-  color: var(--text-soft);
+  color: #785068;
 }
 
 .bubble-header h2 {
-  margin: 0.2rem 0 0;
-  font-size: 1rem;
-  color: var(--text);
+  margin: 0.24rem 0 0;
+  font-size: 1.08rem;
+  color: #1E0812;
 }
 
 .bubble-iso {
   border-radius: 999px;
-  padding: 0.2rem 0.5rem;
+  padding: 0.3rem 0.58rem;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #6a4a28;
-  background: var(--surface-alt);
+  color: #485B38;
+  background: rgba(212, 229, 202, 0.82);
+  border: 1px solid rgba(72, 91, 56, 0.14);
 }
 
 .bubble-meta {
   margin: 0;
   font-size: 0.79rem;
-  color: var(--text-soft);
+  color: #785068;
 }
 
 .bubble-toolbar {
-  margin-top: 0.52rem;
-  margin-bottom: 0.46rem;
+  margin-top: 0.78rem;
+  margin-bottom: 0.6rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
+  flex-shrink: 0;
 }
 
 .bubble-nav {
@@ -934,14 +1006,22 @@ onBeforeUnmount(() => {
 }
 
 .bubble-nav-btn {
-  border: 1px solid var(--border);
-  background: #fbf6f0;
-  color: #6a4a28;
-  border-radius: 8px;
-  width: 30px;
-  height: 26px;
+  border: 1px solid rgba(72, 91, 56, 0.18);
+  background: rgba(212, 229, 202, 0.64);
+  color: #485B38;
+  border-radius: 10px;
+  width: 32px;
+  height: 28px;
   font-weight: 700;
   line-height: 1;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.bubble-nav-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #485B38;
+  border-color: #485B38;
+  color: #fff;
 }
 
 .bubble-nav-btn:disabled {
@@ -951,19 +1031,21 @@ onBeforeUnmount(() => {
 
 .bubble-search {
   width: 100%;
-  border: 1px solid #e0c9b0;
-  border-radius: 10px;
-  padding: 0.4rem 0.55rem;
+  border: 1px solid rgba(229, 208, 204, 0.96);
+  border-radius: 14px;
+  padding: 0.62rem 0.78rem;
   font-size: 0.8rem;
-  color: var(--text);
-  background: var(--surface);
-  margin-bottom: 0.46rem;
+  color: #1E0812;
+  background: rgba(255, 255, 255, 0.88);
+  margin-bottom: 0.6rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  flex-shrink: 0;
 }
 
 .bubble-search:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(192, 74, 8, 0.16);
+  border-color: #5B1928;
+  box-shadow: 0 0 0 4px rgba(91, 25, 40, 0.12);
 }
 
 .bubble-list {
@@ -973,7 +1055,17 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 0.35rem;
   width: 100%;
-  overflow: hidden;
+  overflow: auto;
+  align-content: start;
+  min-height: 0;
+  padding-right: 0.12rem;
+}
+
+.bubble-languages {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .bubble-list li {
@@ -981,13 +1073,21 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 0.6rem;
   align-items: center;
-  border-radius: 10px;
-  padding: 0.35rem 0.45rem;
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.56rem 0.62rem;
+  background: rgba(255, 240, 238, 0.78);
+  border: 1px solid rgba(229, 208, 204, 0.94);
   width: 100%;
   min-width: 0;
   overflow: hidden;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.bubble-list li:hover {
+  transform: translateY(-1px);
+  border-color: rgba(91, 25, 40, 0.18);
+  box-shadow: 0 10px 18px rgba(30, 8, 18, 0.08);
+  background: rgba(255, 247, 241, 0.92);
 }
 
 .bubble-item-main {
@@ -1000,8 +1100,8 @@ onBeforeUnmount(() => {
 
 .bubble-list .name {
   display: block;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 700;
+  color: #1E0812;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1017,39 +1117,40 @@ onBeforeUnmount(() => {
 }
 
 .bubble-action {
-  width: 27px;
-  height: 27px;
+  width: 29px;
+  height: 29px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #fbf6f0;
-  color: #6a4a28;
+  border: 1px solid rgba(229, 208, 204, 0.96);
+  background: rgba(255, 255, 255, 0.84);
+  color: #5B1928;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
 .bubble-action:hover {
   transform: translateY(-1px);
-  border-color: var(--primary);
-  background: var(--surface-alt);
-  color: var(--primary-strong);
+  border-color: #5B1928;
+  background: #5B1928;
+  color: #fff7f1;
+  box-shadow: 0 8px 14px rgba(91, 25, 40, 0.16);
 }
 
 .bubble-action:focus-visible {
-  outline: 2px solid rgba(192, 74, 8, 0.16);
+  outline: 2px solid rgba(91, 25, 40, 0.16);
   outline-offset: 1px;
 }
 
 .bubble-action--muted {
-  color: #6a4a28;
+  color: #485B38;
 }
 
 .bubble-empty {
   margin: 0.6rem 0 0;
   font-size: 0.82rem;
-  color: var(--text-soft);
+  color: #785068;
 }
 
 .language-info-overlay {
@@ -1227,7 +1328,7 @@ onBeforeUnmount(() => {
 
 .search-panel {
   position: relative;
-  border-radius: 12px;
+  border-radius: 999px;
   padding: 0;
   overflow: visible;
 }
@@ -1237,21 +1338,41 @@ onBeforeUnmount(() => {
   z-index: 1;
 }
 
-.search-panel :deep(input) {
-  width: 100%;
-  border: 1px solid color-mix(in srgb, var(--sand-300) 72%, #ffffff 28%);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--sand-50) 90%, #ffffff 10%);
-  color: var(--ink-800);
-  box-shadow: 0 8px 16px rgba(60, 35, 24, 0.08);
+.search-toolbar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #e0c9b0;
+  background: var(--surface);
+  backdrop-filter: blur(10px);
+  padding: 0.42rem 0.78rem;
+  box-shadow: 0 8px 22px rgba(96, 56, 24, 0.08);
 }
 
-.search-panel :deep(input:focus) {
-  border-color: color-mix(in srgb, var(--ember-500) 66%, #ffffff 34%);
+.search-panel :deep(input) {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  border: none;
   outline: none;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--ember-500) 22%, #ffffff 78%),
-    0 10px 22px rgba(79, 49, 35, 0.14);
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+  padding: 0;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-panel :deep(input::placeholder) {
+  color: var(--text-soft);
+}
+
+.search-toolbar:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(192, 74, 8, 0.16);
 }
 
 .languages-main {
@@ -1313,32 +1434,36 @@ onBeforeUnmount(() => {
 }
 
 .languages-panel {
-  border-radius: 14px;
+  border-radius: 20px;
   overflow: auto;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: 0 14px 28px rgba(96, 56, 24, 0.08);
+  border: 1px solid color-mix(in srgb, var(--border) 74%, #ffffff 26%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 240, 238, 0.92));
+  box-shadow:
+      0 22px 40px rgba(30, 8, 18, 0.16),
+      0 2px 8px rgba(30, 8, 18, 0.08);
   max-height: calc(100dvh - 10rem);
+  backdrop-filter: blur(12px);
 }
 
 .languages-icon-toggle {
-  border: 1px solid var(--border);
+  border: 1px solid rgba(91, 25, 40, 0.18);
   border-radius: 999px;
-  background: #fbf6f0;
-  color: #6a4a28;
+  background: linear-gradient(135deg, rgba(91, 25, 40, 0.96), rgba(127, 48, 66, 0.92));
+  color: #fff7f1;
   display: inline-flex;
   align-items: center;
   gap: 0.52rem;
   padding: 0.45rem 0.78rem;
   font-size: 0.84rem;
   font-weight: 700;
+  box-shadow: 0 14px 28px rgba(91, 25, 40, 0.18);
 }
 
 .panel-drag-handle {
-  border: 1px solid var(--border);
+  border: 1px solid rgba(72, 91, 56, 0.18);
   border-radius: 10px;
-  background: #fbf6f0;
-  color: #6a4a28;
+  background: linear-gradient(135deg, rgba(72, 91, 56, 0.96), rgba(93, 118, 72, 0.92));
+  color: #fffdf8;
   width: 42px;
   min-width: 42px;
   height: 36px;
@@ -1387,9 +1512,9 @@ onBeforeUnmount(() => {
 }
 
 .filter-pill {
-  border: none;
-  background: color-mix(in srgb, var(--sand-100) 88%, #ffffff 12%);
-  color: var(--ink-800);
+  border: 1px solid rgba(229, 208, 204, 0.96);
+  background: rgba(255, 255, 255, 0.82);
+  color: #1E0812;
   border-radius: 999px;
   padding: 0.36rem 0.62rem;
   display: inline-flex;
@@ -1402,14 +1527,15 @@ onBeforeUnmount(() => {
 
 .filter-pill:hover {
   transform: translateY(-1px);
-  background: color-mix(in srgb, var(--sand-50) 82%, #ffffff 18%);
-  box-shadow: 0 8px 18px rgba(60, 35, 24, 0.12);
+  background: rgba(255, 247, 241, 0.94);
+  box-shadow: 0 8px 18px rgba(30, 8, 18, 0.12);
 }
 
 .filter-pill.active {
-  background: linear-gradient(135deg, var(--clay-600), var(--ember-600));
+  border-color: rgba(91, 25, 40, 0.18);
+  background: linear-gradient(135deg, rgba(91, 25, 40, 0.96), rgba(127, 48, 66, 0.92));
   color: white;
-  box-shadow: 0 10px 20px rgba(131, 76, 35, 0.28);
+  box-shadow: 0 10px 20px rgba(91, 25, 40, 0.22);
 }
 
 .filter-pill .count {
@@ -1432,24 +1558,24 @@ onBeforeUnmount(() => {
   gap: 0.9rem;
   padding: 0.7rem 0.9rem;
   font-size: 0.9rem;
-  color: var(--ink-700);
-  border: 1px solid color-mix(in srgb, var(--sand-300) 58%, #ffffff 42%);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--sand-50) 82%, #ffffff 18%);
+  color: #785068;
+  border: 1px solid rgba(229, 208, 204, 0.96);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 240, 238, 0.88));
 }
 
 .results-count {
   font-weight: 700;
-  color: var(--ink-800);
+  color: #1E0812;
 }
 
 .list-card {
-  border-radius: 14px;
+  border-radius: 18px;
   overflow: hidden;
   max-height: 40vh;
   overflow-y: auto;
-  border: 1px solid color-mix(in srgb, var(--sand-300) 58%, #ffffff 42%);
-  background: color-mix(in srgb, var(--sand-50) 84%, #ffffff 16%);
+  border: 1px solid rgba(229, 208, 204, 0.96);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 240, 238, 0.88));
 }
 
 @media (max-width: 920px) {

@@ -41,7 +41,6 @@ const routes = [
         meta: {
             title: "Languages",
             description: "Browse and search language entries.",
-            hideFooter: true,
         },
     },
     {
@@ -61,7 +60,6 @@ const routes = [
         meta: {
             title: "Language details",
             description: "Detailed language entry with metadata, scenarios and discussion.",
-            hideFooter: true,
         },
     },
     {

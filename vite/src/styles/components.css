@@ -170,9 +170,9 @@
 }
 
 .badge--neutral {
-    background: #fbf6f0;
-    color: #6a4a28;
-    border-color: var(--border);
+    background: #f8f0ef;
+    color: #5B1928;
+    border-color: #e5d0cc;
 }
 
 .badge--info {
