@@ -2,7 +2,7 @@
 import {computed, onBeforeUnmount, onMounted, reactive, ref, watch} from "vue";
 import {geoNaturalEarth1, geoPath} from "d3-geo";
 import {feature as topojsonFeature} from "topojson-client";
-import {Search} from "lucide-vue-next";
+import {MapPin, Search} from "lucide-vue-next";
 
 import worldAtlas110m from "world-atlas/countries-110m.json";
 import worldCountries from "world-countries";
@@ -24,6 +24,7 @@ const svgRef = ref<SVGSVGElement | null>(null);
 const rafId = ref<number | null>(null);
 const interactionEndTimer = ref<number | null>(null);
 const isInteracting = ref(false);
+const isViewAnimating = ref(false);
 
 const currentView = reactive({x: 0, y: 0, w: MAP_WIDTH, h: MAP_HEIGHT});
 const targetView = reactive({x: 0, y: 0, w: MAP_WIDTH, h: MAP_HEIGHT});
@@ -101,15 +102,6 @@ const activeLanguagePinPoint = computed(() => {
     y: point[1],
     name: pin.name,
   };
-});
-
-const clusterFeatures = computed(() => {
-  return countryFeatures
-      .map((country) => ({
-        ...country,
-        count: Number(store.clusterCountByIso.value[country.isoA3] ?? 0),
-      }))
-      .filter((country) => country.count > 0);
 });
 
 const showLanguageCountryNames = computed(() => {
@@ -233,11 +225,12 @@ function scheduleInteractionEnd(delayMs = 120) {
 
 function scheduleFrame() {
   if (rafId.value != null) return;
+  isViewAnimating.value = true;
 
   rafId.value = requestAnimationFrame(function tick() {
     rafId.value = null;
 
-    const alpha = 0.22;
+    const alpha = 0.34;
 
     currentView.x += (targetView.x - currentView.x) * alpha;
     currentView.y += (targetView.y - currentView.y) * alpha;
@@ -257,6 +250,7 @@ function scheduleFrame() {
       currentView.y = targetView.y;
       currentView.w = targetView.w;
       currentView.h = targetView.h;
+      isViewAnimating.value = false;
     }
   });
 }
@@ -310,13 +304,14 @@ function centerOnCountries(isoCodes: string[]) {
   const minY = Math.min(...ys);
   const maxY = Math.max(...ys);
 
-  const pad = 80;
+  const pad = 110;
+  const minFocusWidth = 460;
   const spanX = Math.max(maxX - minX, 1);
   const spanY = Math.max(maxY - minY, 1);
 
   const widthFromX = spanX + pad * 2;
   const widthFromY = (spanY + pad * 2) * ASPECT;
-  const nextW = Math.min(Math.max(Math.max(widthFromX, widthFromY), MIN_VIEWBOX_WIDTH), MAX_VIEWBOX_WIDTH);
+  const nextW = Math.min(Math.max(Math.max(widthFromX, widthFromY), minFocusWidth), MAX_VIEWBOX_WIDTH);
   const nextH = nextW / ASPECT;
 
   const centerX = (minX + maxX) / 2;
@@ -331,12 +326,14 @@ function centerOnCountries(isoCodes: string[]) {
 }
 
 function centerOnPoint(x: number, y: number) {
-  const nextW = 320;
+  const nextW = 620;
   const nextH = nextW / ASPECT;
+  const targetRatioX = 0.4;
+  const targetRatioY = 0.47;
 
   setTargetView({
-    x: x - nextW / 2,
-    y: y - nextH / 2,
+    x: x - nextW * targetRatioX,
+    y: y - nextH * targetRatioY,
     w: nextW,
     h: nextH,
   });
@@ -491,15 +488,10 @@ function onCountryClick(isoA3: string) {
   store.activateCountryFromMap(isoA3);
 }
 
-function onClusterClick(isoA3: string) {
-  onCountryClick(isoA3);
-}
-
 function countryClass(isoA3: string) {
   return {
     "is-selected": store.activeCountryId.value === isoA3 && store.focusMode.value === "country",
     "is-highlighted": highlightedSet.value.has(isoA3),
-    "has-cluster": (store.clusterCountByIso.value[isoA3] ?? 0) > 0,
   };
 }
 
@@ -616,7 +608,7 @@ onBeforeUnmount(() => {
             :key="country.id"
             :d="country.d"
             class="country-shape"
-            :class="[countryClass(country.isoA3), { 'no-shadow': isInteracting }]"
+            :class="[countryClass(country.isoA3), { 'no-shadow': isInteracting || isViewAnimating }]"
             :data-iso-a3="country.isoA3"
             :aria-label="`${country.name} (${country.isoA3})`"
             tabindex="0"
@@ -632,30 +624,13 @@ onBeforeUnmount(() => {
           :transform="`translate(${activeLanguagePinPoint.x}, ${activeLanguagePinPoint.y})`"
           aria-label="Active language location"
       >
-        <circle class="active-language-pin__pulse" r="12"/>
-        <circle class="active-language-pin__ring" r="6.8"/>
-        <circle class="active-language-pin__core" r="4.2"/>
+        <foreignObject x="-12" y="-26" width="24" height="24" class="active-language-pin__icon-wrap">
+          <div class="active-language-pin__icon" xmlns="http://www.w3.org/1999/xhtml">
+            <MapPin :size="16" stroke-width="2.2"/>
+          </div>
+        </foreignObject>
       </g>
 
-      <g class="cluster-group">
-        <g
-            v-for="cluster in clusterFeatures"
-            :key="`cluster-${cluster.isoA3}`"
-            class="cluster-badge"
-            :transform="`translate(${cluster.cx}, ${cluster.cy})`"
-            role="button"
-            tabindex="0"
-            :aria-label="`Cluster ${cluster.isoA3} (${cluster.count})`"
-            @click.stop="onClusterClick(cluster.isoA3)"
-            @keydown.enter.prevent="onClusterClick(cluster.isoA3)"
-            @keydown.space.prevent="onClusterClick(cluster.isoA3)"
-        >
-          <circle r="11.5"/>
-          <text text-anchor="middle" dominant-baseline="central">
-            +{{ cluster.count }}
-          </text>
-        </g>
-      </g>
     </svg>
 
     <div v-if="showLanguageCountryNames" class="language-country-strip" aria-live="polite">
@@ -805,7 +780,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: block;
-  transform: perspective(1500px) rotateX(4deg);
+  transform: perspective(1500px) rotateX(2.6deg);
   transform-origin: center 58%;
   touch-action: none;
 }
@@ -816,10 +791,10 @@ onBeforeUnmount(() => {
 
 .country-shape {
   fill: #e8caa8;
-  stroke: color-mix(in srgb, #e8caa8 58%, var(--border) 42%);
-  stroke-width: 0.82;
+  stroke: rgba(91, 25, 40, 0.22);
+  stroke-width: 0.98;
   vector-effect: non-scaling-stroke;
-  filter: url(#continent-shadow);
+  filter: none;
   transition: fill 220ms ease, stroke 220ms ease;
   cursor: pointer;
   outline: none;
@@ -863,46 +838,23 @@ onBeforeUnmount(() => {
 
 
 
-.cluster-badge {
-  cursor: pointer;
-  animation: pulse-badge 2.3s ease-in-out infinite;
-}
-
 .active-language-pin {
   pointer-events: none;
 }
 
-.active-language-pin__pulse {
-  fill: rgba(91, 25, 40, 0.24);
-  transform-origin: center;
-  animation: pin-pulse 1800ms ease-out infinite;
+.active-language-pin__icon-wrap {
+  overflow: visible;
 }
 
-.active-language-pin__ring {
-  fill: #fff7f1;
-  stroke: #5B1928;
-  stroke-width: 1.2;
-}
-
-.active-language-pin__core {
-  fill: #5B1928;
-  stroke: #fff7f1;
-  stroke-width: 0.9;
-}
-
-.cluster-badge circle {
-  fill: var(--primary);
-  stroke: rgba(255, 252, 247, 0.92);
-  stroke-width: 1.3;
-  filter: drop-shadow(0 0 8px rgba(192, 74, 8, 0.22));
-}
-
-.cluster-badge text {
-  fill: var(--surface);
-  font-size: 8.8px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  pointer-events: none;
+.active-language-pin__icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #fff7f1;
+  color: #5B1928;
+  box-shadow: 0 8px 14px rgba(91, 25, 40, 0.16);
 }
 
 .language-country-strip {
@@ -940,40 +892,13 @@ onBeforeUnmount(() => {
   overflow: auto;
 }
 
-@keyframes pulse-badge {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.08);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes pin-pulse {
-  0% {
-    opacity: 0.64;
-    transform: scale(0.86);
-  }
-  75% {
-    opacity: 0;
-    transform: scale(1.55);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.65);
-  }
-}
-
 @media (max-width: 920px) {
   .world-map {
     min-height: 100vh;
   }
 
   .world-svg {
-    transform: perspective(1200px) rotateX(2.5deg);
+    transform: perspective(1200px) rotateX(1.8deg);
   }
 
   .language-country-strip {
@@ -988,7 +913,7 @@ onBeforeUnmount(() => {
   }
 
   .world-svg {
-    transform: perspective(1000px) rotateX(1.5deg);
+    transform: perspective(1000px) rotateX(1deg);
   }
 }
 </style>
