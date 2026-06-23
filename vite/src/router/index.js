@@ -38,29 +38,20 @@ const routes = [
         path: "/languages",
         name: "languages",
         component: LanguagesView,
-        meta: {
-            title: "Languages",
-            description: "Browse and search language entries.",
-        },
+        meta: { title: "Languages", description: "Browse and search language entries." },
     },
     {
         path: "/languages/map",
         name: "languages-map",
         component: LanguageWorldMapView,
-        meta: {
-            title: "Language map",
-            description: "Interactive world map with per-country language data.",
-        },
+        meta: { title: "Language map", description: "Interactive world map with per-country language data." },
     },
     {
         path: "/languages/:id",
         name: "language-detail",
         component: LanguageDetailView,
         props: true,
-        meta: {
-            title: "Language details",
-            description: "Detailed language entry with metadata, scenarios and discussion.",
-        },
+        meta: { title: "Language details", description: "Detailed language entry with metadata, scenarios and discussion." },
     },
     {
         path: "/login",
