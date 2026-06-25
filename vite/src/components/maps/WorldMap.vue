@@ -648,6 +648,10 @@ onBeforeUnmount(() => {
   height: 100%;
   min-height: 100vh;
   overflow: hidden;
+  --map-country-highlight: rgba(127, 48, 66, 0.52);
+  --map-country-highlight-hover: rgba(127, 48, 66, 0.64);
+  --map-country-highlight-stroke: rgba(91, 25, 40, 0.72);
+  --map-country-hover: rgba(91, 25, 40, 0.3);
 }
 
 .map-search-overlay {
@@ -785,6 +789,7 @@ onBeforeUnmount(() => {
   touch-action: none;
 }
 
+
 .map-group {
   transition: filter 220ms ease;
 }
@@ -813,26 +818,26 @@ onBeforeUnmount(() => {
 
 .country-shape:hover
 {
-  fill:  rgba(18, 66, 18, 0.35);
+  fill: var(--map-country-hover);
 }
 
 .country-shape.is-highlighted {
-  fill: var(--primary);
-  stroke: var(--primary-strong);
+  fill: var(--map-country-highlight);
+  stroke: var(--map-country-highlight-stroke);
   stroke-width: 0.96;
 }
 
 .country-shape.is-highlighted:hover,
 .country-shape.is-highlighted:focus-visible {
-  fill: color-mix(in srgb, var(--primary) 86%, #ffffff 14%);
-  stroke: var(--primary-strong);
+  fill: var(--map-country-highlight-hover);
+  stroke: var(--map-country-highlight-stroke);
 }
 
 
 .country-shape.is-selected,
 .country-shape.is-selected.is-highlighted {
-  fill: var(--primary);
-  stroke: var(--primary-strong);
+  fill: var(--map-country-highlight);
+  stroke: var(--map-country-highlight-stroke);
   stroke-width: 1.1;
 }
 
@@ -865,12 +870,12 @@ onBeforeUnmount(() => {
   z-index: 3;
   width: min(920px, calc(100vw - 2rem));
   border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(255, 252, 247, 0.92);
+  border: 1px solid rgba(212, 168, 174, 0.55);
+  background: rgba(245, 224, 227, 0.92);
   backdrop-filter: blur(10px);
   padding: 0.58rem 0.72rem;
   color: var(--text);
-  box-shadow: 0 10px 24px rgba(96, 56, 24, 0.08);
+  box-shadow: 0 10px 24px rgba(155, 110, 118, 0.1);
 }
 
 .strip-label {
@@ -878,7 +883,7 @@ onBeforeUnmount(() => {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-soft);
+  color: rgba(127, 48, 66, 0.72);
   font-weight: 700;
 }
 
@@ -887,7 +892,7 @@ onBeforeUnmount(() => {
   font-size: 0.88rem;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--text);
+  color: #5B1928;
   max-height: 3.2rem;
   overflow: auto;
 }

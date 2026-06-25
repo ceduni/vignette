@@ -914,10 +914,10 @@ onBeforeUnmount(() => {
 }
 
 .country-bubble-toggle {
-  border: 1px solid rgba(72, 91, 56, 0.18);
+  border: 1px solid rgba(212, 168, 174, 0.58);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(72, 91, 56, 0.96), rgba(93, 118, 72, 0.92));
-  color: #fffdf8;
+  background: rgba(245, 224, 227, 0.94);
+  color: #5B1928;
   display: inline-flex;
   align-items: center;
   gap: 0.52rem;
@@ -925,13 +925,14 @@ onBeforeUnmount(() => {
   font-size: 0.84rem;
   font-weight: 700;
   letter-spacing: 0;
-  box-shadow: 0 14px 28px rgba(72, 91, 56, 0.18);
+  box-shadow: 0 10px 22px rgba(155, 110, 118, 0.14);
   transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 
 .country-bubble-toggle:hover {
   transform: translateY(-1px);
-  box-shadow: 0 18px 32px rgba(72, 91, 56, 0.22);
+  background: rgba(240, 212, 216, 0.96);
+  box-shadow: 0 14px 26px rgba(155, 110, 118, 0.18);
 }
 
 .country-bubble-toggle .icon {
@@ -940,8 +941,8 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   display: inline-grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.16);
-  color: #f6f1e7;
+  background: rgba(255, 255, 255, 0.55);
+  color: #7f3042;
 }
 
 .country-bubble-toggle__label {
@@ -1460,10 +1461,10 @@ onBeforeUnmount(() => {
 }
 
 .panel-drag-handle {
-  border: 1px solid rgba(72, 91, 56, 0.18);
+  border: 1px solid rgba(212, 168, 174, 0.58);
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(72, 91, 56, 0.96), rgba(93, 118, 72, 0.92));
-  color: #fffdf8;
+  background: rgba(245, 224, 227, 0.94);
+  color: #5B1928;
   width: 42px;
   min-width: 42px;
   height: 36px;
@@ -1473,10 +1474,18 @@ onBeforeUnmount(() => {
   cursor: grab;
   user-select: none;
   touch-action: none;
+  box-shadow: 0 10px 22px rgba(155, 110, 118, 0.14);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.panel-drag-handle:hover {
+  background: rgba(240, 212, 216, 0.96);
+  box-shadow: 0 14px 26px rgba(155, 110, 118, 0.18);
 }
 
 .panel-drag-handle:active {
   cursor: grabbing;
+  background: rgba(235, 200, 206, 0.96);
 }
 
 .languages-icon-toggle .icon {
