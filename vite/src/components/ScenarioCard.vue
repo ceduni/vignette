@@ -23,30 +23,48 @@ const statusVariant = computed(() => {
   <article class="card scenario-card">
     <div class="scenario-card__media">
       <img
-        v-if="previewId"
-        :src="`/api/thumbnails/${previewId}/content`"
-        :alt="scenario.title ?? 'Scenario preview'"
-        class="scenario-card__image"
+          v-if="previewId"
+          :src="`/api/thumbnails/${previewId}/content`"
+          :alt="scenario.title ?? 'Scenario preview'"
+          class="scenario-card__image"
       />
       <div v-else class="scenario-card__placeholder">
         No preview image yet
       </div>
     </div>
+
     <div class="scenario-card__body">
       <div class="scenario-card__top">
         <h3 class="scenario-card__title">
           {{ scenario.title ?? "Untitled scenario" }}
         </h3>
+
         <div class="scenario-card__badges">
-          <BaseBadge variant="info">{{ scenario.languageId ?? "Unknown language" }}</BaseBadge>
-          <BaseBadge variant="neutral">{{ scenario.authorUsername ?? "Unknown author" }}</BaseBadge>
-          <BaseBadge :variant="statusVariant">{{ scenario.visibilityStatus ?? "UNKNOWN" }}</BaseBadge>
+          <BaseBadge variant="info">
+            {{ scenario.languageId ?? "Unknown language" }}
+          </BaseBadge>
+          <BaseBadge variant="neutral">
+            {{ scenario.authorUsername ?? "Unknown author" }}
+          </BaseBadge>
+          <BaseBadge :variant="statusVariant">
+            {{ scenario.visibilityStatus ?? "UNKNOWN" }}
+          </BaseBadge>
         </div>
         <div v-if="scenario.tags?.length" class="scenario-card__tags">
-          <BaseBadge v-for="tag in scenario.tags" :key="tag" variant="neutral">#{{ tag }}</BaseBadge>
+          <BaseBadge
+              v-for="tag in scenario.tags"
+              :key="tag"
+              variant="neutral"
+          >
+            #{{ tag }}
+          </BaseBadge>
         </div>
       </div>
-      <p class="scenario-card__description">{{ description }}</p>
+
+      <p class="scenario-card__description">
+        {{ description }}
+      </p>
+
       <div class="scenario-card__footer">
         <RouterLink :to="`/scenarios/${scenario.id}`" class="btn btn--primary">
           Open storyboard
@@ -55,73 +73,3 @@ const statusVariant = computed(() => {
     </div>
   </article>
 </template>
-
-<style scoped>
-.scenario-card__media {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border-radius: var(--radius) var(--radius) 0 0;
-  background: var(--surface-alt);
-  flex-shrink: 0;
-}
-
-.scenario-card__image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.scenario-card__placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.82rem;
-  color: var(--text-soft);
-}
-
-.scenario-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
-  flex: 1;
-}
-
-.scenario-card__title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.3;
-}
-
-.scenario-card__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.scenario-card__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.scenario-card__description {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-soft);
-  line-height: 1.55;
-  flex: 1;
-}
-
-.scenario-card__footer {
-  margin-top: auto;
-  padding-top: 0.5rem;
-}
-</style>

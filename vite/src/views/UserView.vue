@@ -2,9 +2,6 @@
 import {computed, onMounted, ref} from "vue";
 import {fetchMyProfile, updateMyProfile} from "../api/users";
 import {useAuth} from "../composables/useAuth";
-import {createAccreditationRequest, fetchAccreditationRequests} from "../api/community";
-import {useScenarioInteractions} from "../composables/useScenarioInteractions";
-import {useLanguageFollows} from "../composables/useLanguageFollows";
 
 const {currentUser} = useAuth();
 

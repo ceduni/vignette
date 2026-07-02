@@ -63,8 +63,27 @@
         grid-template-columns: 1fr;
     }
 
+    .home-hero {
+        grid-template-columns: 1fr;
+        min-height: unset;
+        padding-bottom: 24px;
+    }
+
+    .home-hero__left {
+        padding-right: 0;
+    }
+
+    .home-hero__right {
+        max-width: 360px;
+        margin: 0 auto;
+    }
+
+    .home-feed {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
     .hero-globe {
-        max-width: 320px;
+        max-width: 340px;
         margin: 0 auto;
     }
 }
@@ -80,6 +99,16 @@
 
     .app-header__inner {
         align-items: flex-start;
+    }
+}
+
+@media (max-width: 560px) {
+    .home-feed {
+        grid-template-columns: 1fr;
+    }
+
+    .home-title {
+        font-size: 2rem;
     }
 }
 

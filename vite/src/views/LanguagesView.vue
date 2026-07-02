@@ -486,7 +486,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="page">
+  <main class="page page--map">
     <section class="section catalog-immersive">
       <div class="map-background">
         <WorldMap/>
@@ -821,8 +821,7 @@ onBeforeUnmount(() => {
   --ink-700: #4f3123;
   --ink-800: #3c2318;
   position: relative;
-  height: 100%;
-  min-height: 0;
+  min-height: calc(100vh - 80px);
   width: 100%;
   margin-left: 0;
   transform: none;

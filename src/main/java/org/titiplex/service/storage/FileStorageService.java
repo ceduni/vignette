@@ -24,8 +24,13 @@ public class FileStorageService {
             Map.entry("image/png", ".png"),
             Map.entry("image/webp", ".webp"),
             Map.entry("image/gif", ".gif"),
+            Map.entry("image/svg+xml", ".svg"),
+            Map.entry("text/xml", ".xml"),
+            Map.entry("application/xml", ".xml"),
             Map.entry("audio/webm", ".webm"),
             Map.entry("audio/ogg", ".ogg"),
+            Map.entry("audio/mp4", ".mp4"),
+            Map.entry("audio/aac", ".aac"),
             Map.entry("audio/mpeg", ".mp3"),
             Map.entry("audio/wav", ".wav"),
             Map.entry("audio/x-wav", ".wav")

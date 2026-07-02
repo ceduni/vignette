@@ -10,7 +10,7 @@ import TagAutocompleteInput from "@/components/TagAutocompleteInput.vue";
 const router = useRouter();
 const toast = useToast();
 
-const form = ref({title: "", description: "", languageId: "", tags: []});
+const form = ref({title: "", description: "", languageId: "", tags: [], audience: "community", allowComments: true, allowTranscription: true, allowDownload: false});
 const languages = ref([]);
 const langQuery = ref("");
 const selectedLanguage = ref(null);
@@ -84,6 +84,10 @@ async function submit() {
       description: form.value.description,
       languageId: form.value.languageId,
       tags: form.value.tags,
+      audience: form.value.audience,
+      allowComments: form.value.allowComments,
+      allowTranscription: form.value.allowTranscription,
+      allowDownload: form.value.allowDownload,
     });
     toast.success("Scenario created!");
     router.push(`/scenarios/${created.id}`);
@@ -147,7 +151,7 @@ onUnmounted(() => {
           <input
               v-model="form.title"
               class="cs-input cs-input--hero"
-              placeholder="e.g. Market scene — morning greetings"
+              placeholder="e.g. Market scene, morning greetings"
               autocomplete="off"
           />
           <span v-if="form.title && titleError" class="cs-field-err">{{ titleError }}</span>
@@ -221,6 +225,65 @@ onUnmounted(() => {
               placeholder="Describe the intended scene context and elicitation goals…"
           />
           <span class="cs-char-count">{{ form.description.length }} / 500</span>
+        </div>
+
+        <div class="cs-field">
+          <label class="cs-label">
+            Audience
+            <span class="cs-opt">optional</span>
+          </label>
+          <div class="cs-audience">
+            <button
+                type="button"
+                class="cs-audience-btn"
+                :class="{ active: form.audience === 'private' }"
+                @click="form.audience = 'private'"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 2a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1V6a4 4 0 0 0-4-4Zm-2 6V6a2 2 0 1 1 4 0v2H8Z" clip-rule="evenodd"/>
+              </svg>
+              <strong>Private</strong>
+              <small>Only visible to me</small>
+            </button>
+            <button
+                type="button"
+                class="cs-audience-btn"
+                :class="{ active: form.audience === 'group' }"
+                @click="form.audience = 'group'"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+                <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z"/>
+              </svg>
+              <strong>Group</strong>
+              <small>My class or circle</small>
+            </button>
+            <button
+                type="button"
+                class="cs-audience-btn"
+                :class="{ active: form.audience === 'community' }"
+                @click="form.audience = 'community'"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-2.489-8.396a.75.75 0 1 0-1.022-1.098L5 9.996V8.5a.75.75 0 0 0-1.5 0v3a.75.75 0 0 0 .75.75h3a.75.75 0 0 0 0-1.5H6.06l1.45-1.146ZM13.5 11.5a.75.75 0 0 0 0 1.5h1.44l-1.45 1.146a.75.75 0 1 0 1.022 1.098L16 13.754V15.5a.75.75 0 0 0 1.5 0v-3a.75.75 0 0 0-.75-.75h-3Z" clip-rule="evenodd"/>
+              </svg>
+              <strong>Community</strong>
+              <small>The whole platform</small>
+            </button>
+          </div>
+          <div class="cs-toggles">
+            <label class="cs-toggle">
+              <input type="checkbox" v-model="form.allowComments"/>
+              <span>Allow comments</span>
+            </label>
+            <label class="cs-toggle">
+              <input type="checkbox" v-model="form.allowTranscription"/>
+              <span>Show transcription</span>
+            </label>
+            <label class="cs-toggle">
+              <input type="checkbox" v-model="form.allowDownload"/>
+              <span>Allow download</span>
+            </label>
+          </div>
         </div>
 
         <BaseAlert v-if="error" type="error">{{ error }}</BaseAlert>
@@ -839,6 +902,74 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
+.cs-audience {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.cs-audience-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.cs-audience-btn strong {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.cs-audience-btn small {
+  font-size: 0.65rem;
+  color: var(--text-soft);
+  line-height: 1.3;
+}
+
+.cs-audience-btn.active {
+  border-color: #485B38;
+  background: rgba(72, 91, 56, 0.08);
+  color: #485B38;
+}
+
+.cs-audience-btn.active strong {
+  color: #485B38;
+}
+
+.cs-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.cs-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.cs-toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #485B38;
+  cursor: pointer;
+}
+
 @media (max-width: 600px) {
   .cs-hero {
     padding: 24px 16px 20px;
@@ -851,6 +982,10 @@ onUnmounted(() => {
   .cs-form {
     padding: 20px 16px;
     border-radius: 16px;
+  }
+
+  .cs-audience {
+    grid-template-columns: 1fr;
   }
 }
 </style>

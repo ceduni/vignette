@@ -63,6 +63,12 @@
     flex-wrap: wrap;
 }
 
+.scenario-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
 .scenario-card__footer {
     display: flex;
     justify-content: flex-start;

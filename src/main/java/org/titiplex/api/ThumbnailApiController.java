@@ -265,6 +265,19 @@ public class ThumbnailApiController {
                 .body(media.resource());
     }
 
+    @Operation(summary = "Delete a thumbnail")
+    @DeleteMapping("/thumbnails/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @PathVariable Long id,
+            @Parameter(hidden = true) Authentication auth
+    ) {
+        Thumbnail thumbnail = thumbnailService.getThumbnailById(id);
+        Scenario scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
+        scenarioService.assertCanEditScenario(scenario, auth);
+        thumbnailService.delete(id);
+    }
+
     @Operation(
             summary = "Update thumbnail layout",
             description = """

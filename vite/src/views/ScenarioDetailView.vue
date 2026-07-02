@@ -2,7 +2,6 @@
 import {computed, nextTick, onMounted, ref, watch} from "vue";
 import {RouterLink, useRoute, useRouter} from "vue-router";
 import {fetchLanguage} from "../api/languages";
-import {apiFetch} from "../api/rest";
 import {
   deleteAudio,
   deleteThumbnail,
@@ -13,6 +12,7 @@ import {
   publishScenario,
   reorderScenarioThumbnails,
   updateAudioGloss,
+  updateScenarioMetadata,
   updateScenarioStoryboard,
   updateThumbnailLayout,
   uploadScenarioThumbnail,
@@ -22,16 +22,13 @@ import {buildApiUrl} from "../api/rest";
 import {useAuth} from "../composables/useAuth";
 import {useToast} from "../composables/useToast";
 import {useScenarioAutoplay} from "../composables/useScenarioAutoplay";
-import {useScenarioInteractions} from "../composables/useScenarioInteractions";
 import ThumbnailCard from "../components/ThumbnailCard.vue";
-import AudioPanel from "../components/AudioPanel.vue";
 import StudioRecorderPanel from "../components/StudioRecorderPanel.vue";
 import BasePageHeader from "../components/ui/BasePageHeader.vue";
 import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import BaseBadge from "../components/ui/BaseBadge.vue";
-import DiscussionThread from "../components/community/DiscussionThread.vue";
 import {
   buildPlaybackQueue,
   buildSelectedAudios,
@@ -44,72 +41,15 @@ import {
   sortByIdxThenId,
   storyboardItemStyle,
 } from "@/utils/scenarioStoryboard.js";
-import {createAccreditationRequest, fetchAccreditationRequests} from "../api/community";
-
-const requestingAccreditation = ref(false);
-const accreditationRequested = ref(false);
-const hasExistingRequest = ref(false);
-
-async function checkExistingRequest() {
-  try {
-    const requests = await fetchAccreditationRequests(
-      "SCENARIO_EDIT", "SCENARIO", props.id
-    );
-    hasExistingRequest.value = requests.some(
-      (r) => r.requesterUsername === currentUser.value?.username
-           && (r.status === "PENDING" || r.status === "APPROVED")
-    );
-  } catch {
-    // silencieux
-  }
-}
-
-const router = useRouter();
-const route = useRoute();
-
-const forking = ref(false);
-
-async function forkScenario() {
-  forking.value = true;
-  try {
-    const response = await apiFetch(`/api/scenarios/${props.id}/fork`, {
-      method: "POST",
-    });
-    toast.success("Scenario forked successfully. Redirecting to your copy...");
-    await router.push(`/scenarios/${response.id}`);
-  } catch (e) {
-    toast.error(e.message || "Failed to fork scenario.");
-  } finally {
-    forking.value = false;
-  }
-}
-
-async function requestScenarioAccreditation() {
-  requestingAccreditation.value = true;
-  try {
-    await createAccreditationRequest({
-      permissionType: "SCENARIO_EDIT",
-      scopeType: "SCENARIO",
-      targetId: String(props.id),
-      motivation: "Requesting contribution access for this scenario.",
-    });
-    accreditationRequested.value = true;
-    hasExistingRequest.value = true;
-    toast.success("Contribution request submitted.");
-  } catch (e) {
-    toast.error(e.message || "Failed to submit request.");
-  } finally {
-    requestingAccreditation.value = false;
-  }
-}
 
 const props = defineProps({
   id: {type: String, required: true},
 });
 
-const {currentUser, loadMe, isAuthenticated} = useAuth();
+const route = useRoute();
+const router = useRouter();
+const {currentUser, loadMe} = useAuth();
 const toast = useToast();
-const { isLiked, toggleLike, isBookmarked, toggleBookmark, fetchStatus } = useScenarioInteractions();
 
 const scenario = ref(null);
 const languageName = ref("");
@@ -155,6 +95,7 @@ const quickRecordingError = ref("");
 const quickRecordingUploading = ref(false);
 const quickRecordingTargetThumbId = ref(null);
 const quickRecordingVoiceId = ref(null);
+const quickRecordingCreatedDraft = ref(false);
 const selectedSpeaker = ref("A");
 const selectedVoiceId = ref(null);
 const studioRecorderEl = ref(null);
@@ -178,6 +119,11 @@ const glossSaving = ref(false);
 const glossAudioId = ref(null);
 const glossTranscriptionInput = ref(null);
 
+const studioAudioSettingsOpen = ref(false);
+const studioTitleEditing = ref(false);
+const studioTitleDraft = ref("");
+const studioTitleSaving = ref(false);
+
 let quickMediaRecorder = null;
 let quickMediaStream = null;
 let quickRecordingChunks = [];
@@ -189,6 +135,22 @@ const trimWaveBars = [
   34, 62, 48, 76, 52, 88, 44, 66, 92, 58, 38, 72,
   84, 46, 64, 96, 54, 74, 42, 68, 86, 50, 78, 60,
 ];
+
+async function saveStudioTitle() {
+  const newTitle = studioTitleDraft.value.trim();
+  studioTitleEditing.value = false;
+  if (!newTitle || newTitle === scenario.value?.title || studioSandboxMode.value) return;
+  studioTitleSaving.value = true;
+  try {
+    await updateScenarioMetadata(props.id, {title: newTitle});
+    scenario.value = {...scenario.value, title: newTitle};
+    toast.success("Title updated.");
+  } catch (e) {
+    toast.error(e.message || "Could not save title.");
+  } finally {
+    studioTitleSaving.value = false;
+  }
+}
 
 function openInfoDialog() {
   infoDialogOpen.value = true;
@@ -232,6 +194,7 @@ function setStoryboardView(view) {
 
 const selectedThumbnailPanelOpen = ref(false);
 const selectedLayoutPanelOpen = ref(false);
+const playerOpen = ref(false);
 
 function toggleSelectedThumbnailPanel() {
   selectedThumbnailPanelOpen.value = !selectedThumbnailPanelOpen.value;
@@ -278,6 +241,15 @@ const selectedAudios = computed(() => {
 const selectedVoice = computed(() => {
   if (!selectedAudios.value.length) return null;
   return selectedAudios.value.find((audio) => String(audio.id) === String(selectedVoiceId.value)) ?? selectedAudios.value[0];
+});
+
+const recordingTargetVoice = computed(() => {
+  if (!selectedThumb.value) return null;
+  return targetVoiceForThumb(selectedThumb.value);
+});
+
+const recordingTargetSpeaker = computed(() => {
+  return speakerForVoice(recordingTargetVoice.value, selectedThumb.value) || selectedSpeaker.value || nextSelectedSpeaker.value;
 });
 
 const selectedAudioMarkers = computed(() => normalizeMarkers(selectedAudios.value));
@@ -381,13 +353,13 @@ const nextSelectedSpeaker = computed(() => {
 
 const recordingTargetLabel = computed(() => {
   const scene = selectedThumb.value?.title || `Scene ${selectedSceneNumber.value || 1}`;
-  return `${scene} · Voice ${selectedSpeaker.value}`;
+  return `${scene} · Voice ${recordingTargetSpeaker.value}`;
 });
 
 const recordingStatusLabel = computed(() => {
-  if (quickRecordingThumbId.value != null) return `Voice ${selectedSpeaker.value} recording`;
-  if (selectedVoice.value?.isDraft) return `Voice ${selectedSpeaker.value} ready to record`;
-  if (selectedVoice.value) return `Voice ${selectedSpeaker.value} selected`;
+  if (quickRecordingThumbId.value != null) return `Voice ${recordingTargetSpeaker.value} recording`;
+  if (recordingTargetVoice.value?.isDraft) return `Voice ${recordingTargetSpeaker.value} ready to record`;
+  if (recordingTargetVoice.value) return `Voice ${recordingTargetSpeaker.value} ready to re-record`;
   return "Voice A ready to record";
 });
 
@@ -411,6 +383,7 @@ watch(
         selectedLayoutForm.value = {gridColumn: "", gridRow: "", gridColumnSpan: 1, gridRowSpan: 1};
         return;
       }
+
       selectedLayoutForm.value = {
         gridColumn: thumb.gridColumn ?? "",
         gridRow: thumb.gridRow ?? "",
@@ -506,7 +479,9 @@ function isMarkerActive(audio) {
 }
 
 function addUploadFiles(fileList) {
-  const incoming = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+  const incoming = Array.from(fileList).filter((f) =>
+    f.type.startsWith("image/") || f.type === "text/xml" || f.type === "application/xml"
+  );
   const entries = incoming.map((file) => ({
     file,
     previewUrl: URL.createObjectURL(file),
@@ -700,18 +675,34 @@ function applyLocalStoryboardState(nextState) {
   }
 }
 
-function selectThumb(thumb) {
+function openRecorderForSelection({scroll = false} = {}) {
+  selectedThumbnailPanelOpen.value = true;
+  if (storyboardView.value === "global") {
+    globalRecorderOpen.value = true;
+  }
+  if (scroll) {
+    scrollToRecorder();
+  }
+}
+
+function selectThumb(thumb, {openRecorder = true, scrollRecorder = false} = {}) {
+  if (!thumb?.id) return;
   selectedThumb.value = thumb;
   activeAudioId.value = null;
-  const firstVoice = audioMap.value[thumb?.id]?.[0] ?? null;
+  const firstVoice = audioMap.value[thumb.id]?.[0] ?? null;
   selectedVoiceId.value = firstVoice?.id ?? null;
   selectedSpeaker.value = firstVoice ? speakerForAudio(firstVoice, 0) : nextSpeakerForThumb(thumb);
   selectedThumbnailPanelOpen.value = true;
+  if (openRecorder) {
+    openRecorderForSelection({scroll: scrollRecorder});
+  }
 }
 
-function selectGlobalThumb(thumb) {
-  selectThumb(thumb);
-  globalRecorderOpen.value = true;
+function selectGlobalThumb(thumb, audio = null) {
+  selectThumb(thumb, {openRecorder: true});
+  if (audio) {
+    selectVoice(audio, thumb, {scrollRecorder: false});
+  }
 }
 
 function selectRelativeThumb(offset) {
@@ -893,7 +884,7 @@ function toggleSelectedQuickRecording() {
   }
 
   if (selectedThumb.value) {
-    toggleQuickRecording(selectedThumb.value);
+    toggleQuickRecording(selectedThumb.value, targetVoiceForThumb(selectedThumb.value));
   }
 }
 
@@ -910,59 +901,134 @@ function isRecordingThumb(thumb) {
   );
 }
 
-async function addVoiceForThumb(thumb) {
-  if (!thumb?.id) return;
-  selectThumb(thumb);
-  const voice = addDraftVoice(thumb);
-  selectVoice(voice, thumb);
-  scrollToRecorder();
+function recordButtonVoiceForThumb(thumb) {
+  if (!thumb?.id || String(selectedThumb.value?.id ?? "") !== String(thumb.id)) return null;
+  return targetVoiceForThumb(thumb);
 }
 
-function selectVoice(audio, thumb = selectedThumb.value) {
+function recordButtonLabelForThumb(thumb) {
+  if (!thumb?.id) return "Record voice";
+  const targetVoice = recordButtonVoiceForThumb(thumb);
+  if (targetVoice) {
+    const speaker = speakerForVoice(targetVoice, thumb);
+    return targetVoice.isDraft ? `Record selected Voice ${speaker}` : `Re-record Voice ${speaker}`;
+  }
+  if (voicesForThumb(thumb).length >= 4) return "Max voices reached";
+  return `Record voice ${nextSpeakerForThumb(thumb)}`;
+}
+
+async function addVoiceForThumb(thumb) {
+  if (!thumb?.id) return;
+  if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") {
+    toast.error("Stop the current recording first.");
+    return;
+  }
+  const selectedForCard = String(selectedThumb.value?.id ?? "") === String(thumb.id)
+      ? targetVoiceForThumb(thumb)
+      : null;
+
+  if (selectedForCard) {
+    selectVoice(selectedForCard, thumb);
+    await toggleQuickRecording(thumb, selectedForCard);
+    return;
+  }
+
+  selectThumb(thumb);
+  const voice = addDraftVoice(thumb);
+  if (!voice) return;
+  selectVoice(voice, thumb);
+  await toggleQuickRecording(thumb, voice);
+}
+
+async function recordNextVoiceForThumb(thumb) {
+  if (!thumb?.id) return;
+  if (isRecordingThumb(thumb)) {
+    stopQuickRecording();
+    return;
+  }
+  if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") {
+    toast.error("Stop the current recording first.");
+    return;
+  }
+
+  selectGlobalThumb(thumb);
+  const voice = addDraftVoice(thumb, nextSpeakerForThumb(thumb));
+  if (!voice) return;
+  selectVoice(voice, thumb);
+  await toggleQuickRecording(thumb, voice);
+}
+
+function selectVoice(audio, thumb = selectedThumb.value, {scrollRecorder = true} = {}) {
   if (!audio) return;
 
-  if (thumb && String(selectedThumb.value?.id ?? "") !== String(thumb.id)) {
-    selectedThumb.value = thumb;
+  const targetThumb = thumb ?? selectedThumb.value;
+  if (targetThumb && String(selectedThumb.value?.id ?? "") !== String(targetThumb.id)) {
+    selectedThumb.value = targetThumb;
   }
 
   selectedVoiceId.value = audio.id;
-  selectedSpeaker.value = speakerForAudio(audio, Math.max(0, (audioMap.value[thumb?.id] || []).findIndex((item) => String(item.id) === String(audio.id))));
+  selectedSpeaker.value = speakerForAudio(audio, Math.max(0, (audioMap.value[targetThumb?.id] || []).findIndex((item) => String(item.id) === String(audio.id))));
   glossTranscription.value = audio.transcription ?? "";
   glossGloss.value = audio.gloss ?? "";
   glossFreeTranslation.value = audio.freeTranslation ?? "";
-  // Only scroll to gloss if the voice actually has audio — not for drafts
-  if (!audio.isDraft) focusGloss();
-}
-
-async function startRecordingForVoice(audio, thumb = selectedThumb.value) {
-  if (!audio || !thumb) return;
-  selectVoice(audio, thumb);
-  scrollToRecorder();
-  await toggleQuickRecording(thumb);
+  openRecorderForSelection({scroll: scrollRecorder});
 }
 
 function selectSpeakerSlot(speaker, thumb = selectedThumb.value) {
   if (!thumb?.id) return;
-  const existing = (audioMap.value[thumb.id] || []).find((audio, index) =>
-      speakerForAudio(audio, index) === speaker
-  );
+  const existing = findVoiceBySpeaker(thumb, speaker);
 
   if (existing) {
-      selectVoice(existing, thumb);
+    selectVoice(existing, thumb);
     return;
   }
 
-  // No audio for this speaker yet — just pre-select it for the next recording.
-  // Don't create drafts, don't scroll to gloss.
-  selectedSpeaker.value = speaker;
+  if ((audioMap.value[thumb.id] || []).length >= 4) {
+    toast.error("This scene already has four voices.");
+    return;
+  }
+
+  const draft = addDraftVoice(thumb, speaker);
+  if (draft) {
+    selectVoice(draft, thumb);
+  }
 }
 
-function addDraftVoice(targetThumb) {
+function findVoiceBySpeaker(thumb, speaker) {
+  if (!thumb?.id || !speaker) return null;
+  return (audioMap.value[thumb.id] || []).find((audio, index) =>
+      speakerForAudio(audio, index) === speaker
+  ) ?? null;
+}
+
+function indexForSpeaker(speaker) {
+  const index = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".indexOf(String(speaker || "").toUpperCase());
+  return index >= 0 ? index : 0;
+}
+
+function nextVoiceIdxForSpeaker(thumb, speaker) {
+  const voices = audioMap.value[thumb?.id] || [];
+  const used = new Set(voices.map((audio) => Number(audio.idx)).filter(Number.isFinite));
+  const preferred = indexForSpeaker(speaker) + 1;
+  if (!used.has(preferred)) return preferred;
+  return Math.max(0, ...used) + 1;
+}
+
+function addDraftVoice(targetThumb, speaker = nextSpeakerForThumb(targetThumb)) {
   if (!targetThumb?.id) return null;
-  const assignedSpeaker = nextSpeakerForThumb(targetThumb);
+  const voices = audioMap.value[targetThumb.id] || [];
+  const assignedSpeaker = speaker || nextSpeakerForThumb(targetThumb);
+  const existing = findVoiceBySpeaker(targetThumb, assignedSpeaker);
+  if (existing) return existing;
+
+  if (voices.length >= 4) {
+    toast.error("This scene already has four voices.");
+    return null;
+  }
+
   const draft = {
     id: `draft-${targetThumb.id}-${assignedSpeaker}-${Date.now()}`,
-    idx: (audioMap.value[targetThumb.id]?.length ?? 0) + 1,
+    idx: nextVoiceIdxForSpeaker(targetThumb, assignedSpeaker),
     title: `Voice ${assignedSpeaker}`,
     speaker: assignedSpeaker,
     isDraft: true,
@@ -976,10 +1042,42 @@ function addDraftVoice(targetThumb) {
 
   audioMap.value = {
     ...audioMap.value,
-    [targetThumb.id]: [...(audioMap.value[targetThumb.id] || []), draft],
+    [targetThumb.id]: [...voices, draft],
   };
 
   return draft;
+}
+
+function ensureVoiceForRecording(thumb, requestedVoice = null, speaker = null) {
+  if (!thumb?.id) return {voice: null, created: false};
+
+  if (String(selectedThumb.value?.id ?? "") !== String(thumb.id)) {
+    selectThumb(thumb);
+  }
+
+  const voices = voicesForThumb(thumb);
+  const requested = requestedVoice
+      ? voices.find((audio) => String(audio.id) === String(requestedVoice.id))
+      : null;
+  const selected = targetVoiceForThumb(thumb);
+  const target = requested ?? selected;
+
+  if (target) {
+    selectVoice(target, thumb);
+    return {voice: target, created: false};
+  }
+
+  const targetSpeaker = speaker || selectedSpeaker.value || nextSpeakerForThumb(thumb);
+  const existing = findVoiceBySpeaker(thumb, targetSpeaker);
+  if (existing) {
+    selectVoice(existing, thumb);
+    return {voice: existing, created: false};
+  }
+
+  const draft = addDraftVoice(thumb, targetSpeaker);
+  if (draft) selectVoice(draft, thumb);
+
+  return {voice: draft, created: !!draft?.isDraft};
 }
 
 async function removeVoice(audio, thumb = selectedThumb.value) {
@@ -1082,6 +1180,44 @@ function speakerForAudio(audio, index) {
 
 function speakerClass(audio, index) {
   return String(speakerForAudio(audio, index)).toLowerCase();
+}
+
+function voicesForThumb(thumb) {
+  return thumb?.id ? (audioMap.value[thumb.id] || []) : [];
+}
+
+function voiceIndexInThumb(audio, thumb) {
+  if (!audio || !thumb?.id) return -1;
+  return voicesForThumb(thumb).findIndex((item) => String(item.id) === String(audio.id));
+}
+
+function speakerForVoice(audio, thumb) {
+  if (!audio) return "";
+  const index = voiceIndexInThumb(audio, thumb);
+  return speakerForAudio(audio, Math.max(0, index));
+}
+
+function voiceDisplayTitle(audio, thumb = selectedThumb.value) {
+  const speaker = speakerForVoice(audio, thumb) || selectedSpeaker.value || "A";
+  const title = String(audio?.title || "").trim();
+  if (/^Voice\s+[A-Z](\b|$)/i.test(title)) {
+    return title.replace(/^Voice\s+[A-Z]/i, `Voice ${speaker}`);
+  }
+  return title || `Voice ${speaker}`;
+}
+
+function selectedVoiceForThumb(thumb) {
+  if (!thumb?.id || String(selectedThumb.value?.id ?? "") !== String(thumb.id)) return null;
+  return voicesForThumb(thumb).find((audio) => String(audio.id) === String(selectedVoiceId.value ?? "")) ?? null;
+}
+
+function targetVoiceForThumb(thumb) {
+  if (!thumb?.id || String(selectedThumb.value?.id ?? "") !== String(thumb.id)) return null;
+  return selectedVoiceForThumb(thumb) ?? selectedVoice.value ?? null;
+}
+
+function isLocalAudioId(id) {
+  return String(id ?? "").startsWith("local-") || String(id ?? "").startsWith("draft-");
 }
 
 function speakerForIndex(index) {
@@ -1209,8 +1345,7 @@ function addLocalAudioClip(targetThumb, {title, previewUrl, speaker}) {
   };
 
   selectedVoiceId.value = nextAudio.id;
-  selectedSpeaker.value = nextSpeakerForThumb(targetThumb);
-  focusGloss();
+  selectedSpeaker.value = assignedSpeaker;
 }
 
 function openRecordingAudioFile() {
@@ -1223,16 +1358,93 @@ function onRecordingAudioFileChange(event) {
   event.target.value = "";
 }
 
-function importRecordingAudioFile(file) {
+async function importRecordingAudioFile(file) {
   if (!file || !selectedThumb.value) return;
+  const targetThumb = selectedThumb.value;
+  const {voice} = ensureVoiceForRecording(targetThumb, targetVoiceForThumb(targetThumb));
+  if (!voice) return;
+  const speaker = speakerForVoice(voice, targetThumb) || selectedSpeaker.value;
+  const title = voiceDisplayTitle(voice, targetThumb) || file.name.replace(/\.[^.]+$/, "") || `Voice ${speaker}`;
 
-  addLocalAudioClip(selectedThumb.value, {
-    title: file.name.replace(/\.[^.]+$/, ""),
-    previewUrl: URL.createObjectURL(file),
-    speaker: selectedSpeaker.value,
-  });
+  try {
+    if (!studioFrontendOnly) {
+      await uploadVoiceAudioFile(targetThumb, voice, file, title, file.name || "recording-upload");
+      toast.success("Audio imported.");
+      return;
+    }
 
-  toast.success("Audio imported.");
+    addLocalAudioClip(targetThumb, {
+      title,
+      previewUrl: URL.createObjectURL(file),
+      speaker,
+    });
+
+    toast.success("Audio imported.");
+  } catch (e) {
+    toast.error(e.message || "Could not import this audio.");
+  }
+}
+
+async function uploadVoiceAudioFile(targetThumb, voice, audioFile, title, fileName = "recording.webm") {
+  if (!targetThumb?.id || !audioFile) throw new Error("No voice selected.");
+
+  const thumbId = targetThumb.id;
+  const replacingExistingAudio = !!voice && !voice.isDraft && !isLocalAudioId(voice.id);
+  let deletedForReplace = false;
+  const previousAudioIds = new Set(
+      (audioMap.value[thumbId] || [])
+          .filter((audio) => !audio.isDraft)
+          .map((audio) => String(audio.id))
+  );
+
+  try {
+    if (replacingExistingAudio) {
+      await deleteAudio(voice.id);
+      deletedForReplace = true;
+      previousAudioIds.delete(String(voice.id));
+    }
+
+    const fd = new FormData();
+    fd.append("title", title || voice?.title || "");
+    if (voice?.idx) fd.append("idx", String(voice.idx));
+    if (voice?.markerX != null) fd.append("markerX", String(voice.markerX));
+    if (voice?.markerY != null) fd.append("markerY", String(voice.markerY));
+    if (voice?.markerLabel) fd.append("markerLabel", voice.markerLabel);
+    fd.append("audio", audioFile, fileName);
+
+    const response = await uploadThumbnailAudio(thumbId, fd);
+    const freshAudios = await fetchThumbnailAudios(thumbId);
+    audioMap.value = {...audioMap.value, [thumbId]: freshAudios};
+
+    const newAudio =
+        freshAudios.find((audio) => String(audio.id) === String(response?.id)) ??
+        freshAudios.find((audio) => !previousAudioIds.has(String(audio.id))) ??
+        freshAudios[freshAudios.length - 1] ??
+        null;
+
+    if (newAudio) {
+      if (String(selectedThumb.value?.id ?? "") !== String(thumbId)) {
+        selectedThumb.value = targetThumb;
+      }
+      selectedVoiceId.value = newAudio.id;
+      selectedSpeaker.value = speakerForAudio(newAudio, freshAudios.indexOf(newAudio));
+    }
+
+    return newAudio;
+  } catch (e) {
+    if (deletedForReplace) {
+      try {
+        const freshAudios = await fetchThumbnailAudios(thumbId);
+        audioMap.value = {...audioMap.value, [thumbId]: freshAudios};
+        const fallback = freshAudios[0] ?? null;
+        selectedVoiceId.value = fallback?.id ?? null;
+        selectedSpeaker.value = fallback ? speakerForAudio(fallback, 0) : nextSpeakerForThumb(targetThumb);
+      } catch {
+        // Keep the original error as the user-facing failure.
+      }
+    }
+    throw e;
+  }
 }
 
 function restartSelectedRecording() {
@@ -1245,7 +1457,7 @@ function restartSelectedRecording() {
 
   quickRecordingBlob.value = null;
   quickRecordingTitle.value = "";
-  toggleQuickRecording(selectedThumb.value);
+  toggleQuickRecording(selectedThumb.value, targetVoiceForThumb(selectedThumb.value));
 }
 
 function toggleTrimEditor() {
@@ -1376,6 +1588,7 @@ function applyTrimSelection() {
 
 function focusPlaybackItem(item) {
   const thumb = thumbnails.value.find((t) => String(t.id) === String(item.thumbnailId)) ?? null;
+
   selectedThumb.value = thumb;
   activeAudioId.value = item.audioId ?? null;
   ensureSelectedThumbnailPanelOpen();
@@ -1398,8 +1611,12 @@ const autoplay = useScenarioAutoplay(playbackQueue, {
   gapMs: 320,
   autoContinue: true,
   loopScenario: false,
-  onItemChange: (item) => { focusPlaybackItem(item); },
-  onStop: () => { activeAudioId.value = null; },
+  onItemChange: (item) => {
+    focusPlaybackItem(item);
+  },
+  onStop: () => {
+    activeAudioId.value = null;
+  },
   onEndedAll: () => {
     activeAudioId.value = null;
     toast.success("Automatic playback finished.");
@@ -1408,16 +1625,25 @@ const autoplay = useScenarioAutoplay(playbackQueue, {
 
 function toggleAutoContinue() {
   autoplay.toggleAutoContinue();
-  toast.info(autoplay.autoContinue.value ? "Auto-continue enabled." : "Auto-continue disabled.");
+  toast.info(
+      autoplay.autoContinue.value
+          ? "Auto-continue enabled."
+          : "Auto-continue disabled."
+  );
 }
 
 function toggleLoopScenario() {
   autoplay.toggleLoopScenario();
-  toast.info(autoplay.loopScenario.value ? "Loop scenario enabled." : "Loop scenario disabled.");
+  toast.info(
+      autoplay.loopScenario.value
+          ? "Loop scenario enabled."
+          : "Loop scenario disabled."
+  );
 }
 
 function findStartIndex() {
   if (!playbackQueue.value.length) return 0;
+
   if (selectedThumb.value && activeAudioId.value != null) {
     const exactIndex = playbackQueue.value.findIndex(
         (item) =>
@@ -1426,12 +1652,14 @@ function findStartIndex() {
     );
     if (exactIndex >= 0) return exactIndex;
   }
+
   if (selectedThumb.value) {
     const thumbIndex = playbackQueue.value.findIndex(
         (item) => String(item.thumbnailId) === String(selectedThumb.value.id)
     );
     if (thumbIndex >= 0) return thumbIndex;
   }
+
   return 0;
 }
 
@@ -1461,6 +1689,7 @@ async function setActiveAudio(audio) {
           String(item.thumbnailId) === String(selectedThumb.value.id) &&
           String(item.audioId) === String(audio.id)
   );
+
   if (idx >= 0) {
     ensureSelectedThumbnailPanelOpen();
     await autoplay.playFromIndex(idx);
@@ -1475,6 +1704,7 @@ async function playAudioFromMarker(audio) {
           String(item.thumbnailId) === String(selectedThumb.value?.id) &&
           String(item.audioId) === String(audio.id)
   );
+
   if (idx >= 0) {
     ensureSelectedThumbnailPanelOpen();
     await autoplay.playFromIndex(idx);
@@ -1485,8 +1715,55 @@ async function playSelectedAudioPreview() {
   await toggleSelectedAudioPlayback();
 }
 
+const playerCurrentThumb = computed(() => {
+  const item = autoplay.currentItem.value;
+  if (!item) return selectedThumb.value || sortedThumbnails.value[0] || null;
+  return sortedThumbnails.value.find(t => String(t.id) === String(item.thumbnailId)) ?? null;
+});
+
+const playerCurrentSceneNumber = computed(() => {
+  const thumb = playerCurrentThumb.value;
+  if (!thumb) return 1;
+  const idx = sortedThumbnails.value.findIndex(t => String(t.id) === String(thumb.id));
+  return idx >= 0 ? idx + 1 : 1;
+});
+
+function openPlayer() {
+  playerOpen.value = true;
+  if (!autoplay.isPlaying.value && !autoplay.isPaused.value) {
+    playAllFromContext();
+  }
+}
+
+function closePlayer() {
+  playerOpen.value = false;
+}
+
+function playerJumpToScene(thumb) {
+  const idx = playbackQueue.value.findIndex(q => String(q.thumbnailId) === String(thumb.id));
+  if (idx >= 0) autoplay.playFromIndex(idx);
+}
+
+function playerTogglePlay() {
+  if (autoplay.isPlaying.value) {
+    autoplay.pause();
+  } else if (autoplay.isPaused.value) {
+    autoplay.resume();
+  } else {
+    playAllFromContext();
+  }
+}
+
+function onPlayerKey(e) {
+  if (e.key === "Escape") { closePlayer(); return; }
+  if (e.key === " " || e.code === "Space") { e.preventDefault(); playerTogglePlay(); return; }
+  if (e.key === "ArrowRight") { e.preventDefault(); autoplay.next(); return; }
+  if (e.key === "ArrowLeft") { e.preventDefault(); autoplay.previous(); }
+}
+
 async function loadScenario() {
   scenario.value = await fetchScenario(props.id);
+
   if (scenario.value?.languageId) {
     try {
       const lang = await fetchLanguage(scenario.value.languageId);
@@ -1501,6 +1778,7 @@ async function loadScenario() {
 
 async function loadThumbs() {
   thumbnails.value = await fetchScenarioThumbnails(props.id);
+
   const map = {};
   await Promise.all(
       thumbnails.value.map(async (t) => {
@@ -1512,7 +1790,9 @@ async function loadThumbs() {
         }
       })
   );
+
   audioMap.value = map;
+
   if (!selectedThumb.value && sortedThumbnails.value.length) {
     selectedThumb.value = sortedThumbnails.value[0];
   } else if (
@@ -1521,11 +1801,20 @@ async function loadThumbs() {
   ) {
     selectedThumb.value = sortedThumbnails.value[0] || null;
   }
+
   if (
       activeAudioId.value != null &&
       !selectedAudios.value.some((audio) => String(audio.id) === String(activeAudioId.value))
   ) {
     activeAudioId.value = null;
+  }
+
+  const selectedVoices = selectedThumb.value?.id ? (audioMap.value[selectedThumb.value.id] || []) : [];
+  const selectedVoiceStillExists = selectedVoices.some((audio) => String(audio.id) === String(selectedVoiceId.value ?? ""));
+  if (!selectedVoiceStillExists) {
+    const firstVoice = selectedVoices[0] ?? null;
+    selectedVoiceId.value = firstVoice?.id ?? null;
+    selectedSpeaker.value = firstVoice ? speakerForAudio(firstVoice, 0) : nextSpeakerForThumb(selectedThumb.value);
   }
 }
 
@@ -1542,10 +1831,12 @@ async function loadAll() {
 
     await loadMe();
     await loadScenario();
+
     isOwner.value =
         !!currentUser.value &&
         currentUser.value.username === scenario.value.authorUsername;
-    await Promise.all([loadThumbs(), checkExistingRequest()]);
+
+    await loadThumbs();
     applyUnclaimedDraftAudio();
   } catch (e) {
     if (studioFrontendOnly) {
@@ -1627,6 +1918,7 @@ async function deleteCurrentScenario() {
 
 async function publishCurrentScenario() {
   if (!scenario.value || publishing.value) return;
+
   publishing.value = true;
   try {
     scenario.value = await publishScenario(props.id);
@@ -1640,6 +1932,7 @@ async function publishCurrentScenario() {
 
 async function saveStoryboardSettings() {
   if (!scenario.value || savingStoryboard.value) return;
+
   savingStoryboard.value = true;
   const layoutMode = String(storyboardForm.value.layoutMode || "PRESET").toUpperCase();
   const preset = String(storyboardForm.value.preset || "GRID_3").toUpperCase();
@@ -1675,6 +1968,7 @@ async function applyStoryboardPreset(preset) {
 
 async function saveSelectedThumbnailLayout() {
   if (!selectedThumb.value || savingLayout.value) return;
+
   savingLayout.value = true;
   try {
     const nextLayout = {
@@ -2158,6 +2452,7 @@ function closeQuickRecordingDialog() {
   quickRecordingError.value = "";
   quickRecordingTargetThumbId.value = null;
   quickRecordingVoiceId.value = null;
+  quickRecordingCreatedDraft.value = false;
 
   if (quickRecordingPreviewUrl.value) {
     URL.revokeObjectURL(quickRecordingPreviewUrl.value);
@@ -2165,45 +2460,78 @@ function closeQuickRecordingDialog() {
   }
 }
 
-async function ensureQuickRecorder() {
-  if (quickMediaRecorder && quickMediaStream) return;
-  quickMediaStream = await navigator.mediaDevices.getUserMedia({audio: true});
-  quickMediaRecorder = new MediaRecorder(quickMediaStream);
-  quickMediaRecorder.ondataavailable = (event) => {
-    if (event.data && event.data.size > 0) quickRecordingChunks.push(event.data);
-  };
-  quickMediaRecorder.onstop = () => {
-    quickRecordingBlob.value = new Blob(quickRecordingChunks, {
-      type: quickMediaRecorder.mimeType || "audio/webm",
-    });
-    quickRecordingMimeType.value = quickMediaRecorder.mimeType || "audio/webm";
-    quickRecordingChunks = [];
-    quickRecordingDialogOpen.value = true;
-    quickRecordingThumbId.value = null;
-  };
+function getSupportedMimeType() {
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+    "audio/mp4",
+  ];
+  return candidates.find(t => {
+    try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
+  }) ?? "";
 }
 
-async function startQuickRecording(thumb) {
+async function ensureMediaStream() {
+  if (quickMediaStream?.active) return;
+  quickMediaStream = await navigator.mediaDevices.getUserMedia({audio: true});
+}
+
+async function startQuickRecording(thumb, requestedVoice = null) {
   quickRecordingError.value = "";
   quickRecordingBlob.value = null;
-  if (!selectedVoice.value || String(selectedThumb.value?.id ?? "") !== String(thumb.id)) {
-    const voice = addDraftVoice(thumb);
-    selectVoice(voice, thumb);
-  }
-  quickRecordingTitle.value = `Voice ${selectedSpeaker.value}`;
+
+  const {voice, created} = ensureVoiceForRecording(thumb, requestedVoice);
+  if (!voice) return;
+
+  const speaker = speakerForVoice(voice, thumb) || selectedSpeaker.value;
+  quickRecordingCreatedDraft.value = created;
+  quickRecordingTitle.value = voiceDisplayTitle(voice, thumb) || `Voice ${speaker}`;
 
   try {
-    await ensureQuickRecorder();
+    await ensureMediaStream();
+
+    // Always create a fresh MediaRecorder each session to avoid state confusion
     quickRecordingChunks = [];
+    const mimeType = getSupportedMimeType();
+    quickMediaRecorder = mimeType
+        ? new MediaRecorder(quickMediaStream, {mimeType})
+        : new MediaRecorder(quickMediaStream);
+
+    quickMediaRecorder.ondataavailable = (event) => {
+      if (event.data?.size > 0) quickRecordingChunks.push(event.data);
+    };
+
+    quickMediaRecorder.onstop = () => {
+      const type = quickMediaRecorder.mimeType || "audio/webm";
+      quickRecordingBlob.value = new Blob(quickRecordingChunks, {type});
+      quickRecordingMimeType.value = type;
+      quickRecordingChunks = [];
+      quickRecordingDialogOpen.value = true;
+      quickRecordingThumbId.value = null;
+    };
+
     quickRecordingThumbId.value = thumb.id;
     quickRecordingTargetThumbId.value = thumb.id;
-    quickRecordingVoiceId.value = selectedVoice.value?.id ?? null;
+    quickRecordingVoiceId.value = voice.id;
     quickMediaRecorder.start();
-    toast.info(`Voice ${selectedSpeaker.value} recording started.`);
+    toast.info(`Voice ${speaker} recording started.`);
   } catch (e) {
+    if (created && voice?.isDraft) {
+      const voices = audioMap.value[thumb.id] || [];
+      audioMap.value = {
+        ...audioMap.value,
+        [thumb.id]: voices.filter((audio) => String(audio.id) !== String(voice.id)),
+      };
+      const fallback = audioMap.value[thumb.id]?.[0] ?? null;
+      selectedVoiceId.value = fallback?.id ?? null;
+      selectedSpeaker.value = fallback ? speakerForAudio(fallback, 0) : nextSpeakerForThumb(thumb);
+    }
     quickRecordingThumbId.value = null;
     quickRecordingTargetThumbId.value = null;
     quickRecordingVoiceId.value = null;
+    quickRecordingCreatedDraft.value = false;
     quickRecordingError.value = e.message || "Unable to start quick recording.";
     toast.error(quickRecordingError.value);
   }
@@ -2214,10 +2542,11 @@ function stopQuickRecording() {
     quickRecordingThumbId.value = null;
     return;
   }
+
   quickMediaRecorder.stop();
 }
 
-async function toggleQuickRecording(thumb) {
+async function toggleQuickRecording(thumb, requestedVoice = null) {
   if (String(selectedThumb.value?.id ?? "") !== String(thumb?.id ?? "")) {
     selectThumb(thumb);
   }
@@ -2229,31 +2558,39 @@ async function toggleQuickRecording(thumb) {
     stopQuickRecording();
     return;
   }
+
   if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") {
     toast.error("Another quick recording is already in progress.");
     return;
   }
-  await startQuickRecording(thumb);
+
+  await startQuickRecording(thumb, requestedVoice ?? targetVoiceForThumb(thumb));
 }
 
 async function confirmQuickRecordingUpload() {
   quickRecordingError.value = "";
+
   try {
     const targetThumb = thumbnails.value.find(
         (thumb) => String(thumb.id) === String(quickRecordingTargetThumbId.value ?? selectedThumb.value?.id ?? "")
     ) ?? selectedThumb.value;
     if (!targetThumb?.id) throw new Error("No thumbnail selected.");
     if (!quickRecordingBlob.value) throw new Error("No quick recording available.");
+
     quickRecordingUploading.value = true;
+
     const extension = quickRecordingMimeType.value.includes("ogg")
         ? "ogg"
-        : quickRecordingMimeType.value.includes("mp4")
-            ? "m4a"
+        : quickRecordingMimeType.value.includes("mp4") || quickRecordingMimeType.value.includes("aac")
+            ? "mp4"
             : "webm";
+
     const fileName = `quick-recording.${extension}`;
-    const fd = new FormData();
-    fd.append("title", quickRecordingTitle.value || "");
-    fd.append("audio", quickRecordingBlob.value, fileName);
+
+    const targetVoice = (audioMap.value[targetThumb.id] || []).find(
+        (audio) => String(audio.id) === String(quickRecordingVoiceId.value ?? "")
+    ) ?? selectedVoice.value;
+    const voiceTitle = quickRecordingTitle.value || voiceDisplayTitle(targetVoice, targetThumb) || `Voice ${selectedSpeaker.value}`;
 
     if (studioFrontendOnly) {
       if (String(selectedThumb.value?.id ?? "") !== String(targetThumb.id)) {
@@ -2262,9 +2599,9 @@ async function confirmQuickRecordingUpload() {
       selectedVoiceId.value = quickRecordingVoiceId.value ?? selectedVoiceId.value;
 
       addLocalAudioClip(targetThumb, {
-        title: quickRecordingTitle.value || `Voice ${nextSpeakerForThumb(targetThumb)}`,
+        title: voiceTitle,
         previewUrl: URL.createObjectURL(quickRecordingBlob.value),
-        speaker: selectedSpeaker.value,
+        speaker: targetVoice?.speaker || selectedSpeaker.value,
       });
 
       toast.success("Recording added.");
@@ -2272,11 +2609,10 @@ async function confirmQuickRecordingUpload() {
       return;
     }
 
-    await uploadThumbnailAudio(targetThumb.id, fd);
+    await uploadVoiceAudioFile(targetThumb, targetVoice, quickRecordingBlob.value, voiceTitle, fileName);
     toast.success("Quick recording uploaded successfully.");
     closeQuickRecordingDialog();
-    await refreshAudios();
-    focusGloss();
+
   } catch (e) {
     quickRecordingError.value = e.message || "Failed to upload quick recording.";
     toast.error(quickRecordingError.value);
@@ -2286,6 +2622,26 @@ async function confirmQuickRecordingUpload() {
 }
 
 function discardQuickRecording() {
+  const thumbId = quickRecordingTargetThumbId.value;
+  const voiceId = quickRecordingVoiceId.value;
+  const targetThumb = thumbnails.value.find((thumb) => String(thumb.id) === String(thumbId ?? "")) ?? selectedThumb.value;
+  if (thumbId && voiceId && quickRecordingCreatedDraft.value) {
+    const voices = audioMap.value[thumbId] || [];
+    const target = voices.find(a => String(a.id) === String(voiceId));
+    if (target?.isDraft) {
+      audioMap.value = {
+        ...audioMap.value,
+        [thumbId]: voices.filter(a => String(a.id) !== String(voiceId)),
+      };
+      const remaining = audioMap.value[thumbId] || [];
+      const fallback = remaining.find(a => !a.isDraft) ?? remaining[0] ?? null;
+      selectedVoiceId.value = fallback?.id ?? null;
+      selectedSpeaker.value = fallback ? speakerForAudio(fallback, Math.max(0, remaining.indexOf(fallback))) : nextSpeakerForThumb(targetThumb);
+    }
+  } else if (thumbId && voiceId) {
+    const target = (audioMap.value[thumbId] || []).find(a => String(a.id) === String(voiceId));
+    if (target && targetThumb) selectVoice(target, targetThumb);
+  }
   toast.info("Quick recording discarded.");
   closeQuickRecordingDialog();
 }
@@ -2297,21 +2653,20 @@ watch(quickRecordingBlob, (blob) => {
     URL.revokeObjectURL(quickRecordingPreviewUrl.value);
     quickRecordingPreviewUrl.value = "";
   }
-  if (blob) quickRecordingPreviewUrl.value = URL.createObjectURL(blob);
+
+  if (blob) {
+    quickRecordingPreviewUrl.value = URL.createObjectURL(blob);
+  }
 });
 
 watch(
     () => props.id,
-    async () => {
-      if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") quickMediaRecorder.stop();
+    () => {
+      if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") {
+        quickMediaRecorder.stop();
+      }
       quickRecordingThumbId.value = null;
-      scenario.value = null;
-      thumbnails.value = [];
-      audioMap.value = {};
-      selectedThumb.value = null;
-      activeAudioId.value = null;
       closeQuickRecordingDialog();
-      await loadAll();
     }
 );
 
@@ -2321,7 +2676,10 @@ onMounted(loadAll);
 <template>
   <main class="page page--studio">
     <BaseLoader v-if="loading">Loading storyboard...</BaseLoader>
-    <BaseAlert v-else-if="error" type="error">{{ error }}</BaseAlert>
+
+    <BaseAlert v-else-if="error" type="error">
+      {{ error }}
+    </BaseAlert>
 
     <template v-else-if="scenario">
                 <div
@@ -2437,9 +2795,9 @@ onMounted(loadAll);
                         <line x1="12" y1="3" x2="12" y2="15"/>
                       </svg>
                     </div>
-                    <p class="ud-dropzone__label">Drop images here</p>
-                    <p class="ud-dropzone__sub">or click to browse · multiple files supported</p>
-                    <input type="file" accept="image/*,.svg" multiple class="ud-file-input" @change="onImageChange"/>
+                    <p class="ud-dropzone__label">Drop images, SVG or XML here</p>
+                    <p class="ud-dropzone__sub">or click to browse · PNG, JPG, WebP, SVG, XML · multiple files</p>
+                    <input type="file" accept="image/*,.svg,.xml,text/xml,application/xml" multiple class="ud-file-input" @change="onImageChange"/>
                   </label>
 
                   <template v-if="uploadFiles.length">
@@ -2477,7 +2835,7 @@ onMounted(loadAll);
                         <path d="M12 5v14M5 12h14"/>
                       </svg>
                       Add more images
-                      <input type="file" accept="image/*,.svg" multiple class="ud-file-input" @change="onImageChange"/>
+                      <input type="file" accept="image/*,.svg,.xml,text/xml,application/xml" multiple class="ud-file-input" @change="onImageChange"/>
                     </label>
                   </template>
 
@@ -2621,7 +2979,7 @@ onMounted(loadAll);
                       <div class="ss-pub__status">
                         <span class="ss-status-dot" :class="isPublished ? 'ss-status-dot--pub' : 'ss-status-dot--draft'"></span>
                         <div>
-                          <strong>{{ isPublished ? "Published" : "Draft — private" }}</strong>
+                          <strong>{{ isPublished ? "Published" : "Draft (private)" }}</strong>
                           <small>{{ isPublished ? "Visible to the community" : "Only you can see this" }}</small>
                         </div>
                       </div>
@@ -2830,6 +3188,19 @@ onMounted(loadAll);
                       </svg>
                     </button>
                     <button
+                        type="button"
+                        class="vg-play-btn"
+                        :class="{ 'vg-play-btn--playing': autoplay.isPlaying.value || autoplay.isPaused.value }"
+                        :title="playbackQueue.length ? 'Open scenario player' : 'No audio clips yet — record some to enable the player'"
+                        :disabled="!playbackQueue.length"
+                        @click="openPlayer"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                      </svg>
+                      Play
+                    </button>
+                    <button
                         v-if="isOwner && !isPublished"
                         type="button"
                         class="vg-pub"
@@ -2933,7 +3304,7 @@ onMounted(loadAll);
                             :style="storyboardItemStyle(item)"
                             @select="selectGlobalThumb"
                             @play="toggleThumbPlayback"
-                            @quick-record="(thumb) => { selectGlobalThumb(thumb); toggleQuickRecording(thumb); }"
+                            @quick-record="recordNextVoiceForThumb"
                             @delete="deleteThumb"
                             @reorder="({ thumb, direction }) => reorderThumb(thumb, direction)"
                             @resize-start="beginThumbnailResize"
@@ -2966,15 +3337,12 @@ onMounted(loadAll);
                   </div>
 
                   <StudioRecorderPanel
-                      v-if="globalRecorderOpen && selectedThumb && (studioFrontendOnly || isOwner)"
+                      v-if="globalRecorderOpen && selectedThumb"
                       v-model:selected-speaker="selectedSpeaker"
                       v-model:recording-trim-open="recordingTrimOpen"
                       v-model:recording-volume="recordingVolume"
                       v-model:recording-speed="recordingSpeed"
                       v-model:recording-noise-reduction="recordingNoiseReduction"
-                      v-model:recording-comments="recordingComments"
-                      v-model:recording-transcription="recordingTranscription"
-                      v-model:recording-download="recordingDownload"
                       v-model:trim-start="trimStart"
                       v-model:trim-end="trimEnd"
                       class="studio-recorder--global"
@@ -2988,7 +3356,7 @@ onMounted(loadAll);
                       :can-record="studioFrontendOnly || isOwner"
                       :playback-queue-length="playbackQueue.length"
                       :preview-playing="selectedVoice ? isAudioPlaying(selectedVoice, selectedThumb) : autoplay.isPlaying.value"
-                      @select-voice="(voice) => selectVoice(voice, selectedThumb)"
+                      @select-voice="(voice) => selectVoice(voice, selectedThumb, { scrollRecorder: false })"
                       @select-speaker-slot="selectSpeakerSlot"
                       @toggle-record="toggleSelectedQuickRecording"
                       @stop-recording="stopQuickRecording"
@@ -3003,8 +3371,27 @@ onMounted(loadAll);
                   <div class="studio-wrap studio-wrap--fiches">
                     <main class="studio-fiches">
                       <header class="studio-fiches-head">
-                        <span>New scenario</span>
-                        <h2>{{ scenario.title || "Untitled scenario" }}</h2>
+                        <span>Vignette</span>
+                        <div class="studio-title-row">
+                          <input
+                              v-if="studioTitleEditing"
+                              class="studio-title-input"
+                              :value="studioTitleDraft"
+                              @input="studioTitleDraft = $event.target.value"
+                              @blur="saveStudioTitle"
+                              @keydown.enter.prevent="saveStudioTitle"
+                              @keydown.escape.prevent="studioTitleEditing = false"
+                              @focusin.once="$event.target.select()"
+                              autocomplete="off"
+                              autofocus
+                          />
+                          <h2 v-else @click="isOwner && (studioTitleDraft = scenario.title || '', studioTitleEditing = true)" :class="{ 'studio-title-editable': isOwner }">
+                            {{ scenario.title || "Untitled scenario" }}
+                            <svg v-if="isOwner" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" class="studio-title-pen" aria-hidden="true">
+                              <path d="M11 2l3 3-8 8-4 1 1-4 8-8Z"/>
+                            </svg>
+                          </h2>
+                        </div>
                         <div class="studio-chip-row">
                           <span v-if="languageName">{{ languageName }}</span>
                           <template v-if="scenario.tags?.length">
@@ -3022,34 +3409,32 @@ onMounted(loadAll);
                               active: selectedThumb?.id === item.id,
                               recording: String(quickRecordingThumbId ?? '') === String(item.id)
                             }"
-                            @click="selectThumb(item)"
+                            @click="selectThumb(item, { scrollRecorder: true })"
                         >
                           <div class="fiche-image">
                             <span class="fiche-num">{{ String(item._sceneNumber ?? item.idx ?? item.id).padStart(2, "0") }}</span>
                             <img :src="thumbnailContentUrl(item)" :alt="item.title || 'Scene image'"/>
-                            <button type="button" title="Delete scene" class="fiche-delete" @click.stop="deleteThumb(item)">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                   stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                                <path d="M10 11v6M14 11v6"/>
-                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                              </svg>
-                            </button>
                           </div>
 
                           <div class="fiche-body">
+                            <button type="button" class="fiche-delete" title="Delete scene" aria-label="Delete scene" @click.stop="deleteThumb(item)">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                              </svg>
+                            </button>
                             <div class="fiche-top">
                               <input
                                   class="fiche-title"
                                   :value="item.title || `Scene ${item._sceneNumber ?? item.id}`"
-                                  @focus="selectThumb(item)"
+                                  @click.stop="selectThumb(item, { scrollRecorder: false })"
+                                  @focus="selectThumb(item, { scrollRecorder: false })"
                                   @input="updateThumbTitle(item, $event)"
                               />
                               <div class="fiche-actions">
                                 <button type="button" title="Move up" @click.stop="reorderThumb(item, 'up')">↑</button>
                                 <button type="button" title="Move down" @click.stop="reorderThumb(item, 'down')">↓</button>
-                                <button type="button" title="Add scene" @click.stop="selectThumb(item); openUploadDialog()">＋</button>
                               </div>
                             </div>
 
@@ -3060,7 +3445,7 @@ onMounted(loadAll);
                                   class="fiche-voice"
                                   :class="{
                                     'fiche-voice--selected': selectedThumb?.id === item.id && String(selectedVoiceId ?? '') === String(audio.id),
-                                    'fiche-voice--draft': audio.isDraft,
+                                    'fiche-voice--draft': audio.isDraft && !(isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id)),
                                     'fiche-voice--recording': isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id)
                                   }"
                                   @click.stop="selectVoice(audio, item)"
@@ -3069,31 +3454,38 @@ onMounted(loadAll);
                                   {{ speakerForAudio(audio, index) }}
                                 </span>
                                 <span class="fiche-voice-title">
-                                  {{ audio.title || `Audio ${audio.idx ?? audio.id}` }}
-                                  <span v-if="audio.isDraft" class="fiche-gloss">to fill</span>
-                                  <span v-if="audio.gloss" class="fiche-gloss">{{ audio.gloss }}</span>
+                                  {{ voiceDisplayTitle(audio, item) }}
+                                  <span v-if="audio.isDraft && !(isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id))" class="fiche-gloss">to record</span>
+                                  <span v-else-if="audio.gloss" class="fiche-gloss">{{ audio.gloss }}</span>
                                 </span>
-                                <span class="fiche-wave" :class="{ 'fiche-wave--live': isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id) }">
+                                <!-- Wave: only when audio exists or actively recording this voice -->
+                                <span
+                                    v-if="!audio.isDraft || (isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id))"
+                                    class="fiche-wave"
+                                    :class="{ 'fiche-wave--live': isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id) }"
+                                    aria-hidden="true"
+                                >
                                   <i></i><i></i><i></i><i></i><i></i><i></i>
                                 </span>
+                                <!-- Play/stop: only for recorded voices or the voice currently being recorded -->
                                 <button
+                                    v-if="!audio.isDraft || (isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id))"
                                     type="button"
                                     class="fiche-play"
                                     :class="{ 'fiche-play--pause': isAudioPlaying(audio, item) }"
-                                    :title="isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id) ? 'Stop' : (audio.isDraft ? 'Record this voice' : (isAudioPlaying(audio, item) ? 'Pause' : 'Play'))"
-                                    :aria-label="isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id) ? 'Stop recording' : (audio.isDraft ? 'Record this voice' : (isAudioPlaying(audio, item) ? 'Pause' : 'Play voice'))"
-                                    @click.stop="isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id) ? stopQuickRecording() : (audio.isDraft ? startRecordingForVoice(audio, item) : toggleAudioPlayback(audio, item))"
+                                    :title="isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id) ? 'Stop recording' : (isAudioPlaying(audio, item) ? 'Pause' : 'Play')"
+                                    :aria-label="isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id) ? 'Stop recording' : (isAudioPlaying(audio, item) ? 'Pause playback' : 'Play voice')"
+                                    @click.stop="isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id) ? stopQuickRecording() : toggleAudioPlayback(audio, item)"
                                 >
                                   <span v-if="isRecordingThumb(item) && String(selectedVoiceId ?? '') === String(audio.id)" class="pause-icon" aria-hidden="true"></span>
                                   <span v-else-if="isAudioPlaying(audio, item)" class="pause-icon" aria-hidden="true"></span>
-                                  <span v-else-if="audio.isDraft" aria-hidden="true">＋</span>
                                   <span v-else aria-hidden="true">▶</span>
                                 </button>
                                 <button
                                     type="button"
                                     class="fiche-delete-voice"
-                                    title="Remove this voice"
-                                    aria-label="Remove this voice"
+                                    title="Remove voice"
+                                    aria-label="Remove voice"
                                     @click.stop="removeVoice(audio, item)"
                                 >
                                   ×
@@ -3112,8 +3504,8 @@ onMounted(loadAll);
                                   type="button"
                                   class="fiche-add-voice"
                                   :class="{ 'fiche-add-voice--rec': isRecordingThumb(item) }"
-                                  :disabled="!(studioFrontendOnly || isOwner)"
-                                  @click.stop="addVoiceForThumb(item)"
+                                  :disabled="!(studioFrontendOnly || isOwner) || (!isRecordingThumb(item) && !recordButtonVoiceForThumb(item) && (audioMap[item.id] || []).length >= 4)"
+                                  @click.stop="isRecordingThumb(item) ? stopQuickRecording() : addVoiceForThumb(item)"
                               >
                                 <template v-if="isRecordingThumb(item)">
                                   <span class="fiche-rec-dot"></span>
@@ -3126,11 +3518,12 @@ onMounted(loadAll);
                                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                                     <line x1="12" y1="19" x2="12" y2="22"/>
                                   </svg>
-                                  Record voice {{ nextSpeakerForThumb(item) }}
+                                  {{ recordButtonLabelForThumb(item) }}
                                 </template>
                               </button>
                             </div>
                           </div>
+
                         </article>
 
                         <button
@@ -3159,7 +3552,7 @@ onMounted(loadAll);
                               active: String(audio.id) === String(selectedVoiceId),
                               'rec-speaker--draft': audio.isDraft
                             }"
-                            @click="selectVoice(audio, selectedThumb)"
+                            @click="selectVoice(audio, selectedThumb, { scrollRecorder: false })"
                         >
                           <span>{{ speakerForAudio(audio, index) }}</span>
                           <small>{{ audio.isDraft ? 'to record' : 'recorded' }}</small>
@@ -3177,6 +3570,19 @@ onMounted(loadAll);
                         </button>
                       </div>
 
+                      <div
+                          class="rec-target-strip"
+                          :class="{ recording: quickRecordingThumbId != null, draft: recordingTargetVoice?.isDraft }"
+                      >
+                        <span class="fiche-speaker" :class="String(recordingTargetSpeaker).toLowerCase()">
+                          {{ recordingTargetSpeaker }}
+                        </span>
+                        <div>
+                          <strong>{{ quickRecordingThumbId != null ? `Recording Voice ${recordingTargetSpeaker}` : `Voice ${recordingTargetSpeaker} selected` }}</strong>
+                          <small>{{ recordingStatusLabel }}</small>
+                        </div>
+                      </div>
+
                       <div class="mic-rings rec-mic">
                         <div class="mic-ring"></div>
                         <div class="mic-ring"></div>
@@ -3186,6 +3592,8 @@ onMounted(loadAll);
                             class="mic-btn"
                             :class="{ rec: quickRecordingThumbId != null }"
                             :disabled="!(studioFrontendOnly || isOwner) || !selectedThumb"
+                            :title="quickRecordingThumbId != null ? `Stop recording Voice ${recordingTargetSpeaker}` : `Record Voice ${recordingTargetSpeaker}`"
+                            :aria-label="quickRecordingThumbId != null ? `Stop recording Voice ${recordingTargetSpeaker}` : `Record Voice ${recordingTargetSpeaker}`"
                             @click="toggleSelectedQuickRecording"
                         ></button>
                       </div>
@@ -3200,12 +3608,13 @@ onMounted(loadAll);
                             {{ speakerForAudio(selectedVoice, selectedAudios.indexOf(selectedVoice)) }}
                           </span>
                           <div>
-                            <strong>{{ selectedVoice?.title || "Selected voice" }}</strong>
+                            <strong>{{ selectedVoice ? voiceDisplayTitle(selectedVoice, selectedThumb) : "Selected voice" }}</strong>
                             <small>{{ recordingStatusLabel }}</small>
                           </div>
-                          <span class="fiche-wave">
+                          <span v-if="!selectedVoice?.isDraft" class="fiche-wave">
                             <i></i><i></i><i></i><i></i><i></i><i></i>
                           </span>
+                          <span v-else class="fiche-empty-dot"></span>
                           <button
                               type="button"
                               :disabled="selectedVoice?.isDraft"
@@ -3237,105 +3646,72 @@ onMounted(loadAll);
                           @change="onRecordingAudioFileChange"
                       />
 
-                      <div class="rec-main-actions">
-                        <button type="button" @click="openRecordingAudioFile">
-                          Import audio file
-                        </button>
-                      </div>
-
-                      <div class="rec-tool-grid">
+                      <button type="button" class="rec-collapse-toggle" @click="studioAudioSettingsOpen = !studioAudioSettingsOpen">
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" width="13" height="13">
+                          <path d="M3 5h14M3 10h14M3 15h14"/>
+                          <circle cx="7" cy="5" r="1.5" fill="currentColor" stroke="none"/>
+                          <circle cx="13" cy="10" r="1.5" fill="currentColor" stroke="none"/>
+                          <circle cx="9" cy="15" r="1.5" fill="currentColor" stroke="none"/>
+                        </svg>
+                        Advanced settings
+                        <svg class="rec-collapse-chevron" :class="{ open: studioAudioSettingsOpen }" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="11" height="11">
+                          <path d="M4 6l4 4 4-4"/>
+                        </svg>
+                      </button>
+                      <div v-if="studioAudioSettingsOpen" class="side-settings side-settings--collapse">
+                        <p class="rec-adv-section">Import audio</p>
+                        <div class="rec-main-actions rec-main-actions--split">
+                          <button type="button" class="rec-import-btn" @click="openRecordingAudioFile">
+                            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" width="13" height="13">
+                              <path d="M9 3a1 1 0 0 1 2 0v7.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 1 1 1.414-1.414L9 10.586V3Z"/>
+                              <path d="M3 14a1 1 0 0 1 2 0v1h10v-1a1 1 0 1 1 2 0v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1Z"/>
+                            </svg>
+                            Audio file
+                          </button>
+                        </div>
+                        <p class="rec-adv-section">Trim</p>
                         <button
                             type="button"
-                            :disabled="quickRecordingThumbId == null"
-                            @click="stopQuickRecording"
-                        >
-                          Stop
-                        </button>
-                        <button
-                            type="button"
+                            class="rec-import-btn rec-trim-btn"
                             :disabled="!selectedVoice || selectedVoice.isDraft"
-                            @click="playSelectedAudioPreview"
+                            @click="toggleTrimEditor"
                         >
-                          {{ selectedVoice && isAudioPlaying(selectedVoice, selectedThumb) ? "Pause" : "Replay" }}
+                          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" aria-hidden="true">
+                            <path d="M3 6h14M3 10h14M3 14h14"/>
+                            <rect x="6" y="4" width="3" height="4" rx="1" fill="currentColor" stroke="none"/>
+                            <rect x="11" y="8" width="3" height="4" rx="1" fill="currentColor" stroke="none"/>
+                          </svg>
+                          {{ recordingTrimOpen ? 'Close trim' : 'Trim audio' }}
                         </button>
-                        <button type="button" :disabled="!selectedVoice || selectedVoice.isDraft" @click="toggleTrimEditor">
-                          Couper
-                        </button>
-                        <button
-                            type="button"
-                            :disabled="!selectedVoice || !hasVoiceAudio(selectedVoice)"
-                            @click="removeVoiceAudio(selectedVoice, selectedThumb)"
-                        >
-                          Remove audio
-                        </button>
-                        <button
-                            type="button"
-                            :disabled="!(studioFrontendOnly || isOwner) || !selectedThumb"
-                            @click="restartSelectedRecording"
-                        >
-                          Recommencer
-                        </button>
-                      </div>
-
-                      <div v-if="recordingTrimOpen" class="trim-panel">
-                        <div class="trim-panel__header">
-                          <div>
-                            <div class="side-settings__title">Coupe audio</div>
-                            <small>{{ selectedVoice?.title || `Voice ${selectedSpeaker}` }}</small>
+                        <div v-if="recordingTrimOpen" class="trim-panel trim-panel--inline">
+                          <div class="trim-panel__header">
+                            <small>{{ selectedVoice ? voiceDisplayTitle(selectedVoice, selectedThumb) : `Voice ${selectedSpeaker}` }}</small>
+                            <strong>{{ trimEnd - trimStart }}%</strong>
                           </div>
-                          <strong>{{ trimEnd - trimStart }}%</strong>
-                        </div>
-
-                        <div
-                            class="trim-editor__wave"
-                            :class="{ dragging: trimDragging }"
-                            @pointerdown="setNearestTrimHandle"
-                        >
-                          <span
-                              v-for="(bar, index) in trimWaveBars"
-                              :key="index"
-                              class="trim-editor__bar"
-                              :style="{ height: `${bar}%` }"
-                          ></span>
-                          <span class="trim-editor__shade trim-editor__shade--left" :style="{ width: `${trimStart}%` }"></span>
-                          <span class="trim-editor__shade trim-editor__shade--right" :style="{ left: `${trimEnd}%` }"></span>
-                          <span
-                              class="trim-editor__selection"
-                              :style="{ left: `${trimStart}%`, width: `${trimEnd - trimStart}%` }"
-                          ></span>
-                          <button
-                              type="button"
-                              class="trim-editor__handle trim-editor__handle--start"
-                              :style="{ left: `${trimStart}%` }"
-                              aria-label="Trim start"
-                              @pointerdown.stop.prevent="beginTrimDrag('start', $event)"
+                          <div
+                              class="trim-editor__wave"
+                              :class="{ dragging: trimDragging }"
+                              @pointerdown="setNearestTrimHandle"
                           >
-                            <span></span>
-                          </button>
-                          <button
-                              type="button"
-                              class="trim-editor__handle trim-editor__handle--end"
-                              :style="{ left: `${trimEnd}%` }"
-                              aria-label="Fin de coupe"
-                              @pointerdown.stop.prevent="beginTrimDrag('end', $event)"
-                          >
-                            <span></span>
-                          </button>
+                            <span
+                                v-for="(bar, index) in trimWaveBars"
+                                :key="index"
+                                class="trim-editor__bar"
+                                :style="{ height: `${bar}%` }"
+                            ></span>
+                            <span class="trim-editor__shade trim-editor__shade--left" :style="{ width: `${trimStart}%` }"></span>
+                            <span class="trim-editor__shade trim-editor__shade--right" :style="{ left: `${trimEnd}%` }"></span>
+                            <span class="trim-editor__selection" :style="{ left: `${trimStart}%`, width: `${trimEnd - trimStart}%` }"></span>
+                            <button type="button" class="trim-editor__handle trim-editor__handle--start" :style="{ left: `${trimStart}%` }" aria-label="Trim start" @pointerdown.stop.prevent="beginTrimDrag('start', $event)"><span></span></button>
+                            <button type="button" class="trim-editor__handle trim-editor__handle--end" :style="{ left: `${trimEnd}%` }" aria-label="Trim end" @pointerdown.stop.prevent="beginTrimDrag('end', $event)"><span></span></button>
+                          </div>
+                          <div class="trim-panel__actions">
+                            <button type="button" :disabled="!selectedVoice || selectedVoice.isDraft" @click="previewTrimSelection">{{ trimPreviewPlaying ? "Stop" : "Preview" }}</button>
+                            <button type="button" @click="resetTrimSelection">Reset</button>
+                            <button type="button" class="primary" :disabled="!selectedVoice || selectedVoice.isDraft" @click="applyTrimSelection">Apply</button>
+                          </div>
                         </div>
-
-                        <div class="trim-panel__actions">
-                          <button type="button" :disabled="!selectedVoice || selectedVoice.isDraft" @click="previewTrimSelection">
-                            {{ trimPreviewPlaying ? "Stop preview" : "Preview" }}
-                          </button>
-                          <button type="button" @click="resetTrimSelection">Reset</button>
-                          <button type="button" class="primary" :disabled="!selectedVoice || selectedVoice.isDraft" @click="applyTrimSelection">
-                            Appliquer
-                          </button>
-                        </div>
-                      </div>
-
-                      <div class="side-settings">
-                        <div class="side-settings__title">Audio settings</div>
+                        <p class="rec-adv-section">Playback</p>
                         <label>
                           <span>Volume</span>
                           <input v-model="recordingVolume" type="range" min="0" max="100"/>
@@ -3361,7 +3737,7 @@ onMounted(loadAll);
                               {{ selectedSpeaker }}
                             </span>
                             <div>
-                              <strong>{{ selectedVoice.title || `Voice ${selectedSpeaker}` }}</strong>
+                              <strong>{{ voiceDisplayTitle(selectedVoice, selectedThumb) }}</strong>
                               <small>{{ selectedVoice.isDraft ? "Not yet recorded" : "Audio ready" }}</small>
                             </div>
                           </div>
@@ -3410,39 +3786,6 @@ onMounted(loadAll);
                         <p v-else class="side-gloss-empty">Select a scene to annotate the gloss.</p>
                       </div>
 
-                      <div class="side-settings">
-                        <div class="side-settings__title">Visibility</div>
-                        <label class="switch-row">
-                          <span>Comments</span>
-                          <input v-model="recordingComments" type="checkbox"/>
-                          <strong>{{ recordingComments ? "On" : "Off" }}</strong>
-                        </label>
-                        <label class="switch-row">
-                          <span>Transcription</span>
-                          <input v-model="recordingTranscription" type="checkbox"/>
-                          <strong>{{ recordingTranscription ? "On" : "Off" }}</strong>
-                        </label>
-                        <label class="switch-row">
-                          <span>Download</span>
-                          <input v-model="recordingDownload" type="checkbox"/>
-                          <strong>{{ recordingDownload ? "On" : "Off" }}</strong>
-                        </label>
-                        <button type="button" class="visibility-choice">
-                          <span></span>
-                          <strong>Private</strong>
-                          <small>Only visible to me</small>
-                        </button>
-                        <button type="button" class="visibility-choice">
-                          <span></span>
-                          <strong>Group</strong>
-                          <small>My class or circle</small>
-                        </button>
-                        <button type="button" class="visibility-choice active">
-                          <span></span>
-                          <strong>Community</strong>
-                          <small>The whole platform</small>
-                        </button>
-                      </div>
                     </aside>
                   </div>
                 </div>
@@ -3500,125 +3843,160 @@ onMounted(loadAll);
                   </div>
                 </div>
               </div>
-            <section class="card autoplay-panel">
-              <div class="autoplay-panel__header">
-                <div>
-                  <h2>Scenario player</h2>
-                  <p class="muted">Automatic playback through all audio clips in thumbnail order.</p>
-                </div>
-                <BaseBadge variant="info">
-                  {{ autoplay.currentIndex >= 0 ? `${autoplay.currentIndex + 1}/${playbackQueue.length}` : `0/${playbackQueue.length}` }}
-                </BaseBadge>
-              </div>
-              <div class="transport-card transport-card--compact">
-                <div class="transport-card__top transport-card__top--compact">
-                  <div class="transport-card__meta">
-                    <p class="transport-card__title">
-                      <template v-if="autoplay.currentItem">
-                        {{ autoplay.currentItem.audioTitle?.trim() || (autoplay.currentItem.audioId != null ? `Audio #${autoplay.currentItem.audioId}` : "Untitled audio") }}
-                      </template>
-                      <template v-else>No audio selected</template>
-                    </p>
-                    <p class="muted transport-card__subtitle">
-                      <template v-if="autoplay.currentItem">
-                        {{ autoplay.currentItem.thumbnailIdx != null ? `Thumb #${autoplay.currentItem.thumbnailIdx}` : (autoplay.currentItem.thumbnailId != null ? `Thumb #${autoplay.currentItem.thumbnailId}` : "Thumb unknown") }}
-                        <span v-if="autoplay.currentItem.audioIdx != null"> · #{{ autoplay.currentItem.audioIdx }}</span>
-                        · {{ playerStateLabel }}
-                      </template>
-                      <template v-else>Idle</template>
-                    </p>
-                  </div>
-                  <div class="transport-toggles transport-toggles--compact">
-                    <button type="button" class="btn btn--small" :class="autoplay.autoContinue ? 'btn--primary' : 'btn--ghost'" @click="toggleAutoContinue">Auto</button>
-                    <button type="button" class="btn btn--small" :class="autoplay.loopScenario ? 'btn--primary' : 'btn--ghost'" @click="toggleLoopScenario">Loop</button>
-                  </div>
-                </div>
-                <div class="transport-progress">
-                  <input type="range" min="0" max="100" step="0.1" :value="autoplay.progressPercent" @input="autoplay.seekToPercent($event.target.value)"/>
-                  <div class="transport-progress__times">
-                    <span>{{ autoplay.formatTime(autoplay.currentTime) }}</span>
-                    <span>{{ autoplay.formatTime(autoplay.duration) }}</span>
-                  </div>
-                </div>
-                <div class="transport-controls transport-controls--compact">
-                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length" @click="autoplay.previous">Prev</button>
-                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length" @click="autoplay.replayCurrent">Replay</button>
-                  <button v-if="!autoplay.isPlaying" type="button" class="btn btn--primary btn--small" :disabled="!playbackQueue.length || autoplay.isLoading" @click="autoplay.isPaused ? autoplay.resume() : playAllFromContext()">{{ autoplay.isPaused ? "Resume" : "Play" }}</button>
-                  <button v-else type="button" class="btn btn--primary btn--small" @click="autoplay.pause">Pause</button>
-                  <button type="button" class="btn btn--ghost btn--small" :disabled="!playbackQueue.length" @click="autoplay.next">Next</button>
-                  <button type="button" class="btn btn--ghost btn--small" :disabled="autoplay.currentIndex < 0" @click="autoplay.stop">Stop</button>
-                </div>
-              </div>
-            </section>
 
-            <section v-if="selectedThumb" class="card selected-thumbnail-panel collapsible-card">
-              <button type="button" class="collapsible-card__header" @click="toggleSelectedThumbnailPanel">
-                <div class="collapsible-card__title-block">
-                  <h2 class="collapsible-card__title">Selected thumbnail</h2>
-                  <p class="muted collapsible-card__summary">
-                    {{ selectedThumb.title || `Thumbnail #${selectedThumb.idx ?? selectedThumb.id}` }}
-                    · {{ selectedAudios.length }} audio clip(s)
-                    · {{ selectedAudioMarkers.length }} marker(s)
-                  </p>
-                </div>
-                <div class="collapsible-card__header-right">
-                  <BaseBadge variant="success">Selected</BaseBadge>
-                  <span class="collapsible-card__chevron" :class="{ 'is-open': selectedThumbnailPanelOpen }">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                  </span>
-                </div>
+      <!-- ============ CINEMATIC SCENARIO PLAYER ============ -->
+      <Teleport to="body">
+        <Transition name="sp">
+          <div
+              v-if="playerOpen"
+              class="sp-overlay"
+              tabindex="0"
+              @keydown="onPlayerKey"
+          >
+            <!-- Blurred background from current scene -->
+            <div class="sp-bg" aria-hidden="true">
+              <img
+                  v-if="playerCurrentThumb"
+                  :src="thumbnailContentUrl(playerCurrentThumb)"
+                  class="sp-bg__img"
+              />
+            </div>
+
+            <!-- Top bar -->
+            <div class="sp-topbar">
+              <button type="button" class="sp-close" aria-label="Close player" @click="closePlayer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
               </button>
-              <div v-if="selectedThumbnailPanelOpen" class="collapsible-card__body">
-                <div class="selected-thumbnail-panel__header">
-                  <div>
-                    <h3>{{ selectedThumb.title || `Thumbnail #${selectedThumb.idx ?? selectedThumb.id}` }}</h3>
-                    <p class="muted">Index {{ selectedThumb.idx ?? "-" }} · {{ selectedAudios.length }} audio clip(s) · {{ selectedAudioMarkers.length }} marker(s)</p>
-                  </div>
-                </div>
-                <div class="selected-thumbnail-panel__stage">
-                  <img :src="thumbnailContentUrl(selectedThumb)" :alt="selectedThumb.title || 'Selected thumbnail'" class="selected-thumbnail-panel__image"/>
-                  <button v-for="audio in selectedAudioMarkers" :key="audio.id" type="button" class="marker-dot" :class="{ 'marker-dot--active': isMarkerActive(audio) }" :style="markerStyle(audio)" :title="audio.markerLabel || audio.title || `Audio #${audio.id}`" @click="playAudioFromMarker(audio)">
-                    <span class="marker-dot__pulse"></span>
-                    <span class="marker-dot__core"></span>
-                  </button>
-                </div>
-              </div>
-            </section>
 
-            <section v-if="isOwner && selectedThumb" class="card collapsible-card">
-              <button type="button" class="collapsible-card__header" @click="toggleSelectedLayoutPanel">
-                <div class="collapsible-card__title-block">
-                  <h2 class="collapsible-card__title">Selected thumbnail layout</h2>
-                  <p class="muted collapsible-card__summary">Custom grid placement and span settings</p>
-                </div>
-                <span class="collapsible-card__chevron" :class="{ 'is-open': selectedLayoutPanelOpen }">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <div class="sp-topbar__center">
+                <span class="sp-scenario-title">{{ scenario?.title || "Scenario" }}</span>
+                <span class="sp-scene-counter" v-if="playbackQueue.length">
+                  Scene {{ playerCurrentSceneNumber }} / {{ sortedThumbnails.length }}
+                  &nbsp;·&nbsp;
+                  Track {{ autoplay.currentIndex.value >= 0 ? autoplay.currentIndex.value + 1 : 0 }} / {{ playbackQueue.length }}
                 </span>
-              </button>
-              <div v-if="selectedLayoutPanelOpen" class="collapsible-card__body">
-                <div class="storyboard-settings-grid">
-                  <label>Column<input v-model="selectedLayoutForm.gridColumn" type="number" min="1" placeholder="auto"/></label>
-                  <label>Row<input v-model="selectedLayoutForm.gridRow" type="number" min="1" placeholder="auto"/></label>
-                  <label>Column span<input v-model="selectedLayoutForm.gridColumnSpan" type="number" min="1"/></label>
-                  <label>Row span<input v-model="selectedLayoutForm.gridRowSpan" type="number" min="1"/></label>
-                </div>
-                <div class="toolbar">
-                  <button class="btn btn--primary" :disabled="savingLayout" @click="saveSelectedThumbnailLayout">{{ savingLayout ? "Saving..." : "Save thumbnail layout" }}</button>
-                </div>
-                <p class="muted">In custom mode, these values control the persisted storyboard composition for this thumbnail.</p>
               </div>
-            </section>
 
-            <AudioPanel
-                :selected-thumb="selectedThumb"
-                :audios="selectedAudios"
-                :active-audio-id="activeAudioId"
-                :active-audio-title="autoplay.currentItem?.audioTitle ?? ''"
-                :player-state="playerStateLabel"
-                :is-owner="isOwner"
-                @uploaded="refreshAudios"
-                @play-audio="setActiveAudio"
-            />
+              <div class="sp-toggles">
+                <button type="button" class="sp-toggle" :class="{ active: autoplay.autoContinue.value }" @click="toggleAutoContinue">Auto</button>
+                <button type="button" class="sp-toggle" :class="{ active: autoplay.loopScenario.value }" @click="toggleLoopScenario">Loop</button>
+              </div>
+            </div>
+
+            <!-- Main stage -->
+            <div class="sp-stage">
+              <!-- Scene image -->
+              <div class="sp-scene-wrap">
+                <div class="sp-scene">
+                  <img
+                      v-if="playerCurrentThumb"
+                      :src="thumbnailContentUrl(playerCurrentThumb)"
+                      :alt="playerCurrentThumb.title || 'Scene'"
+                      class="sp-scene__img"
+                  />
+                  <div v-else class="sp-scene__empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" opacity="0.3">
+                      <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+                    </svg>
+                    <span>No scene</span>
+                  </div>
+
+                  <!-- Info gradient overlay -->
+                  <div class="sp-scene__overlay">
+                    <span class="sp-scene__big-num">{{ String(playerCurrentSceneNumber).padStart(2, "0") }}</span>
+                    <div class="sp-scene__meta">
+                      <p class="sp-scene__name">{{ playerCurrentThumb?.title || `Scene ${playerCurrentSceneNumber}` }}</p>
+                      <p class="sp-scene__audio-name">
+                        {{ autoplay.currentItem.value?.audioTitle?.trim() || (autoplay.currentIndex.value >= 0 ? "Playing…" : "—") }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Animated waveform -->
+              <div class="sp-wave" aria-hidden="true" :class="{ 'sp-wave--on': autoplay.isPlaying.value }">
+                <span v-for="i in 28" :key="i"></span>
+              </div>
+
+              <!-- Progress -->
+              <div class="sp-progress">
+                <span class="sp-time">{{ autoplay.formatTime(autoplay.currentTime.value) }}</span>
+                <div class="sp-bar">
+                  <div class="sp-bar__track"></div>
+                  <div class="sp-bar__fill" :style="{ width: autoplay.progressPercent.value + '%' }"></div>
+                  <input
+                      type="range" min="0" max="100" step="0.1"
+                      :value="autoplay.progressPercent.value"
+                      class="sp-bar__input"
+                      @input="autoplay.seekToPercent($event.target.value)"
+                  />
+                </div>
+                <span class="sp-time">{{ autoplay.formatTime(autoplay.duration.value) }}</span>
+              </div>
+
+              <!-- Transport controls -->
+              <div class="sp-transport">
+                <button type="button" class="sp-btn" title="Previous (←)" :disabled="!playbackQueue.length" @click="autoplay.previous()">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/>
+                  </svg>
+                </button>
+
+                <button type="button" class="sp-btn sp-btn--play" :disabled="!playbackQueue.length || autoplay.isLoading.value" @click="playerTogglePlay">
+                  <svg v-if="autoplay.isLoading.value" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="22" height="22" class="sp-spin">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                  </svg>
+                  <svg v-else-if="autoplay.isPlaying.value" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                    <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                </button>
+
+                <button type="button" class="sp-btn" title="Next (→)" :disabled="!playbackQueue.length" @click="autoplay.next()">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <path d="M6 18 14.5 12 6 6v12zM16 6v12h2V6h-2z"/>
+                  </svg>
+                </button>
+
+                <button type="button" class="sp-btn sp-btn--stop" title="Stop" :disabled="autoplay.currentIndex.value < 0" @click="autoplay.stop()">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filmstrip of all scenes -->
+            <div class="sp-filmstrip">
+              <div class="sp-filmstrip__inner">
+                <button
+                    v-for="(item, i) in storyboardItems"
+                    :key="item.id"
+                    type="button"
+                    class="sp-film"
+                    :class="{ 'sp-film--active': playerCurrentThumb?.id === item.id }"
+                    :title="item.title || `Scene ${i + 1}`"
+                    @click="playerJumpToScene(item)"
+                >
+                  <div class="sp-film__frame">
+                    <img :src="thumbnailContentUrl(item)" :alt="item.title || `Scene ${i + 1}`" loading="lazy"/>
+                    <span class="sp-film__num">{{ String(item._sceneNumber ?? i + 1).padStart(2, "0") }}</span>
+                    <div class="sp-film__bar"></div>
+                  </div>
+                  <span class="sp-film__label">{{ item.title || `Scene ${i + 1}` }}</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </Transition>
+      </Teleport>
+
     </template>
   </main>
 </template>
@@ -3671,7 +4049,7 @@ onMounted(loadAll);
   width: fit-content;
 }
 .si-status--pub  { background: rgba(74,103,65,0.12);  color: #4A6741; }
-.si-status--draft { background: rgba(72,91,56,0.12); color: #8B3010; }
+.si-status--draft { background: rgba(72,91,56,0.12); color: #485B38; }
 .si-status__dot {
   width: 6px; height: 6px;
   border-radius: 999px;
@@ -4254,7 +4632,7 @@ onMounted(loadAll);
   transition: background 160ms ease, transform 120ms ease;
 }
 
-.qr-confirm:hover:not(:disabled) { background: #8B3010; transform: translateY(-1px); }
+.qr-confirm:hover:not(:disabled) { background: #344228; transform: translateY(-1px); }
 .qr-confirm:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .qr-spinner {
@@ -4460,7 +4838,7 @@ onMounted(loadAll);
   height: 42px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: #FFFCF7;
+  background: #fff;
   color: var(--text);
   display: inline-flex;
   align-items: center;
@@ -4478,39 +4856,6 @@ onMounted(loadAll);
 .icon-button svg {
   width: 18px;
   height: 18px;
-}
-
-/* Like / Bookmark buttons */
-.interaction-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0.45rem 1rem;
-  border-radius: 999px;
-  border: 1.5px solid var(--border);
-  background: #FFFCF7;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-soft);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.interaction-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(192, 74, 8, 0.06);
-}
-
-.interaction-btn--active {
-  background: rgba(192, 74, 8, 0.10);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.interaction-btn--active svg {
-  fill: var(--primary);
 }
 
 .dialog-backdrop {
@@ -5155,4 +5500,494 @@ onMounted(loadAll);
   border-radius: 999px;
   transition: width 200ms ease;
 }
+
+/* ──────────────────────────────────────────────────────────
+   PLAY BUTTON IN NAV
+────────────────────────────────────────────────────────── */
+.vg-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(72, 91, 56, 0.5);
+  background: rgba(72, 91, 56, 0.1);
+  color: #485B38;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: all 160ms ease;
+}
+.vg-play-btn:hover:not(:disabled) {
+  background: #485B38;
+  border-color: #485B38;
+  color: white;
+  box-shadow: 0 0 14px rgba(72, 91, 56, 0.3);
+}
+.vg-play-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.vg-play-btn--playing {
+  background: rgba(72, 91, 56, 0.18);
+  border-color: #485B38;
+  animation: sp-pulse-btn 2s ease-in-out infinite;
+}
+@keyframes sp-pulse-btn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(72,91,56,0); }
+  50% { box-shadow: 0 0 10px 3px rgba(72,91,56,0.2); }
+}
+
+/* ──────────────────────────────────────────────────────────
+   CINEMATIC SCENARIO PLAYER
+────────────────────────────────────────────────────────── */
+.sp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  background: #100810;
+  overflow: hidden;
+  outline: none;
+}
+
+/* Blurred background */
+.sp-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.sp-bg__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(64px) brightness(0.2) saturate(0.5);
+  transform: scale(1.15);
+  transition: opacity 600ms ease;
+}
+
+/* Top bar */
+.sp-topbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.55), transparent);
+  flex-shrink: 0;
+}
+.sp-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.75);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: background 150ms, color 150ms;
+}
+.sp-close:hover { background: rgba(255,255,255,0.16); color: #fff; }
+.sp-close svg { width: 14px; height: 14px; }
+
+.sp-topbar__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.sp-scenario-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.sp-scene-counter {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-toggles {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.sp-toggle {
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.4);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 150ms;
+}
+.sp-toggle.active {
+  background: rgba(72, 91, 56, 0.35);
+  border-color: rgba(72, 91, 56, 0.6);
+  color: #B8D4A8;
+}
+
+/* Main stage */
+.sp-stage {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 24px 12px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Scene image container */
+.sp-scene-wrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sp-scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 28px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.06);
+}
+.sp-scene__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #100810;
+}
+.sp-scene__empty {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.25);
+  font-size: 0.85rem;
+}
+.sp-scene__overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 36px 18px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%);
+  pointer-events: none;
+}
+.sp-scene__big-num {
+  font-size: 3rem;
+  font-weight: 900;
+  color: rgba(255,255,255,0.12);
+  line-height: 1;
+  letter-spacing: -0.06em;
+  flex-shrink: 0;
+}
+.sp-scene__meta { flex: 1; min-width: 0; }
+.sp-scene__name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-scene__audio-name {
+  margin: 3px 0 0;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Waveform */
+.sp-wave {
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 30px;
+  flex-shrink: 0;
+}
+.sp-wave span {
+  display: block;
+  width: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(72, 91, 56, 0.35);
+  transition: height 150ms ease, background 150ms ease;
+}
+.sp-wave--on span {
+  animation: sp-bar 0.9s ease-in-out infinite alternate;
+  background: rgba(72, 91, 56, 0.75);
+}
+.sp-wave--on span:nth-child(1)  { animation-delay: 0ms;   animation-duration: 0.85s; }
+.sp-wave--on span:nth-child(2)  { animation-delay: 40ms;  animation-duration: 0.72s; }
+.sp-wave--on span:nth-child(3)  { animation-delay: 80ms;  animation-duration: 0.95s; }
+.sp-wave--on span:nth-child(4)  { animation-delay: 20ms;  animation-duration: 0.68s; }
+.sp-wave--on span:nth-child(5)  { animation-delay: 110ms; animation-duration: 0.82s; }
+.sp-wave--on span:nth-child(6)  { animation-delay: 60ms;  animation-duration: 0.90s; }
+.sp-wave--on span:nth-child(7)  { animation-delay: 30ms;  animation-duration: 0.76s; }
+.sp-wave--on span:nth-child(8)  { animation-delay: 90ms;  animation-duration: 1.0s;  }
+.sp-wave--on span:nth-child(9)  { animation-delay: 15ms;  animation-duration: 0.65s; }
+.sp-wave--on span:nth-child(10) { animation-delay: 55ms;  animation-duration: 0.88s; }
+.sp-wave--on span:nth-child(11) { animation-delay: 75ms;  animation-duration: 0.78s; }
+.sp-wave--on span:nth-child(12) { animation-delay: 35ms;  animation-duration: 0.92s; }
+.sp-wave--on span:nth-child(13) { animation-delay: 100ms; animation-duration: 0.70s; }
+.sp-wave--on span:nth-child(14) { animation-delay: 50ms;  animation-duration: 0.86s; }
+.sp-wave--on span:nth-child(15) { animation-delay: 25ms;  animation-duration: 0.98s; }
+.sp-wave--on span:nth-child(16) { animation-delay: 70ms;  animation-duration: 0.73s; }
+.sp-wave--on span:nth-child(17) { animation-delay: 45ms;  animation-duration: 0.84s; }
+.sp-wave--on span:nth-child(18) { animation-delay: 120ms; animation-duration: 0.67s; }
+.sp-wave--on span:nth-child(19) { animation-delay: 10ms;  animation-duration: 0.94s; }
+.sp-wave--on span:nth-child(20) { animation-delay: 65ms;  animation-duration: 0.80s; }
+.sp-wave--on span:nth-child(21) { animation-delay: 85ms;  animation-duration: 0.75s; }
+.sp-wave--on span:nth-child(22) { animation-delay: 32ms;  animation-duration: 0.88s; }
+.sp-wave--on span:nth-child(23) { animation-delay: 95ms;  animation-duration: 0.71s; }
+.sp-wave--on span:nth-child(24) { animation-delay: 18ms;  animation-duration: 0.96s; }
+.sp-wave--on span:nth-child(25) { animation-delay: 58ms;  animation-duration: 0.82s; }
+.sp-wave--on span:nth-child(26) { animation-delay: 42ms;  animation-duration: 0.79s; }
+.sp-wave--on span:nth-child(27) { animation-delay: 105ms; animation-duration: 0.91s; }
+.sp-wave--on span:nth-child(28) { animation-delay: 78ms;  animation-duration: 0.69s; }
+@keyframes sp-bar {
+  from { height: 3px; opacity: 0.5; }
+  to   { height: 24px; opacity: 1; }
+}
+
+/* Progress bar */
+.sp-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+  flex-shrink: 0;
+}
+.sp-time {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.38);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+.sp-bar {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+}
+.sp-bar__track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.1);
+}
+.sp-bar__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(to right, #344228, #485B38);
+  transition: width 80ms linear;
+  pointer-events: none;
+}
+.sp-bar__input {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10px;
+  width: 100%;
+  height: calc(100% + 20px);
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* Transport controls */
+.sp-transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.sp-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  transition: all 150ms;
+}
+.sp-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.22);
+  color: #fff;
+}
+.sp-btn:disabled { opacity: 0.25; cursor: default; }
+.sp-btn--play {
+  width: 60px;
+  height: 60px;
+  background: #485B38;
+  border-color: #485B38;
+  color: #fff;
+  box-shadow: 0 0 24px rgba(72, 91, 56, 0.45);
+}
+.sp-btn--play:hover:not(:disabled) {
+  background: #566b44;
+  border-color: #566b44;
+  box-shadow: 0 0 32px rgba(72, 91, 56, 0.65);
+  transform: scale(1.04);
+}
+.sp-btn--stop {
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.4);
+}
+.sp-spin {
+  animation: sp-spin 0.9s linear infinite;
+}
+@keyframes sp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Filmstrip */
+.sp-filmstrip {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  padding: 8px 20px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+}
+.sp-filmstrip__inner {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.sp-filmstrip__inner::-webkit-scrollbar { height: 3px; }
+.sp-filmstrip__inner::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+.sp-film {
+  flex-shrink: 0;
+  width: 76px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.sp-film__frame {
+  position: relative;
+  width: 76px;
+  height: 52px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+.sp-film--active .sp-film__frame {
+  border-color: #485B38;
+  box-shadow: 0 0 12px rgba(72, 91, 56, 0.5);
+}
+.sp-film:not(.sp-film--active):hover .sp-film__frame {
+  border-color: rgba(255,255,255,0.28);
+}
+.sp-film__frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sp-film__num {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  letter-spacing: 0.02em;
+}
+.sp-film__bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #485B38;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 160ms;
+}
+.sp-film--active .sp-film__bar {
+  transform: scaleX(1);
+}
+.sp-film__label {
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 76px;
+  text-align: center;
+  transition: color 160ms;
+}
+.sp-film--active .sp-film__label { color: rgba(255,255,255,0.75); }
+.sp-film:not(.sp-film--active):hover .sp-film__label { color: rgba(255,255,255,0.55); }
+
+/* Player enter/leave transition */
+.sp-enter-active { transition: opacity 280ms ease, transform 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+.sp-leave-active { transition: opacity 200ms ease, transform 200ms ease; }
+.sp-enter-from { opacity: 0; transform: scale(1.04); }
+.sp-leave-to   { opacity: 0; transform: scale(0.97); }
 </style>

@@ -180,7 +180,7 @@ onMounted(loadDrafts);
 
         <div v-else class="er-empty">
           <span class="er-empty__dot"></span>
-          <p>Hit <strong>REC</strong> to capture a voice note — no scenario needed.</p>
+          <p>Hit <strong>REC</strong> to capture a voice note, no scenario needed.</p>
         </div>
 
       </section>
