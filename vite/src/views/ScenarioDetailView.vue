@@ -1835,8 +1835,7 @@ async function loadAll() {
     isOwner.value =
         !!currentUser.value &&
         currentUser.value.username === scenario.value.authorUsername;
-
-    await loadThumbs();
+    await Promise.all([loadThumbs(), checkExistingRequest()]);
     applyUnclaimedDraftAudio();
   } catch (e) {
     if (studioFrontendOnly) {
@@ -2662,9 +2661,7 @@ watch(quickRecordingBlob, (blob) => {
 watch(
     () => props.id,
     () => {
-      if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") {
-        quickMediaRecorder.stop();
-      }
+      if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") quickMediaRecorder.stop();
       quickRecordingThumbId.value = null;
       closeQuickRecordingDialog();
     }

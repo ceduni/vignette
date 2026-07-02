@@ -1,19 +1,20 @@
 <script setup>
 import {computed, ref, watch} from "vue";
 import {RouterLink} from "vue-router";
-import worldCountries from "world-countries";
-import {ArrowLeft, ArrowUpRight, BookOpenText, Globe2, MapPin, MapPinned, PencilLine} from "lucide-vue-next";
 import {fetchLanguage, fetchLanguageScenarios, fetchMyLanguagePermissions, updateLanguage} from "../api/languages";
 import {fetchDiscussionMessages} from "../api/community";
 import {fetchScenarioThumbnails} from "../api/scenarios";
 import {buildApiUrl} from "../api/rest";
 import {useAuth} from "../composables/useAuth";
-import {useLanguageFollows} from "../composables/useLanguageFollows";
-import {useScenarioReader} from "../composables/useScenarioReader";
 import {useToast} from "../composables/useToast";
-import LanguagePresenceMap from "../components/maps/LanguagePresenceMap.vue";
+import {useLanguageFollows} from "../composables/useLanguageFollows";
+import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
+import {useScenarioReader} from "../composables/useScenarioReader";
 import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
+import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
+import BaseBadge from "../components/ui/BaseBadge.vue";
+import DiscussionThread from "../components/community/DiscussionThread.vue";
 
 const props = defineProps({
   id: {type: String, required: true},
@@ -197,17 +198,14 @@ const editForm = ref({
 });
 const isEditing = ref(false);
 
-const iso2ToIso3 = new Map(
-    worldCountries
-        .filter((country) => country?.cca2 && country?.cca3)
-        .map((country) => [String(country.cca2).toUpperCase(), String(country.cca3).toUpperCase()])
-);
-
-const iso3ToCountryName = new Map(
-    worldCountries
-        .filter((country) => country?.cca3)
-        .map((country) => [String(country.cca3).toUpperCase(), country?.name?.common || String(country.cca3).toUpperCase()])
-);
+function levelVariant(level) {
+  if (!level) return "neutral";
+  const l = String(level).toLowerCase();
+  if (l.includes("family")) return "info";
+  if (l.includes("language")) return "success";
+  if (l.includes("dialect")) return "warning";
+  return "neutral";
+}
 
 function hydrateForm(lang) {
   editForm.value = {
@@ -221,48 +219,6 @@ function hydrateForm(lang) {
 }
 
 const canEditLanguage = computed(() => !!permissions.value?.canEdit);
-
-function parseCountryIds(raw) {
-  if (!raw) return [];
-
-  const tokens = String(raw)
-      .split(/[\s,;|/]+/)
-      .map((token) => token.trim().toUpperCase())
-      .filter(Boolean);
-
-  const normalized = tokens
-      .map((token) => {
-        if (token.length === 3) return token;
-        if (token.length === 2 && iso2ToIso3.has(token)) return iso2ToIso3.get(token);
-        return null;
-      })
-      .filter((token) => !!token);
-
-  return Array.from(new Set(normalized));
-}
-
-function normalizeLevel(level) {
-  const normalized = String(level ?? "").trim().toLowerCase();
-  if (normalized.includes("dialect")) return "dialect";
-  if (normalized.includes("family")) return "family";
-  return "language";
-}
-
-const heroDescription = computed(() => {
-  const desc = String(language.value?.description ?? "").trim();
-  const markupDesc = String(language.value?.markupDescription ?? "").trim();
-  return desc || markupDesc || "Discover this language through geography, context, and community scenarios.";
-});
-
-const normalizedLevel = computed(() => normalizeLevel(language.value?.level));
-
-const spokenCountries = computed(() => {
-  const codes = parseCountryIds(language.value?.countryIds ?? "");
-  return codes.map((isoA3) => ({
-    isoA3,
-    name: iso3ToCountryName.get(isoA3) || isoA3,
-  }));
-});
 
 async function load(id) {
   loading.value = true;
@@ -281,23 +237,13 @@ async function load(id) {
     scenarios.value = results[1];
     permissions.value = isAuthenticated.value ? results[2] : {canEdit: false};
     hydrateForm(language.value);
-
-    try {
-      messages.value = await fetchDiscussionMessages("LANGUAGE", id);
-    } catch {
-      messages.value = [];
-    }
-
-    try {
-      await loadCarouselThumbnails(
-        [...scenarios.value]
-          .filter((s) => s.visibilityStatus === "PUBLISHED")
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 5)
-      );
-    } catch {
-      scenarioThumbnailUrls.value = {};
-    }
+    messages.value = await fetchDiscussionMessages("LANGUAGE", id);
+    await loadCarouselThumbnails(
+      [...scenarios.value]
+        .filter((s) => s.visibilityStatus === "PUBLISHED")
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5)
+    );
   } catch (e) {
     error.value = e.message || "Failed to load language details.";
   } finally {
@@ -353,875 +299,790 @@ watch(
 </script>
 
 <template>
-  <main class="page language-detail-page">
+  <main class="page lang-page">
     <BaseLoader v-if="loading">Loading language details...</BaseLoader>
     <BaseAlert v-else-if="error" type="error">{{ error }}</BaseAlert>
 
     <template v-else-if="language">
-      <section class="section language-detail-shell">
-        <article class="hero-card">
-          <div class="hero-actions">
-            <RouterLink to="/languages" class="back-link" aria-label="Back to languages catalog">
-              <ArrowLeft :size="16"/>
-              <span>Back to catalog</span>
-            </RouterLink>
+      <div class="lang-content">
 
-            <button
-                v-if="canEditLanguage && !isEditing"
-                type="button"
-                class="edit-btn"
-                aria-label="Edit language"
-                @click="isEditing = true"
-            >
-              <PencilLine :size="15"/>
-              <span>Edit language</span>
-            </button>
+      <!-- Badge démo -->
+      <div v-if="isDemoMode" class="demo-banner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        Preview mode — showing sample data to illustrate community features
+      </div>
+
+      <!-- Hero -->
+      <div class="lang-hero">
+        <div class="lang-hero__left">
+          <div class="lang-hero__icon">
+            {{ (language.name ?? "?").slice(0, 2).toUpperCase() }}
+          </div>
+          <div class="lang-hero__info">
+            <div class="lang-hero__badges">
+              <BaseBadge :variant="levelVariant(language.level)">{{ language.level ?? "Language" }}</BaseBadge>
+              <BaseBadge v-if="canEditLanguage" variant="success">Can edit</BaseBadge>
+            </div>
+            <h1 class="lang-hero__title">{{ language.name ?? "Language" }}</h1>
+            <p class="lang-hero__meta">
+              <span v-if="language.familyName">{{ language.familyName }}</span>
+              <span v-if="language.familyName && language.iso639P3code"> · </span>
+              <span v-if="language.iso639P3code">ISO: <code>{{ language.iso639P3code }}</code></span>
+              <span v-if="language.countryIds"> · {{ language.countryIds }}</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="lang-hero__right">
+          <div class="lang-hero__stats">
+            <div class="lang-stat">
+              <span class="lang-stat__value">{{ activeContributors.length }}</span>
+              <span class="lang-stat__label">Members</span>
+            </div>
+            <div class="lang-stat">
+              <span class="lang-stat__value">{{ rootMessages.length }}</span>
+              <span class="lang-stat__label">Discussions</span>
+            </div>
+            <div class="lang-stat">
+              <span class="lang-stat__value">{{ effectiveScenarios.length }}</span>
+              <span class="lang-stat__label">Storyboards</span>
+            </div>
           </div>
 
-          <div class="hero-main">
-            <div class="hero-copy">
-              <p class="hero-kicker">Language profile</p>
-              <h1>{{ language.name ?? "Language" }}</h1>
-              <p class="hero-description">{{ heroDescription }}</p>
+          <button v-if="isAuthenticated" type="button" class="follow-btn" :class="{ 'follow-btn--active': isFollowing }" @click="toggleFollow">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              <circle v-if="isFollowing" cx="19" cy="5" r="3" fill="currentColor" stroke="none"/>
+            </svg>
+            {{ isFollowing ? "Following" : "Follow" }}
+          </button>
+        </div>
+      </div>
 
-              <div class="hero-stats">
-                <div class="hero-stat">
-                  <span>{{ spokenCountries.length }}</span>
-                  <small>Countries</small>
-                </div>
+      <!-- Onglets -->
+      <nav class="lang-tabs">
+        <button class="lang-tab" :class="{ 'lang-tab--active': activeTab === 'overview' }" @click="activeTab = 'overview'">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          Overview
+        </button>
+        <button class="lang-tab" :class="{ 'lang-tab--active': activeTab === 'discussion' }" @click="activeTab = 'discussion'">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Discussion
+          <span class="lang-tab__count">{{ rootMessages.length }}</span>
+        </button>
+        <button class="lang-tab" :class="{ 'lang-tab--active': activeTab === 'storyboards' }" @click="activeTab = 'storyboards'">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Storyboards
+          <span class="lang-tab__count">{{ effectiveScenarios.length }}</span>
+        </button>
+      </nav>
 
-                <div class="hero-stat">
-                  <span>{{ scenarios.length }}</span>
-                  <small>Scenarios</small>
-                </div>
+      <!-- Contenu -->
+      <div class="lang-body">
 
-                <div class="hero-stat">
-                  <span>{{ language.level ?? "N/A" }}</span>
-                  <small>Level</small>
-                </div>
-              </div>
+        <!-- Overview -->
+        <div v-if="activeTab === 'overview'" class="lang-overview">
+
+          <!-- Métadonnées -->
+          <div class="lang-meta-grid">
+            <div class="lang-meta-card">
+              <span class="lang-meta-card__label">Family</span>
+              <RouterLink v-if="language.familyId" :to="`/languages/${language.familyId}`" class="lang-meta-card__value lang-meta-card__value--link">
+                {{ language.familyName ?? language.familyId }}
+              </RouterLink>
+              <span v-else class="lang-meta-card__value">—</span>
             </div>
-
-            <aside class="hero-profile-card">
-              <p class="profile-kicker">Language identity</p>
-              <span class="level-pill" :class="`level-pill--${normalizedLevel}`">
-                {{ language.level ?? "Language" }}
-              </span>
-
-              <div class="profile-row">
-                <span>Family</span>
-                <RouterLink v-if="language.familyId" :to="`/languages/${language.familyId}`">
-                  {{ language.familyName }}
-                </RouterLink>
-                <strong v-else>Not specified</strong>
-              </div>
-
-              <div class="profile-row">
-                <span>Parent</span>
-                <RouterLink v-if="language.parentId" :to="`/languages/${language.parentId}`">
-                  {{ language.parentName }}
-                </RouterLink>
-                <strong v-else>Not specified</strong>
-              </div>
-
-              <div class="profile-row">
-                <span>Countries</span>
-                <strong>{{ spokenCountries.length }}</strong>
-              </div>
-
-              <div class="profile-row">
-                <span>Scenarios</span>
-                <strong>{{ scenarios.length }}</strong>
-              </div>
-            </aside>
+            <div class="lang-meta-card">
+              <span class="lang-meta-card__label">Parent</span>
+              <RouterLink v-if="language.parentId" :to="`/languages/${language.parentId}`" class="lang-meta-card__value lang-meta-card__value--link">
+                {{ language.parentName ?? language.parentId }}
+              </RouterLink>
+              <span v-else class="lang-meta-card__value">—</span>
+            </div>
+            <div class="lang-meta-card">
+              <span class="lang-meta-card__label">Level</span>
+              <span class="lang-meta-card__value">{{ language.level ?? "—" }}</span>
+            </div>
           </div>
-        </article>
 
-        <div class="top-grid">
-          <section class="panel-card">
-            <header class="panel-header">
-              <div class="panel-title-row">
-                <MapPinned :size="18"/>
-                <h2>Pays ou cette langue est parlee</h2>
-              </div>
-              <p class="panel-counter">{{ spokenCountries.length }} pays renseigne(s)</p>
-            </header>
-
-            <div class="country-layout">
-              <div>
-                <div v-if="spokenCountries.length" class="country-pills" aria-label="Countries where this language is spoken">
-                  <span
-                      v-for="country in spokenCountries"
-                      :key="country.isoA3"
-                      class="country-pill"
-                      :title="`${country.name} (${country.isoA3})`"
-                  >
-                    <MapPin :size="14" class="country-pin"/>
-                    <span class="country-name">{{ country.name }}</span>
-                    <span class="country-code">{{ country.isoA3 }}</span>
-                  </span>
-                </div>
-                <p v-else class="empty-copy">Aucun pays renseigne pour cette langue.</p>
-              </div>
-
-              <aside class="country-mini-map" aria-label="Mini world map for language coverage">
-                <LanguagePresenceMap
-                    :country-ids="String(language.countryIds || '')"
-                    :latitude="language.latitude"
-                    :longitude="language.longitude"
-                    :language-name="String(language.name || '')"
-                />
-              </aside>
+          <!-- Description -->
+          <section class="card lang-description">
+            <div class="lang-description__header">
+              <h2>Description</h2>
+              <button v-if="canEditLanguage && !isEditing" type="button" class="btn btn--ghost" @click="isEditing = true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit
+              </button>
             </div>
-          </section>
-
-          <section class="panel-card">
-            <header class="panel-header">
-              <div class="panel-title-row">
-                <Globe2 :size="18"/>
-                <h2>A propos de la langue</h2>
-              </div>
-            </header>
-
             <template v-if="isEditing">
               <div class="form-grid">
-                <label>
-                  Name
-                  <input v-model="editForm.name"/>
-                </label>
-
-                <label>
-                  Level
-                  <input v-model="editForm.level"/>
-                </label>
-
-                <label>
-                  ISO 639-3
-                  <input v-model="editForm.iso639P3code"/>
-                </label>
-
-                <label>
-                  Country IDs
-                  <input v-model="editForm.countryIds"/>
-                </label>
-
-                <label>
-                  Family ID
-                  <input v-model="editForm.familyId"/>
-                </label>
-
-                <label>
-                  Parent ID
-                  <input v-model="editForm.parentId"/>
-                </label>
-
-                <label>
-                  Latitude
-                  <input v-model="editForm.latitude" type="number" step="any"/>
-                </label>
-
-                <label>
-                  Longitude
-                  <input v-model="editForm.longitude" type="number" step="any"/>
-                </label>
-
-                <label class="checkbox-row">
-                  <input v-model="editForm.bookkeeping" type="checkbox"/>
-                  <span>Bookkeeping</span>
-                </label>
-
-                <label class="form-grid__full">
-                  Description
-                  <textarea v-model="editForm.description" rows="6"/>
-                </label>
-
-                <label class="form-grid__full">
-                  Markup description
-                  <textarea v-model="editForm.markupDescription" rows="6"/>
-                </label>
+                <label>Name<input v-model="editForm.name"/></label>
+                <label>Level<input v-model="editForm.level"/></label>
+                <label>ISO 639-3<input v-model="editForm.iso639P3code"/></label>
+                <label>Country IDs<input v-model="editForm.countryIds"/></label>
+                <label>Family ID<input v-model="editForm.familyId"/></label>
+                <label>Parent ID<input v-model="editForm.parentId"/></label>
+                <label>Latitude<input v-model="editForm.latitude" type="number" step="any"/></label>
+                <label>Longitude<input v-model="editForm.longitude" type="number" step="any"/></label>
+                <label class="checkbox-row"><input v-model="editForm.bookkeeping" type="checkbox"/><span>Bookkeeping</span></label>
+                <label class="form-grid__full">Description<textarea v-model="editForm.description" rows="6"/></label>
+                <label class="form-grid__full">Markup description<textarea v-model="editForm.markupDescription" rows="6"/></label>
               </div>
-
               <div class="toolbar">
-                <button class="btn btn--primary" :disabled="saving" @click="saveLanguage">
-                  {{ saving ? "Saving..." : "Save changes" }}
-                </button>
-                <button class="btn btn--ghost" :disabled="saving" @click="cancelEdit">
-                  Cancel
-                </button>
+                <button class="btn btn--primary" :disabled="saving" @click="saveLanguage">{{ saving ? "Saving..." : "Save changes" }}</button>
+                <button class="btn btn--ghost" :disabled="saving" @click="cancelEdit">Cancel</button>
               </div>
-
               <BaseAlert v-if="saveSuccess" type="success">{{ saveSuccess }}</BaseAlert>
               <BaseAlert v-if="saveError" type="error">{{ saveError }}</BaseAlert>
             </template>
+            <template v-else>
+              <p class="text lang-description__text">{{ language.description ?? "No description available for this language." }}</p>
+            </template>
+          </section>
 
-            <p v-else class="about-copy">
-              {{ language.description || "Aucune description detaillee n'est encore disponible." }}
-            </p>
+          <!-- Grille overview -->
+          <div class="overview-grid">
+
+            <!-- Discussions populaires -->
+            <section class="card overview-section">
+              <div class="overview-section__header">
+                <h3>Popular discussions</h3>
+                <button type="button" class="overview-section__link" @click="activeTab = 'discussion'">View all →</button>
+              </div>
+              <div v-if="popularDiscussions.length" class="overview-discussions">
+                <button v-for="msg in popularDiscussions" :key="msg.id" type="button" class="overview-discussion-item" @click="activeTab = 'discussion'">
+                  <div class="overview-discussion-item__avatar" :style="{ background: avatarColor(msg.authorUsername) }">
+                    {{ authorInitials(msg.authorUsername) }}
+                  </div>
+                  <div class="overview-discussion-item__body">
+                    <p class="overview-discussion-item__content">{{ msg.content.slice(0, 80) }}{{ msg.content.length > 80 ? "…" : "" }}</p>
+                    <p class="overview-discussion-item__meta">
+                      {{ msg.authorUsername ?? "Unknown" }} ·
+                      <span>{{ replyCountById[String(msg.id)] ?? 0 }} repl{{ (replyCountById[String(msg.id)] ?? 0) === 1 ? "y" : "ies" }}</span>
+                    </p>
+                  </div>
+                </button>
+              </div>
+              <p v-else class="overview-section__empty">No discussions yet. Be the first to start one!</p>
+            </section>
+
+            <!-- Nouveaux storyboards — carousel -->
+            <section class="card overview-section">
+              <div class="overview-section__header">
+                <h3>New storyboards</h3>
+                <button type="button" class="overview-section__link" @click="activeTab = 'storyboards'">View all →</button>
+              </div>
+
+              <div v-if="recentScenarios.length" class="carousel-wrapper">
+                <button type="button" class="carousel-btn" :disabled="carouselIndex === 0" @click="carouselScroll(-1)" aria-label="Previous">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+
+                <div class="carousel-track-outer">
+                  <div class="carousel-track" :style="{ transform: `translateX(${carouselOffset}px)` }">
+                    <component
+                      :is="isDemoMode ? 'div' : RouterLink"
+                      v-for="(s, i) in recentScenarios"
+                      :key="s.id"
+                      v-bind="isDemoMode ? {} : { to: `/scenarios/${s.id}` }"
+                      class="carousel-card"
+                      :class="{ 'carousel-card--active': i === carouselIndex }"
+                    >
+                      <div class="carousel-card__image">
+                        <img v-if="scenarioThumbnailUrls[s.id]" :src="scenarioThumbnailUrls[s.id]" :alt="s.title" class="carousel-card__img"/>
+                        <div v-else class="carousel-card__img-placeholder">
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        </div>
+                        <div class="carousel-card__image-badge">
+                          <BaseBadge :variant="s.visibilityStatus === 'PUBLISHED' ? 'success' : 'warning'">{{ s.visibilityStatus ?? "DRAFT" }}</BaseBadge>
+                        </div>
+                        <button
+                          v-if="!isDemoMode && s.visibilityStatus === 'PUBLISHED'"
+                          type="button"
+                          class="carousel-card__read-btn"
+                          title="Read scenario"
+                          @click.prevent.stop="openReader(s)"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                          </svg>
+                          Read
+                        </button>
+                      </div>
+                      <div class="carousel-card__body">
+                        <p class="carousel-card__title">{{ s.title ?? "Untitled scenario" }}</p>
+                        <div class="carousel-card__footer">
+                          <span class="carousel-card__author">By {{ s.authorUsername ?? "Unknown" }}</span>
+                          <span class="carousel-card__date" v-if="s.createdAt">{{ formatDate(s.createdAt) }}</span>
+                        </div>
+                      </div>
+                    </component>
+                  </div>
+                </div>
+
+                <button type="button" class="carousel-btn" :disabled="carouselIndex >= recentScenarios.length - 1" @click="carouselScroll(1)" aria-label="Next">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+              </div>
+
+              <div v-if="recentScenarios.length > 1" class="carousel-dots">
+                <button v-for="(_, i) in recentScenarios" :key="i" type="button" class="carousel-dot" :class="{ 'carousel-dot--active': i === carouselIndex }" @click="carouselGoTo(i)"/>
+              </div>
+
+              <p v-if="!recentScenarios.length" class="overview-section__empty">No published storyboards yet.</p>
+            </section>
+          </div>
+
+          <!-- Contributeurs actifs -->
+          <section class="card overview-section">
+            <div class="overview-section__header">
+              <h3>Active contributors</h3>
+              <span class="overview-section__sub">Based on recent discussions</span>
+            </div>
+            <div v-if="activeContributors.length" class="contributors-row">
+              <div v-for="username in activeContributors" :key="username" class="contributor-avatar" :style="{ background: avatarColor(username) }" :title="username">
+                {{ authorInitials(username) }}
+              </div>
+              <span class="contributors-row__label">{{ activeContributors.length }} active contributor{{ activeContributors.length > 1 ? "s" : "" }}</span>
+            </div>
+            <p v-else class="overview-section__empty">No contributors yet.</p>
           </section>
         </div>
 
-        <section class="panel-card scenario-section">
-          <header class="panel-header">
-            <div class="panel-title-row">
-              <BookOpenText :size="18"/>
-              <h2>Scenarios pour decouvrir cette langue</h2>
-            </div>
-            <p class="panel-intro">
-              Les scenarios permettent de comprendre une langue a travers des situations, des dialogues et des contextes culturels.
-            </p>
-          </header>
+        <!-- Discussion -->
+        <div v-else-if="activeTab === 'discussion'" class="lang-tab-panel">
+          <DiscussionThread
+            title="Community discussion"
+            :subtitle="language.name"
+            target-type="LANGUAGE"
+            :target-id="props.id"
+            empty-title="No messages yet"
+            empty-message="Be the first to start a discussion about this language."
+          />
+        </div>
 
-          <div v-if="scenarios.length" class="scenario-grid">
-            <RouterLink
-                v-for="scenario in scenarios"
-                :key="scenario.id"
-                :to="`/scenarios/${scenario.id}`"
-                class="scenario-card"
-                :aria-label="`Open scenario ${scenario.title || 'Untitled scenario'}`"
+        <!-- Storyboards -->
+        <div v-else-if="activeTab === 'storyboards'" class="lang-tab-panel">
+          <div v-if="effectiveScenarios.length" class="lang-scenarios">
+            <component
+              :is="isDemoMode ? 'div' : RouterLink"
+              v-for="s in effectiveScenarios"
+              :key="s.id"
+              v-bind="isDemoMode ? {} : { to: `/scenarios/${s.id}` }"
+              class="lang-scenario-card"
             >
-              <div class="scenario-card__top">
-                <div>
-                  <p class="scenario-label">Scenario</p>
-                  <h3>{{ scenario.title ?? "Untitled scenario" }}</h3>
+              <div class="lang-scenario-card__left">
+                <div class="lang-scenario-card__icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 </div>
-                <ArrowUpRight :size="18"/>
+                <div>
+                  <p class="lang-scenario-card__title">{{ s.title ?? "Untitled scenario" }}</p>
+                  <p class="lang-scenario-card__meta">By {{ s.authorUsername ?? "Unknown" }}<span v-if="s.createdAt"> · {{ formatDate(s.createdAt) }}</span></p>
+                </div>
               </div>
-
-              <p class="scenario-desc">
-                {{ scenario.description || scenario.markupDescription || "No description available yet." }}
-              </p>
-
-              <div class="scenario-meta">
-                <span>{{ scenario.authorUsername ?? "Unknown author" }}</span>
-                <span>{{ formatDate(scenario.createdAt) }}</span>
+              <div class="lang-scenario-card__right">
+                <BaseBadge :variant="s.visibilityStatus === 'PUBLISHED' ? 'success' : 'warning'">{{ s.visibilityStatus ?? "DRAFT" }}</BaseBadge>
+                <button
+                  v-if="!isDemoMode && s.visibilityStatus === 'PUBLISHED'"
+                  type="button"
+                  class="lang-scenario-card__read-btn"
+                  title="Read scenario"
+                  @click.prevent.stop="openReader(s)"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Read
+                </button>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-soft)"><path d="m9 18 6-6-6-6"/></svg>
               </div>
-            </RouterLink>
+            </component>
           </div>
-
-          <div v-else class="scenario-empty">
-            <BookOpenText :size="28" class="scenario-empty-icon"/>
-            <h3>Aucun scenario n'est encore lie a cette langue.</h3>
-            <p>Chaque scenario ouvre une porte vers la culture, la voix et le contexte vivant d'une langue.</p>
-          </div>
-        </section>
-      </section>
+          <BaseEmptyState v-else title="No storyboards yet" message="No scenarios have been created for this language." />
+        </div>
+      </div>
+      </div>
     </template>
   </main>
+  <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
 </template>
 
 <style scoped>
-.language-detail-page {
-  --bg-950: #17100d;
-  --bg-900: #231711;
-  --panel: rgba(52, 34, 24, 0.7);
-  --panel-soft: rgba(66, 43, 30, 0.62);
-  --sand: #f8f2e8;
-  --sand-muted: #d9c7ad;
-  --clay: #9d5f2f;
-  --ember: #c06a2f;
-  --gold: #d7a15f;
-  --border: rgba(216, 178, 126, 0.22);
-  --font-display: "Playfair Display", "Lora", Georgia, "Times New Roman", serif;
-  --font-body: "Plus Jakarta Sans", "Inter", "Segoe UI", Roboto, Arial, sans-serif;
-  position: relative;
-  min-height: 100dvh;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(204, 126, 67, 0.25), transparent 34rem),
-    radial-gradient(circle at 82% 18%, rgba(173, 108, 58, 0.2), transparent 30rem),
-    linear-gradient(135deg, var(--bg-900) 0%, #322117 48%, var(--bg-950) 100%);
-  font-family: var(--font-body);
-  color: var(--sand);
-  overflow: hidden;
-}
-
-.language-detail-page::before {
-  content: "";
-  position: absolute;
-  inset: -30% -20%;
-  pointer-events: none;
-  opacity: 0.24;
-  background:
-    radial-gradient(circle at 30% 36%, rgba(255, 213, 170, 0.08) 0 2px, transparent 2px),
-    radial-gradient(circle at 70% 52%, rgba(240, 192, 132, 0.06) 0 1.5px, transparent 1.5px),
-    repeating-linear-gradient(160deg, rgba(255, 227, 188, 0.03) 0 1px, transparent 1px 24px);
-  filter: blur(0.2px);
-}
-
-.language-detail-shell {
-  width: min(1180px, calc(100% - 2rem));
-  margin: 0 auto;
-  padding: 2rem 0 3rem;
-  display: grid;
-  gap: 1.2rem;
-  position: relative;
-  z-index: 1;
-}
-
-.hero-card,
-.panel-card {
-  border: 1px solid var(--border);
-  background: var(--panel);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(14px);
-  border-radius: 28px;
-}
-
-.hero-card {
-  padding: 1.2rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-card::before {
-  content: "";
-  position: absolute;
-  width: 420px;
-  height: 420px;
-  right: -160px;
-  top: -190px;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle, rgba(215, 161, 95, 0.25) 0%, rgba(215, 161, 95, 0) 68%);
-  pointer-events: none;
-}
-
-.hero-card::after {
-  content: "";
-  position: absolute;
-  right: 120px;
-  top: 38px;
-  width: 200px;
-  height: 200px;
-  border-radius: 999px;
-  border: 1px dashed rgba(215, 161, 95, 0.24);
-  box-shadow: 0 0 0 14px rgba(215, 161, 95, 0.05), 0 0 0 42px rgba(192, 106, 47, 0.04);
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-.hero-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  position: relative;
-  z-index: 1;
-}
-
-.back-link,
-.edit-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  border-radius: 999px;
-  padding: 0.58rem 0.85rem;
-  font-weight: 700;
-  text-decoration: none;
-  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease;
-}
-
-.back-link {
-  color: var(--sand-muted);
-  background: rgba(28, 19, 13, 0.72);
-  border: 1px solid var(--border);
-}
-
-.edit-btn {
-  border: none;
-  color: #fff6ec;
-  background: linear-gradient(135deg, var(--clay), var(--ember));
-  cursor: pointer;
-  box-shadow: 0 10px 22px rgba(192, 106, 47, 0.28);
-}
-
-.back-link:hover,
-.edit-btn:hover {
-  transform: translateY(-1px);
-}
-
-.back-link:hover {
-  background: rgba(42, 28, 19, 0.9);
-  border-color: rgba(216, 178, 126, 0.38);
-}
-
-.hero-main {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 2rem;
-  align-items: end;
-  position: relative;
-  z-index: 1;
-}
-
-.hero-kicker,
-.scenario-label {
-  margin: 0 0 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--gold);
-}
-
-.hero-copy h1 {
-  font-family: var(--font-display);
-  margin: 0;
-  font-size: clamp(2.5rem, 6vw, 5.4rem);
-  line-height: 0.92;
-  color: var(--sand);
-  text-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
-}
-
-.hero-description {
-  max-width: 680px;
-  margin: 1.2rem 0 0;
-  font-size: 1.05rem;
-  line-height: 1.7;
-  color: var(--sand-muted);
-}
-
-.hero-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.8rem;
-  margin-top: 1.6rem;
-}
-
-.hero-stat {
-  min-width: 120px;
-  border-radius: 18px;
-  padding: 0.85rem 1rem;
-  background: rgba(18, 12, 8, 0.72);
-  border: 1px solid var(--border);
-  box-shadow: inset 0 1px 0 rgba(255, 235, 211, 0.06);
-}
-
-.hero-stat span {
-  display: block;
-  font-size: 1.35rem;
-  font-weight: 850;
-  color: var(--sand);
-}
-
-.hero-stat small {
-  color: var(--gold);
-  font-weight: 700;
-}
-
-.hero-profile-card {
-  border-radius: 24px;
-  padding: 1rem;
-  background: var(--panel-soft);
-  border: 1px solid var(--border);
-  box-shadow: inset 0 1px 0 rgba(255, 235, 211, 0.07);
-}
-
-.profile-kicker {
-  margin: 0 0 0.62rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: var(--sand-muted);
-  font-weight: 800;
-}
-
-.level-pill {
-  display: inline-flex;
-  border-radius: 999px;
-  padding: 0.38rem 0.72rem;
-  font-size: 0.75rem;
-  font-weight: 850;
-  text-transform: uppercase;
-  border: 1px solid rgba(216, 178, 126, 0.38);
-}
-
-.level-pill--language {
-  background: rgba(53, 88, 55, 0.35);
-  color: #cdf2d0;
-}
-
-.level-pill--dialect {
-  background: rgba(138, 83, 31, 0.35);
-  color: #ffe1c1;
-}
-
-.level-pill--family {
-  background: rgba(78, 59, 142, 0.32);
-  color: #e2d9ff;
-}
-
-.profile-row {
-  margin-top: 0.9rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--sand-muted);
-}
-
-.profile-row span {
-  color: var(--gold);
-  font-weight: 750;
-}
-
-.profile-row a,
-.profile-row strong {
-  color: var(--sand);
-  font-weight: 850;
-  text-decoration: none;
-}
-
-.top-grid {
-  margin-top: 1.2rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.2rem;
-}
-
-.panel-card {
-  padding: 1.15rem;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-}
-
-.panel-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.38);
-  border-color: rgba(216, 178, 126, 0.34);
-}
-
-.panel-header {
-  margin-bottom: 0.45rem;
-}
-
-.panel-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  color: var(--sand);
-}
-
-.panel-title-row :deep(svg) {
-  color: var(--gold);
-}
-
-.panel-title-row h2 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.panel-counter {
-  margin: 0.62rem 0 0;
-  color: var(--sand-muted);
-  font-size: 0.84rem;
-  font-weight: 750;
-}
-
-.country-pills {
-  margin-top: 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-}
-
-.country-layout {
-  margin-top: 0.88rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
-  gap: 0.9rem;
-  align-items: start;
-}
-
-.country-mini-map {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.country-mini-map :deep(.map-card) {
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: rgba(24, 16, 12, 0.8);
-  box-shadow: none;
-}
-
-.country-mini-map :deep(.map-content) {
-  padding: 0.45rem;
-}
-
-.country-mini-map :deep(.country-name) {
-  min-height: 1.2rem;
-  margin: 0 0 0.35rem;
-  color: var(--sand-muted);
-  font-size: 0.75rem;
-  letter-spacing: 0.01em;
-}
-
-.country-mini-map :deep(.map-svg) {
-  border-radius: 12px;
-  border: 1px solid rgba(216, 178, 126, 0.16);
-  background:
-      radial-gradient(circle at 24% 20%, rgba(192, 106, 47, 0.22), rgba(192, 106, 47, 0) 36%),
-      linear-gradient(180deg, #19120d 0%, #120d0a 100%);
-}
-
-.country-mini-map :deep(.country-shape) {
-  fill: #3a2a1f;
-  stroke: #8f7359;
-}
-
-.country-mini-map :deep(.country-shape:hover),
-.country-mini-map :deep(.country-shape.is-hovered),
-.country-mini-map :deep(.country-shape:focus-visible) {
-  fill: #705239;
-  stroke: #c6a177;
-  filter: drop-shadow(0 0 3px rgba(215, 161, 95, 0.24));
-}
-
-.country-mini-map :deep(.country-shape.is-highlighted) {
-  fill: #c06a2f;
-  stroke: #ffd4a7;
-}
-
-.country-mini-map :deep(.country-shape.is-highlighted:hover),
-.country-mini-map :deep(.country-shape.is-highlighted.is-hovered),
-.country-mini-map :deep(.country-shape.is-highlighted:focus-visible) {
-  fill: #d78647;
-  stroke: #ffdfbe;
-}
-
-.country-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  border-radius: 999px;
-  padding: 0.5rem 0.68rem;
-  background: rgba(25, 17, 12, 0.72);
-  border: 1px solid var(--border);
-  color: var(--sand);
-  font-weight: 750;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
-}
-
-.country-pill:hover {
-  transform: translateY(-1px);
-  border-color: rgba(216, 178, 126, 0.42);
-  background: rgba(33, 22, 15, 0.84);
-}
-
-.country-pin {
-  color: var(--gold);
-  flex-shrink: 0;
-}
-
-.country-name {
-  color: var(--sand);
-}
-
-.country-code {
-  color: #f8d6ab;
-  font-size: 0.72rem;
-  font-weight: 850;
-  padding: 0.06rem 0.38rem;
-  border-radius: 999px;
-  border: 1px solid rgba(216, 178, 126, 0.26);
-  background: rgba(56, 37, 26, 0.7);
-}
-
-.empty-copy,
-.about-copy {
-  margin: 1rem 0 0;
-  line-height: 1.7;
-  color: var(--sand-muted);
-}
-
-.about-copy {
-  white-space: pre-line;
-}
-
-.panel-intro {
-  margin: 0.42rem 0 0;
-  color: var(--sand-muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-
-.scenario-grid {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.scenario-card {
-  min-height: 210px;
+/* ── Page layout ── */
+.lang-page {
+  max-width: 100%;
+  padding: 1.5rem 2rem;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  border-radius: 22px;
-  padding: 1rem;
-  text-decoration: none;
-  background: linear-gradient(150deg, rgba(38, 25, 17, 0.78), rgba(27, 18, 13, 0.88));
-  border: 1px solid var(--border);
-  color: var(--sand);
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease;
+  min-height: 100vh;
 }
 
-.scenario-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
-  border-color: rgba(215, 161, 95, 0.48);
-}
-
-.scenario-card:focus-visible {
-  outline: 2px solid rgba(215, 161, 95, 0.38);
-  outline-offset: 2px;
-}
-
-.scenario-card__top {
+/* Banner démo */
+.demo-banner {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.scenario-card__top :deep(svg) {
-  color: var(--gold);
-  flex-shrink: 0;
-  margin-top: 0.1rem;
-}
-
-.scenario-card h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.35;
-}
-
-.scenario-desc {
-  margin: 1rem 0;
-  color: var(--sand-muted);
-  line-height: 1.55;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.scenario-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-  color: var(--gold);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(255, 248, 240, 0.96);
+  border: 1px solid rgba(192, 74, 8, 0.3);
   font-size: 0.82rem;
-  font-weight: 750;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
 }
 
-.scenario-empty {
-  margin-top: 1rem;
-  border-radius: 22px;
+/* Hero */
+.lang-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
   padding: 2rem;
-  background: linear-gradient(150deg, rgba(28, 19, 13, 0.78), rgba(20, 13, 10, 0.88));
-  border: 1px solid var(--border);
-  color: var(--sand-muted);
-  text-align: center;
-  box-shadow: inset 0 1px 0 rgba(255, 227, 188, 0.06);
+  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
+  border: 1px solid rgba(192, 74, 8, 0.3);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 24px rgba(42, 21, 0, 0.08);
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
 }
 
-.scenario-empty h3 {
-  margin: 0.75rem 0 0;
-  color: var(--sand);
-  font-size: 1rem;
+.lang-hero__left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex: 1;
+  min-width: 0;
 }
 
-.scenario-empty p {
-  margin: 0.58rem 0 0;
-  color: var(--sand-muted);
+.lang-hero__icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(192, 74, 8, 0.25);
+}
+
+.lang-hero__badges { display: flex; gap: 6px; margin-bottom: 0.4rem; flex-wrap: wrap; }
+
+.lang-hero__title {
+  margin: 0 0 0.3rem;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.lang-hero__meta {
+  margin: 0;
   font-size: 0.9rem;
+  color: var(--text-soft);
 }
 
-.scenario-empty-icon {
-  color: var(--gold);
+.lang-hero__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-shrink: 0;
 }
 
-.form-grid {
+.lang-hero__stats { display: flex; gap: 0.75rem; }
+
+.lang-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0.65rem 1rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  min-width: 70px;
+}
+
+.lang-stat__value { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1; }
+.lang-stat__label { font-size: 0.72rem; color: var(--text-soft); font-weight: 600; white-space: nowrap; }
+
+/* Bouton suivre */
+.follow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: #FFFCF7;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.follow-btn:hover { border-color: var(--primary); background: rgba(192, 74, 8, 0.08); }
+.follow-btn--active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.follow-btn--active:hover { background: var(--primary-strong); border-color: var(--primary-strong); }
+
+/* Onglets */
+.lang-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--accent-warm);
+  margin-bottom: 1.5rem;
+}
+
+.lang-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 6px;
+  padding: 0.7rem 1.1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -2px;
+  white-space: nowrap;
+}
+
+.lang-tab:hover { color: var(--text); }
+.lang-tab--active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.lang-tab__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent-warm);
+  border: 1px solid rgba(192, 74, 8, 0.25);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+/* Corps */
+.lang-body { min-height: 400px; flex: 1; display: flex; flex-direction: column; }
+.lang-tab-panel { display: flex; flex-direction: column; gap: 1rem; flex: 1; }
+
+/* Overview */
+.lang-overview { display: flex; flex-direction: column; gap: 1.5rem; flex: 1; }
+
+.lang-meta-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.62rem;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
 }
 
-.form-grid label {
+.lang-meta-card {
+  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(42, 21, 0, 0.06);
+}
+
+.lang-meta-card__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-soft);
+}
+
+.lang-meta-card__value { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+.lang-meta-card__value--link { color: var(--primary); text-decoration: none; }
+.lang-meta-card__value--link:hover { color: var(--primary-strong); text-decoration: underline; }
+.lang-meta-card__value--mono { font-family: ui-monospace, monospace; font-size: 0.85rem; }
+
+/* Description */
+.lang-description {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
+  border-color: rgba(192, 74, 8, 0.2);
+}
+
+.lang-description__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.lang-description__header h2 { margin: 0; color: var(--text); }
+.lang-description__text { line-height: 1.75; font-size: 0.95rem; color: var(--text); }
+
+/* Grille overview */
+.overview-grid {
   display: grid;
-  gap: 0.28rem;
-  font-size: 0.8rem;
-  color: var(--sand-muted);
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
 }
 
-.form-grid input,
-.form-grid textarea {
+@media (max-width: 780px) { .overview-grid { grid-template-columns: 1fr; } }
+
+.overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
+  border-color: rgba(192, 74, 8, 0.2);
+}
+
+.overview-section__header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.overview-section__header h3 { margin: 0; font-size: 1rem; color: var(--text); }
+.overview-section__sub { font-size: 0.78rem; color: var(--text-soft); }
+
+.overview-section__link {
+  background: none; border: none; font-size: 0.82rem; font-weight: 600;
+  color: var(--primary); cursor: pointer; padding: 0; white-space: nowrap;
+}
+.overview-section__link:hover { color: var(--primary-strong); text-decoration: underline; }
+.overview-section__empty { font-size: 0.85rem; color: var(--text-soft); }
+
+/* Discussions */
+.overview-discussions { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.overview-discussion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.7rem 0.85rem;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: rgba(21, 14, 10, 0.84);
-  color: var(--sand);
-  padding: 0.45rem 0.52rem;
-  font: inherit;
+  background: var(--surface-alt);
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.form-grid input:focus,
-.form-grid textarea:focus {
-  outline: none;
-  border-color: rgba(215, 161, 95, 0.62);
-  box-shadow: 0 0 0 3px rgba(192, 106, 47, 0.22);
+.overview-discussion-item:hover {
+  background: rgba(255, 224, 192, 0.5);
+  border-color: rgba(192, 74, 8, 0.35);
 }
 
-.form-grid__full {
-  grid-column: 1 / -1;
+.overview-discussion-item__avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 800; color: #fff; flex-shrink: 0;
 }
 
-.checkbox-row {
-  align-items: center;
-  grid-auto-flow: column;
-  justify-content: start;
-  gap: 0.5rem;
+.overview-discussion-item__body { flex: 1; min-width: 0; }
+
+.overview-discussion-item__content {
+  margin: 0; font-size: 0.86rem; font-weight: 500; color: var(--text); line-height: 1.4;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 
-.toolbar {
-  margin-top: 0.7rem;
+.overview-discussion-item__meta { margin: 0.2rem 0 0; font-size: 0.75rem; color: var(--text-soft); }
+
+/* Carousel */
+.carousel-wrapper { position: relative; display: flex; align-items: center; gap: 6px; }
+
+.carousel-track-outer {
+  flex: 1; overflow: hidden; border-radius: 14px;
+  mask-image: linear-gradient(to right, transparent 0px, black 28px, black calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0px, black 28px, black calc(100% - 28px), transparent 100%);
+}
+
+.carousel-track {
+  display: flex; gap: 14px;
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform; padding: 6px 2px 10px;
+}
+
+.carousel-card {
+  flex-shrink: 0; width: 220px;
+  background: #FFFCF7;
+  border: 1.5px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  text-decoration: none; color: inherit;
+  display: flex; flex-direction: column;
+  box-shadow: 0 4px 16px rgba(42, 21, 0, 0.07);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s;
+  transform: scale(0.93); opacity: 0.65;
+  cursor: pointer;
+}
+
+.carousel-card--active { transform: scale(1); opacity: 1; border-color: var(--primary); box-shadow: 0 8px 28px rgba(192, 74, 8, 0.18); }
+.carousel-card:hover { border-color: var(--primary); box-shadow: 0 10px 32px rgba(192, 74, 8, 0.16); }
+
+.carousel-card__image { position: relative; width: 100%; height: 130px; background: var(--bg); overflow: hidden; }
+.carousel-card__img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; }
+.carousel-card:hover .carousel-card__img { transform: scale(1.04); }
+
+.carousel-card__img-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-warm); color: var(--primary); opacity: 0.7;
+}
+
+.carousel-card__image-badge { position: absolute; top: 8px; right: 8px; }
+
+.carousel-card__body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+
+.carousel-card__title {
+  margin: 0; font-weight: 700; font-size: 0.88rem; color: var(--text); line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.carousel-card__footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 4px;
+  margin-top: auto; padding-top: 0.35rem;
+  border-top: 1px solid rgba(192, 74, 8, 0.12);
+}
+
+.carousel-card__author, .carousel-card__date {
+  font-size: 0.72rem; color: var(--text-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.carousel-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: #FFFCF7;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-soft); flex-shrink: 0;
+  transition: all 0.15s; box-shadow: 0 2px 8px rgba(42, 21, 0, 0.07);
+}
+
+.carousel-btn:hover:not(:disabled) { background: var(--accent-warm); border-color: var(--primary); color: var(--primary); }
+.carousel-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 4px; }
+
+.carousel-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  border: none; background: var(--accent-warm);
+  cursor: pointer; padding: 0; transition: all 0.2s;
+}
+
+.carousel-dot--active { background: var(--primary); width: 18px; border-radius: 3px; }
+
+/* Contributeurs */
+.contributors-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+
+.contributor-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; font-weight: 800; color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(42, 21, 0, 0.15);
+  cursor: default; transition: transform 0.15s;
+}
+
+.contributor-avatar:hover { transform: scale(1.12); z-index: 1; }
+.contributors-row__label { font-size: 0.85rem; color: var(--text-soft); margin-left: 0.25rem; }
+
+/* Storyboards */
+.lang-scenarios { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.lang-scenario-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1.1rem 1.35rem;
+  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 10px rgba(42, 21, 0, 0.06);
+  text-decoration: none; color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+
+.lang-scenario-card:hover { border-color: var(--primary); box-shadow: 0 8px 24px rgba(192, 74, 8, 0.14); }
+
+.lang-scenario-card__left { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
+
+.lang-scenario-card__icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(192, 74, 8, 0.10);
+  border: 1px solid rgba(192, 74, 8, 0.22);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--primary); flex-shrink: 0;
+}
+
+.lang-scenario-card__title { margin: 0; font-weight: 700; font-size: 0.95rem; color: var(--text); }
+.lang-scenario-card__meta { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--text-soft); }
+.lang-scenario-card__right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+
+.lang-content {
   display: flex;
-  gap: 0.52rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  flex: 1;
+  gap: 1.25rem;
 }
 
-@media (max-width: 960px) {
-  .hero-main,
-  .top-grid,
-  .scenario-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .country-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-actions {
-    align-items: flex-start;
-    flex-direction: column;
-  }
+@media (max-width: 600px) {
+  .lang-page { padding: 1rem; }
+  .lang-hero { flex-direction: column; }
+  .lang-hero__right { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+  .lang-hero__icon { width: 60px; height: 60px; font-size: 1.2rem; }
+  .lang-tabs { overflow-x: auto; }
 }
 
-@media (max-width: 640px) {
-  .language-detail-shell {
-    width: min(1180px, calc(100% - 1.25rem));
-    padding-top: 1.15rem;
-  }
+/* Read buttons */
+.carousel-card__read-btn {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(20, 8, 4, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
 
-  .hero-card,
-  .panel-card {
-    border-radius: 22px;
-  }
+.carousel-card__read-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+}
 
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
+.lang-scenario-card__read-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(192, 74, 8, 0.3);
+  background: rgba(192, 74, 8, 0.06);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.lang-scenario-card__read-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
 }
 </style>

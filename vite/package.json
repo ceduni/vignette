@@ -14,7 +14,7 @@
     "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "cobe": "^0.6.3",
+    "cobe": "^2.0.1",
     "d3-geo": "^3.1.1",
     "lucide-vue-next": "^1.0.0",
     "topojson-client": "^3.1.0",

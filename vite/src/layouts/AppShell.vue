@@ -7,8 +7,8 @@
       <slot/>
     </div>
 
-    <EmergencyAudioRecorder v-if="showEmergencyRecorder"/>
-    <AppFooter/>
+    <EmergencyAudioRecorder v-if="!isStudio"/>
+    <AppFooter v-if="!hideFooter"/>
   </div>
 </template>
 
@@ -21,7 +21,6 @@ import BaseToast from "../components/ui/BaseToast.vue";
 import EmergencyAudioRecorder from "../components/EmergencyAudioRecorder.vue";
 
 const route = useRoute();
-const workflowRoutes = new Set(["workspace", "create-scenario", "user", "scenario-manage"]);
 const isStudio = computed(() => route.name === "scenario-detail");
-const showEmergencyRecorder = computed(() => !isStudio.value && workflowRoutes.has(route.name));
+const hideFooter = computed(() => route.name === "languages" || route.name === "languages-map");
 </script>
