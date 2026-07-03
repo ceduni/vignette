@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.api.dto.CreateAudioResponse;
+import org.titiplex.api.dto.LanguagePreviewAudioDto;
 import org.titiplex.api.dto.UpdateMarkerRequest;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
@@ -154,6 +155,30 @@ class AudioApiControllerTest {
         assertEquals(1, result.size());
         assertEquals("Clip", result.get(0).title());
         verify(audioService).listForLanguage("chuj");
+    }
+
+    @Test
+    void previewByLanguage_delegatesToService() {
+        when(audioService.getLanguagePreviewAudio("bamb1269")).thenReturn(
+                new LanguagePreviewAudioDto(
+                        5L,
+                        "Preview",
+                        "audio/webm",
+                        "/api/audios/5/content",
+                        9L,
+                        "First scenario",
+                        12L,
+                        "bamb1269",
+                        1,
+                        null
+                )
+        );
+
+        LanguagePreviewAudioDto result = controller.previewByLanguage("bamb1269");
+
+        assertEquals(5L, result.id());
+        assertEquals("/api/audios/5/content", result.contentUrl());
+        verify(audioService).getLanguagePreviewAudio("bamb1269");
     }
 
     private Authentication auth(String username, String... authorities) {

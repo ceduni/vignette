@@ -37,7 +37,7 @@ build/
 ### Mac OS ###
 .DS_Store
 
-### Local storage (uploads) ###
-/data/
-### Local storage (uploads) ###
-/data/
+### Local runtime / workspace ###
+data/
+.tools/
+/fond*.avif

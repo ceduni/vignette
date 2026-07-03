@@ -3,6 +3,7 @@ import {createRouter, createWebHistory} from "vue-router";
 import HomeView from "../views/HomeView.vue";
 import LanguagesView from "../views/LanguagesView.vue";
 import LanguageDetailView from "../views/LanguageDetailView.vue";
+import LanguageWorldMapView from "../views/languages/LanguageWorldMapView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import ScenariosView from "../views/ScenariosView.vue";
@@ -38,6 +39,12 @@ const routes = [
         name: "languages",
         component: LanguagesView,
         meta: { title: "Languages", description: "Browse and search language entries." },
+    },
+    {
+        path: "/languages/map",
+        name: "languages-map",
+        component: LanguageWorldMapView,
+        meta: { title: "Language map", description: "Interactive world map with per-country language data." },
     },
     {
         path: "/languages/:id",

@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.titiplex.api.dto.LanguageDto;
 import org.titiplex.api.dto.LanguageOptionDto;
+import org.titiplex.api.dto.LanguageRowDto;
 import org.titiplex.api.dto.UpdateLanguageRequest;
 import org.titiplex.persistence.model.AccreditationPermissionType;
 import org.titiplex.persistence.model.AccreditationScopeType;
@@ -18,9 +19,15 @@ import org.titiplex.persistence.repo.LanguageRepository;
 import org.titiplex.persistence.repo.UserRepository;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class LanguageService {
@@ -189,5 +196,69 @@ public class LanguageService {
         }
 
         return result;
+    }
+
+    public Map<String, List<LanguageRowDto>> listLanguagesByCountryIsoA3() {
+        List<Language> languages = repo.findAllWithFamilyAndParent();
+
+        Map<String, List<LanguageRowDto>> grouped = new LinkedHashMap<>();
+
+        for (Language language : languages) {
+            String countryIds = language.getCountryIds();
+            if (countryIds == null || countryIds.isBlank()) {
+                continue;
+            }
+
+            LanguageRowDto row = new LanguageRowDto(
+                    language.getId(),
+                    language.getName(),
+                    language.getLevel(),
+                    language.getCountryIds(),
+                    language.getFamily() != null ? language.getFamily().getName() : language.getFamilyId(),
+                    language.getParent() != null ? language.getParent().getName() : language.getParentId()
+            );
+
+            for (String token : Arrays.stream(countryIds.split("[\\s,;]+"))
+                    .map(String::trim)
+                    .filter(value -> !value.isBlank())
+                    .toList()) {
+                String isoA3 = toIsoA3(token);
+                if (isoA3 == null) {
+                    continue;
+                }
+                grouped.computeIfAbsent(isoA3, key -> new ArrayList<>()).add(row);
+            }
+        }
+
+        grouped.replaceAll((iso, rows) -> rows.stream()
+                .sorted(Comparator.comparing(LanguageRowDto::name, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList()));
+
+        return grouped;
+    }
+
+    private String toIsoA3(String rawCountryCode) {
+        if (rawCountryCode == null) {
+            return null;
+        }
+
+        String normalized = rawCountryCode.trim().toUpperCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return null;
+        }
+
+        if (normalized.length() == 3 && normalized.chars().allMatch(Character::isLetter)) {
+            return normalized;
+        }
+
+        if (normalized.length() == 2 && normalized.chars().allMatch(Character::isLetter)) {
+            try {
+                return Locale.of("", normalized).getISO3Country().toUpperCase(Locale.ROOT);
+            } catch (RuntimeException ex) {
+                return null;
+            }
+        }
+
+        return null;
     }
 }

@@ -4,13 +4,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.api.dto.AudioRowDto;
+import org.titiplex.api.dto.LanguagePreviewAudioDto;
 import org.titiplex.persistence.model.Audio;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.repo.AudioRepository;
+import org.titiplex.persistence.repo.ScenarioRepository;
 import org.titiplex.service.storage.FileStorageService;
 import org.titiplex.service.storage.MediaContent;
 import org.titiplex.service.storage.StoredFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -18,20 +22,25 @@ import java.util.NoSuchElementException;
 @Service
 public class AudioService {
 
+    private static final Logger log = LoggerFactory.getLogger(AudioService.class);
+
     private final AudioRepository audios;
     private final ThumbnailService thumbnailService;
     private final ScenarioService scenarioService;
+    private final ScenarioRepository scenarioRepository;
     private final FileStorageService storage;
 
     public AudioService(
             AudioRepository audios,
             ThumbnailService thumbnailService,
             ScenarioService scenarioService,
+            ScenarioRepository scenarioRepository,
             FileStorageService storage
     ) {
         this.audios = audios;
         this.thumbnailService = thumbnailService;
         this.scenarioService = scenarioService;
+        this.scenarioRepository = scenarioRepository;
         this.storage = storage;
     }
 
@@ -61,6 +70,51 @@ public class AudioService {
                         a.getMarkerLabel()
                 ))
                 .toList();
+    }
+
+    public LanguagePreviewAudioDto getLanguagePreviewAudio(String languageId) {
+        log.info("Preview audio requested for language={}", languageId);
+
+        List<Scenario> scenarios = scenarioRepository.findPublishedByLanguageIdOrderByCreatedAtAscIdAsc(languageId);
+
+        for (Scenario scenario : scenarios) {
+            List<Thumbnail> thumbnails = thumbnailService.listByScenarioId(scenario.getId());
+
+            for (Thumbnail thumbnail : thumbnails) {
+                List<Audio> thumbnailAudios = audios.findByThumbnailIdOrderByIdxAsc(thumbnail.getId());
+                if (thumbnailAudios.isEmpty()) {
+                    continue;
+                }
+
+                Audio audio = thumbnailAudios.getFirst();
+                String contentUrl = "/api/audios/" + audio.getId() + "/content";
+
+                log.info(
+                        "Preview audio selected language={} scenario={} thumbnail={} audio={} url={}",
+                        languageId,
+                        scenario.getId(),
+                        thumbnail.getId(),
+                        audio.getId(),
+                        contentUrl
+                );
+
+                return new LanguagePreviewAudioDto(
+                        audio.getId(),
+                        audio.getTitle(),
+                        audio.getMime(),
+                        contentUrl,
+                        scenario.getId(),
+                        scenario.getTitle(),
+                        thumbnail.getId(),
+                        audio.getLanguageId(),
+                        audio.getIdx(),
+                        null
+                );
+            }
+        }
+
+        log.info("No preview audio found for language={}", languageId);
+        throw new NoSuchElementException("No preview audio found for language " + languageId);
     }
 
     public Long getScenarioIdForAudio(Long audioId) {

@@ -8,7 +8,7 @@
     </div>
 
     <EmergencyAudioRecorder v-if="!isStudio"/>
-    <AppFooter/>
+    <AppFooter v-if="!hideFooter"/>
   </div>
 </template>
 
@@ -22,4 +22,5 @@ import EmergencyAudioRecorder from "../components/EmergencyAudioRecorder.vue";
 
 const route = useRoute();
 const isStudio = computed(() => route.name === "scenario-detail");
+const hideFooter = computed(() => route.name === "languages" || route.name === "languages-map");
 </script>

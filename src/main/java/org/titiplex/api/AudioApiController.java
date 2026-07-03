@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.api.dto.ApiError;
 import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.api.dto.CreateAudioResponse;
+import org.titiplex.api.dto.LanguagePreviewAudioDto;
 import org.titiplex.api.dto.UpdateMarkerRequest;
 import org.titiplex.api.security.*;
 import org.titiplex.service.AudioService;
@@ -346,5 +347,39 @@ public class AudioApiController {
             @PathVariable String langId
     ) {
         return audioService.listForLanguage(langId);
+    }
+
+    @Operation(
+            summary = "Get representative preview audio for a language",
+            description = """
+                    Returns a single representative audio preview for a language.
+                    Selection rule:
+                    - first published scenario for the language
+                    - then first thumbnail in that scenario
+                    - then first audio in that thumbnail
+                    """
+    )
+    @PublicOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Preview audio retrieved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = LanguagePreviewAudioDto.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "No preview audio found for this language",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @GetMapping("/languages/{langId}/preview-audio")
+    public LanguagePreviewAudioDto previewByLanguage(
+            @Parameter(description = "ID of the language to retrieve the preview audio for", required = true)
+            @PathVariable String langId
+    ) {
+        return audioService.getLanguagePreviewAudio(langId);
     }
 }

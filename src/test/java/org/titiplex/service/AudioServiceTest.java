@@ -8,13 +8,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.api.dto.AudioRowDto;
+import org.titiplex.api.dto.LanguagePreviewAudioDto;
 import org.titiplex.persistence.model.Audio;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.repo.AudioRepository;
+import org.titiplex.persistence.repo.ScenarioRepository;
 import org.titiplex.service.storage.FileStorageService;
 import org.titiplex.service.storage.StoredFile;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +37,9 @@ class AudioServiceTest {
 
     @Mock
     private ScenarioService scenarioService;
+
+    @Mock
+    private ScenarioRepository scenarioRepository;
 
     @Mock
     private FileStorageService storage;
@@ -154,5 +160,41 @@ class AudioServiceTest {
         Audio result = audioService.getAudioOrThrow(19L);
 
         assertEquals(19L, result.getId());
+    }
+
+    @Test
+    void getLanguagePreviewAudio_selectsFirstPublishedScenarioThenFirstThumbnailThenFirstAudio() {
+        Scenario firstScenario = new Scenario();
+        firstScenario.setId(4L);
+        firstScenario.setTitle("First scenario");
+        firstScenario.setCreatedAt(Instant.parse("2025-01-01T00:00:00Z"));
+        firstScenario.setLanguage_id("bamb1269");
+
+        Thumbnail firstThumbnail = new Thumbnail();
+        firstThumbnail.setId(8L);
+        firstThumbnail.setScenarioId(4L);
+        firstThumbnail.setIdx(1);
+
+        Audio firstAudio = new Audio();
+        firstAudio.setId(15L);
+        firstAudio.setTitle("Greeting clip");
+        firstAudio.setMime("audio/webm");
+        firstAudio.setLanguageId("bamb1269");
+        firstAudio.setScenarioId(4L);
+        firstAudio.setThumbnailId(8L);
+        firstAudio.setIdx(1);
+
+        when(scenarioRepository.findPublishedByLanguageIdOrderByCreatedAtAscIdAsc("bamb1269"))
+                .thenReturn(List.of(firstScenario));
+        when(thumbnailService.listByScenarioId(4L)).thenReturn(List.of(firstThumbnail));
+        when(audioRepository.findByThumbnailIdOrderByIdxAsc(8L)).thenReturn(List.of(firstAudio));
+
+        LanguagePreviewAudioDto result = audioService.getLanguagePreviewAudio("bamb1269");
+
+        assertEquals(15L, result.id());
+        assertEquals("Greeting clip", result.title());
+        assertEquals("/api/audios/15/content", result.contentUrl());
+        assertEquals(4L, result.scenarioId());
+        assertEquals(8L, result.thumbnailId());
     }
 }

@@ -19,6 +19,10 @@ public interface LanguageRepository extends JpaRepository<Language, String> {
     @EntityGraph(attributePaths = {"family", "parent"})
     Optional<Language> findWithFamilyAndParentById(String id);
 
+    @EntityGraph(attributePaths = {"family", "parent"})
+    @Query("select l from Language l")
+    List<Language> findAllWithFamilyAndParent();
+
     @Query("select new org.titiplex.api.dto.LanguageOptionDto(l.id, l.name) " +
             "from Language l " +
             "where (:q is null or lower(l.name) like lower(concat('%', :q, '%'))) " +

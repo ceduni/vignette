@@ -1,5 +1,6 @@
 import {computed, ref} from "vue";
-import {login as apiLogin, logout as apiLogout, me as apiMe} from "../api/auth";
+import {login as apiLogin, logout as apiLogout, me as apiMe, refresh as apiRefresh} from "../api/auth";
+import {getAccessToken} from "../api/rest";
 
 const currentUser = ref(null);
 const authLoaded = ref(false);
@@ -24,6 +25,9 @@ export function useAuth() {
             authLoading.value = true;
             try {
                 currentUser.value = await apiMe();
+                if (currentUser.value && !getAccessToken()) {
+                    await apiRefresh();
+                }
                 return currentUser.value;
             } catch {
                 currentUser.value = null;
