@@ -7,7 +7,9 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@Table(name = "audio")
+@Table(name = "audio", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_audio_scenario_sha256", columnNames = {"scenario_id", "audio_sha256"})
+})
 public class Audio {
 
     @Id
@@ -24,7 +26,7 @@ public class Audio {
     @Column(name = "original_filename")
     private String originalFilename;
 
-    @Column(name = "audio_sha256", nullable = false, unique = true, length = 64)
+    @Column(name = "audio_sha256", nullable = false, length = 64)
     private String audioSha256;
 
     @Column(name = "title", nullable = false)

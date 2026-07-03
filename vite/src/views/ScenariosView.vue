@@ -12,6 +12,8 @@ import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue"
 import {useScenarioReader} from "../composables/useScenarioReader";
 import {useScenarioInteractions} from "../composables/useScenarioInteractions";
 import {useAuth} from "../composables/useAuth";
+import { forkScenario } from "../api/scenarios";
+import { useRouter } from "vue-router";
 
 const scenarios = ref([]);
 const previewMap = ref({});
@@ -27,6 +29,24 @@ const languageFilter = ref("");
 const { openReader, activeScenario, closeReader } = useScenarioReader();
 const { isLiked, toggleLike, isBookmarked, toggleBookmark } = useScenarioInteractions();
 const { isAuthenticated, currentUser } = useAuth();
+
+const router = useRouter();
+const copyingId = ref(null);
+const copyError = ref("");
+
+async function copyScenario(s) {
+  if (copyingId.value) return;
+  copyingId.value = s.id;
+  copyError.value = "";
+  try {
+    const result = await forkScenario(s.id);
+    router.push(`/scenarios/${result.id}`);
+  } catch (e) {
+    copyError.value = e.message || "Could not copy this scenario.";
+  } finally {
+    copyingId.value = null;
+  }
+}
 
 function languageName(id) {
   return languageNameMap.value[String(id)] ?? id ?? "";
@@ -297,6 +317,20 @@ onMounted(load);
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                 </svg>
               </button>
+              <button
+                v-if="isAuthenticated && currentUser && s.authorUsername !== currentUser.username"
+                type="button"
+                class="sc-card__icon-btn"
+                :disabled="copyingId === s.id"
+                :title="copyingId === s.id ? 'Copying…' : 'Copy to my scenarios'"
+                @click="copyScenario(s)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
 
             </div>
           </div>
@@ -340,6 +374,7 @@ onMounted(load);
     </template>
 
     <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
+    <BaseAlert v-if="copyError" type="error">{{ copyError }}</BaseAlert>
   </main>
 </template>
 

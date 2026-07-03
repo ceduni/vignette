@@ -11,6 +11,14 @@ import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 import org.titiplex.persistence.model.StoryboardLayoutMode;
 import org.titiplex.persistence.repo.ScenarioRepository;
+import org.springframework.transaction.annotation.Transactional;
+import org.titiplex.persistence.model.Audio;
+import org.titiplex.persistence.model.Thumbnail;
+import org.titiplex.persistence.repo.AudioRepository;
+import org.titiplex.persistence.repo.ThumbnailRepository;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -24,19 +32,25 @@ public class ScenarioService {
     private final LanguageService languageService;
     private final ScenarioTagService scenarioTagService;
     private final NotificationService notificationService;
+    private final ThumbnailRepository thumbnailRepo;
+    private final AudioRepository audioRepo;
 
     public ScenarioService(
             ScenarioRepository scenarioRepository,
             UserService userService,
             LanguageService languageService,
             ScenarioTagService scenarioTagService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            ThumbnailRepository thumbnailRepo,
+            AudioRepository audioRepo
     ) {
         this.repo = scenarioRepository;
         this.userService = userService;
         this.languageService = languageService;
         this.scenarioTagService = scenarioTagService;
         this.notificationService = notificationService;
+        this.thumbnailRepo = thumbnailRepo;
+        this.audioRepo = audioRepo;
     }
 
     public boolean existsByIdAndAuthorUsername(Long scenarioId, String username) {
@@ -281,6 +295,7 @@ public class ScenarioService {
                 .map(this::toDto)
                 .toList();
     }
+    @Transactional
     public Scenario forkScenario(Long originalId, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new InsufficientAuthenticationException("Authentication required");
@@ -296,7 +311,7 @@ public class ScenarioService {
         Long userId = userService.getUserByUsername(username).getId();
 
         Scenario fork = new Scenario();
-        fork.setTitle("Fork of " + original.getTitle());
+        fork.setTitle(generateUniqueScenarioTitle(original.getTitle(), username));
         fork.setDescription(original.getDescription());
         fork.setAuthor_id(userId);
         fork.setLanguage_id(original.getLanguage_id());
@@ -307,9 +322,65 @@ public class ScenarioService {
         fork.setStoryboardLayoutMode(original.getStoryboardLayoutMode());
         fork.setStoryboardPreset(original.getStoryboardPreset());
         fork.setStoryboardColumns(original.getStoryboardColumns());
+        fork.setParentScenarioId(original.getId());
         fork.setTags(new LinkedHashSet<>(original.getTags()));
-        fork.setParentScenarioId(originalId);
 
-        return repo.save(fork);
+        Scenario saved = repo.save(fork);
+
+        // Deep copy: thumbnails + audios. Physical files are reused (content-addressed
+        // storage), only new DB rows are created pointing at the same storagePath/hash.
+        List<Thumbnail> originalThumbnails = thumbnailRepo.findByScenarioIdOrderByIdxAsc(original.getId());
+
+        for (Thumbnail ot : originalThumbnails) {
+            Thumbnail copy = new Thumbnail();
+            copy.setTitle(ot.getTitle());
+            copy.setIdx(ot.getIdx());
+            copy.setContentType(ot.getContentType());
+            copy.setAuthorId(userId);
+            copy.setScenarioId(saved.getId());
+            copy.setStoragePath(ot.getStoragePath());
+            copy.setSizeBytes(ot.getSizeBytes());
+            copy.setOriginalFilename(ot.getOriginalFilename());
+            copy.setImageSha256(ot.getImageSha256());
+            copy.setGridColumn(ot.getGridColumn());
+            copy.setGridRow(ot.getGridRow());
+            copy.setGridColumnSpan(ot.getGridColumnSpan());
+            copy.setGridRowSpan(ot.getGridRowSpan());
+            copy.setImageWidth(ot.getImageWidth());
+            copy.setImageHeight(ot.getImageHeight());
+            Thumbnail savedThumb = thumbnailRepo.save(copy);
+
+            List<Audio> originalAudios = audioRepo.findByThumbnailIdOrderByIdxAsc(ot.getId());
+            for (Audio oa : originalAudios) {
+                Audio audioCopy = new Audio();
+                audioCopy.setStoragePath(oa.getStoragePath());
+                audioCopy.setSizeBytes(oa.getSizeBytes());
+                audioCopy.setOriginalFilename(oa.getOriginalFilename());
+                audioCopy.setAudioSha256(oa.getAudioSha256());
+                audioCopy.setTitle(oa.getTitle());
+                audioCopy.setIdx(oa.getIdx());
+                audioCopy.setMime(oa.getMime());
+                audioCopy.setAuthorId(userId);
+                audioCopy.setScenarioId(saved.getId());
+                audioCopy.setLanguageId(oa.getLanguageId());
+                audioCopy.setThumbnailId(savedThumb.getId());
+                audioCopy.setMarkerX(oa.getMarkerX());
+                audioCopy.setMarkerY(oa.getMarkerY());
+                audioCopy.setMarkerLabel(oa.getMarkerLabel());
+                audioRepo.save(audioCopy);
+            }
+        }
+
+        return saved;
+    }
+
+    private String generateUniqueScenarioTitle(String baseTitle, String username) {
+        String candidate = "Copy of " + baseTitle + " (" + username + ")";
+        int counter = 2;
+        while (repo.existsByTitle(candidate)) {
+            candidate = "Copy of " + baseTitle + " (" + username + " #" + counter + ")";
+            counter++;
+        }
+        return candidate;
     }
 }

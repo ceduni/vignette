@@ -19,6 +19,12 @@ export function createScenario(body) {
     });
 }
 
+export function forkScenario(id) {
+  return apiFetch(`/api/scenarios/${id}/fork`, {
+    method: "POST",
+  });
+}
+
 export function publishScenario(id) {
     return apiFetch(`/api/scenarios/${id}/publish`, {
         method: "POST",

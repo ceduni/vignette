@@ -15,6 +15,8 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
 
     boolean existsByIdAndAuthorUsername(Long scenarioId, String username);
 
+    boolean existsByTitle(String title);
+
     boolean existsByTitleAndAuthorUsernameAndLanguageId(String title, String authorUsername, String languageId);
 
     List<Scenario> findAllByOrderByCreatedAtDesc();
