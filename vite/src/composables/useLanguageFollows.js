@@ -1,80 +1,91 @@
 // composables/useLanguageFollows.js
+// Source de vérité : backend uniquement — plus de localStorage
 import { ref, computed } from "vue";
 import { apiFetch } from "../api/rest";
+import { useAuth } from "./useAuth";
 
-const FOLLOWS_KEY = "vignette_language_follows";
-const FOLLOWS_META_KEY = "vignette_language_follows_meta";
-
-function loadArray() {
-  try { return JSON.parse(localStorage.getItem(FOLLOWS_KEY) ?? "[]"); }
-  catch { return []; }
-}
-
-function loadMeta() {
-  try { return JSON.parse(localStorage.getItem(FOLLOWS_META_KEY) ?? "{}"); }
-  catch { return {}; }
-}
-
-// État global partagé entre tous les composants
-const followedIdsArray = ref(loadArray());
-const followedMeta = ref(loadMeta());
-
-function persist() {
-  localStorage.setItem(FOLLOWS_KEY, JSON.stringify(followedIdsArray.value));
-  localStorage.setItem(FOLLOWS_META_KEY, JSON.stringify(followedMeta.value));
-}
+// État réactif — réinitialisé à chaque changement de compte
+const followedIdsArray = ref([]);   // string[]
+const followedMeta    = ref({});    // { languageId: { id, name } }
+const initialized     = ref(false);
 
 export function useLanguageFollows() {
+  const { currentUser } = useAuth();
 
-  function isFollowing(languageId) {
-    return followedIdsArray.value.includes(String(languageId));
+  // ── Charger les follows depuis le backend ────────────────────────────────
+  async function loadFollows() {
+    try {
+      const ids = await apiFetch("/api/languages/followed");
+      if (Array.isArray(ids)) {
+        followedIdsArray.value = ids.map(String);
+      }
+      initialized.value = true;
+    } catch {
+      followedIdsArray.value = [];
+      initialized.value = true;
+    }
   }
 
-  function setFollowing(languageId, value, meta = null) {
-    const id = String(languageId);
-    const next = followedIdsArray.value.filter((x) => x !== id);
-    if (value) next.push(id);
-    followedIdsArray.value = next;
+  // ── Réinitialiser quand l'utilisateur change ─────────────────────────────
+  function reset() {
+    followedIdsArray.value = [];
+    followedMeta.value     = {};
+    initialized.value      = false;
+  }
 
-    const nextMeta = { ...followedMeta.value };
-    if (value && meta) nextMeta[id] = meta;
-    else if (!value) delete nextMeta[id];
-    followedMeta.value = nextMeta;
-
-    persist();
+  // ── API ──────────────────────────────────────────────────────────────────
+  function isFollowing(languageId) {
+    return followedIdsArray.value.includes(String(languageId));
   }
 
   async function toggleFollow(languageId, languageName = null) {
     const id = String(languageId);
     const wasFollowing = isFollowing(id);
-    const meta = { id, name: languageName ?? id };
 
-    // Toujours persister localement — pas de rollback
-    setFollowing(id, !wasFollowing, meta);
+    // Optimistic update
+    if (wasFollowing) {
+      followedIdsArray.value = followedIdsArray.value.filter(x => x !== id);
+      const next = { ...followedMeta.value };
+      delete next[id];
+      followedMeta.value = next;
+    } else {
+      followedIdsArray.value = [...followedIdsArray.value, id];
+      followedMeta.value = {
+        ...followedMeta.value,
+        [id]: { id, name: languageName ?? id },
+      };
+    }
 
-    // Appel API best-effort — l'échec ne défait pas le localStorage
+    // Sync backend
     try {
-      const method = wasFollowing ? "DELETE" : "POST";
-      await apiFetch(`/api/languages/${id}/follow`, { method });
+      await apiFetch(`/api/languages/${id}/follow`, { method: "POST" });
     } catch {
-      // Silencieux — le follow est quand même sauvegardé localement
+      // Rollback on error
+      if (wasFollowing) {
+        followedIdsArray.value = [...followedIdsArray.value, id];
+      } else {
+        followedIdsArray.value = followedIdsArray.value.filter(x => x !== id);
+      }
     }
   }
 
   const followedLanguagesList = computed(() =>
-    followedIdsArray.value.map((id) => ({
+    followedIdsArray.value.map(id => ({
       id,
       name: followedMeta.value[id]?.name ?? id,
     }))
   );
 
   return {
-    followedIds: computed(() => new Set(followedIdsArray.value)),
+    followedIds:          computed(() => new Set(followedIdsArray.value)),
     followedIdsArray,
     followedMeta,
+    initialized,
     isFollowing,
     toggleFollow,
     followedLanguagesList,
     getFollowedLanguages: () => followedLanguagesList.value,
+    loadFollows,
+    reset,
   };
 }

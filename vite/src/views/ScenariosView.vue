@@ -2,6 +2,7 @@
 import {computed, onMounted, ref, watch} from "vue";
 import {RouterLink} from "vue-router";
 import {fetchScenarios, fetchScenarioThumbnails} from "../api/scenarios";
+import {fetchLanguages} from "../api/languages";
 import {buildApiUrl} from "../api/rest";
 import {useDebouncedRef} from "../composables/useDebouncedRef";
 import BaseLoader from "../components/ui/BaseLoader.vue";
@@ -9,9 +10,12 @@ import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
 import {useScenarioReader} from "../composables/useScenarioReader";
+import {useScenarioInteractions} from "../composables/useScenarioInteractions";
+import {useAuth} from "../composables/useAuth";
 
 const scenarios = ref([]);
 const previewMap = ref({});
+const languageNameMap = ref({}); // { languageId: languageName }
 const error = ref("");
 const loading = ref(false);
 
@@ -21,6 +25,12 @@ watch(debounced, (v) => { effectiveSearch.value = v.trim().toLowerCase(); });
 
 const languageFilter = ref("");
 const { openReader, activeScenario, closeReader } = useScenarioReader();
+const { isLiked, toggleLike, isBookmarked, toggleBookmark } = useScenarioInteractions();
+const { isAuthenticated, currentUser } = useAuth();
+
+function languageName(id) {
+  return languageNameMap.value[String(id)] ?? id ?? "";
+}
 
 const filtered = computed(() => {
   const q = effectiveSearch.value;
@@ -32,7 +42,7 @@ const filtered = computed(() => {
       s.description ?? "",
       ...(s.tags ?? []).map(String),
     ].some(v => v.toLowerCase().includes(q));
-    const matchesLang = !lang || String(s.languageId ?? "").toLowerCase().includes(lang);
+    const matchesLang = !lang || languageName(s.languageId).toLowerCase().includes(lang);
     return matchesSearch && matchesLang;
   });
 });
@@ -58,7 +68,19 @@ async function load() {
   loading.value = true;
   error.value = "";
   try {
-    const data = await fetchScenarios();
+    const [data, languages] = await Promise.all([
+      fetchScenarios(),
+      fetchLanguages().catch(() => []),
+    ]);
+
+    // Build language ID → name map
+    const langList = Array.isArray(languages) ? languages : (languages.content ?? []);
+    const langMap = {};
+    for (const l of langList) {
+      langMap[String(l.id)] = l.name ?? String(l.id);
+    }
+    languageNameMap.value = langMap;
+
     // Only show published scenarios in the public catalogue
     const all = Array.isArray(data) ? data : (data.content ?? []);
     scenarios.value = all.filter(s => s.visibilityStatus === "PUBLISHED");
@@ -129,7 +151,7 @@ onMounted(load);
         <input
           v-model="languageFilter"
           class="sc-search__input"
-          placeholder="Filter by language ID…"
+          placeholder="Filter by language name…"
         />
         <button v-if="languageFilter" type="button" class="sc-search__clear" @click="languageFilter = ''">×</button>
       </div>
@@ -155,7 +177,7 @@ onMounted(load);
           class="sc-card"
         >
           <!-- Thumbnail -->
-          <RouterLink :to="`/scenarios/${s.id}`" class="sc-card__thumb" tabindex="-1">
+          <RouterLink v-if="currentUser && s.authorUsername === currentUser.username" :to="`/scenarios/${s.id}`" class="sc-card__thumb" tabindex="-1">
             <img
               v-if="thumbnailUrl(s.id)"
               :src="thumbnailUrl(s.id)"
@@ -172,19 +194,42 @@ onMounted(load);
               </svg>
             </div>
             <div class="sc-card__overlay" aria-hidden="true">
-              <span class="sc-card__overlay-label">Open →</span>
+              <span class="sc-card__overlay-label">Open studio →</span>
             </div>
           </RouterLink>
+          <button v-else type="button" class="sc-card__thumb" @click="openReader(s)">
+            <img
+              v-if="thumbnailUrl(s.id)"
+              :src="thumbnailUrl(s.id)"
+              :alt="s.title || 'Scene preview'"
+              class="sc-card__img"
+            />
+            <div v-else class="sc-card__placeholder" :style="{ background: placeholderGradient(index) }">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"
+                   stroke-linecap="round" stroke-linejoin="round" class="sc-card__placeholder-icon">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </div>
+            <div class="sc-card__overlay" aria-hidden="true">
+              <span class="sc-card__overlay-label">Read →</span>
+            </div>
+          </button>
 
           <!-- Body -->
           <div class="sc-card__body">
-            <RouterLink :to="`/scenarios/${s.id}`" class="sc-card__title-link">
+            <RouterLink v-if="currentUser && s.authorUsername === currentUser.username" :to="`/scenarios/${s.id}`" class="sc-card__title-link">
               <h3 class="sc-card__title">{{ s.title || "Untitled scenario" }}</h3>
             </RouterLink>
+            <button v-else type="button" class="sc-card__title-link" @click="openReader(s)">
+              <h3 class="sc-card__title">{{ s.title || "Untitled scenario" }}</h3>
+            </button>
 
             <div class="sc-card__meta">
               <span class="sc-card__author">{{ s.authorUsername ?? "Unknown" }}</span>
-              <span v-if="s.languageId" class="sc-card__lang">{{ s.languageId }}</span>
+              <span v-if="s.languageId" class="sc-card__lang">{{ languageName(s.languageId) }}</span>
               <template v-if="s.tags?.length">
                 <span v-for="tag in s.tags.slice(0, 2)" :key="tag" class="sc-card__tag">#{{ tag }}</span>
               </template>
@@ -196,7 +241,18 @@ onMounted(load);
 
             <!-- Actions -->
             <div class="sc-card__actions">
+              <RouterLink
+                v-if="currentUser && s.authorUsername === currentUser.username"
+                :to="`/scenarios/${s.id}`"
+                class="sc-card__action sc-card__action--open"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+                Open
+              </RouterLink>
               <button
+                v-if="currentUser && s.authorUsername === currentUser.username"
                 type="button"
                 class="sc-card__action sc-card__action--read"
                 @click="openReader(s)"
@@ -206,13 +262,42 @@ onMounted(load);
                 </svg>
                 Read
               </button>
-              <RouterLink :to="`/scenarios/${s.id}`" class="sc-card__action sc-card__action--open">
-                Open
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                     stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
+              <button
+                v-else
+                type="button"
+                class="sc-card__action sc-card__action--read"
+                @click="openReader(s)"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="13" height="13">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
-              </RouterLink>
+                Read
+              </button>
+              <button
+                v-if="isAuthenticated"
+                type="button"
+                class="sc-card__icon-btn"
+                :class="{ 'sc-card__icon-btn--active': isLiked(s.id) }"
+                :title="isLiked(s.id) ? 'Unlike' : 'Like'"
+                @click="toggleLike(s.id)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" :fill="isLiked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </button>
+              <button
+                v-if="isAuthenticated"
+                type="button"
+                class="sc-card__icon-btn"
+                :class="{ 'sc-card__icon-btn--active': isBookmarked(s.id) }"
+                :title="isBookmarked(s.id) ? 'Remove bookmark' : 'Bookmark'"
+                @click="toggleBookmark(s.id)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" :fill="isBookmarked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </button>
+
             </div>
           </div>
         </div>
@@ -415,6 +500,10 @@ onMounted(load);
   background: var(--surface-alt);
   display: block;
   text-decoration: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  width: 100%;
 }
 
 .sc-card__img {
@@ -472,7 +561,7 @@ onMounted(load);
   gap: 6px;
 }
 
-.sc-card__title-link { text-decoration: none; color: inherit; }
+.sc-card__title-link { text-decoration: none; color: inherit; border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer; width: 100%; }
 .sc-card__title-link:hover .sc-card__title { color: var(--primary); }
 
 .sc-card__title {
@@ -561,6 +650,33 @@ onMounted(load);
   border-color: var(--primary);
   color: var(--primary);
   background: rgba(192, 74, 8, 0.05);
+}
+
+.sc-card__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.sc-card__icon-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(192, 74, 8, 0.05);
+}
+
+.sc-card__icon-btn--active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(192, 74, 8, 0.08);
 }
 
 /* No results */

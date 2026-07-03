@@ -1,112 +1,119 @@
 // composables/useScenarioInteractions.js
-import { ref } from "vue";
+// État réactif par userId — se recalcule au changement de compte
+import { ref, computed, watch } from "vue";
 import { apiFetch } from "../api/rest";
+import { useAuth } from "./useAuth";
 
-const LIKES_KEY = "vignette_scenario_likes";
-const BOOKMARKS_KEY = "vignette_scenario_bookmarks";
+// Refs réactifs au niveau du module — mis à jour à chaque toggle
+const _likedIds     = ref(new Set());
+const _bookmarkedIds = ref(new Set());
+let   _loadedUid    = null;
 
-function loadSet(key) {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(key) ?? "[]"));
-  } catch {
-    return new Set();
-  }
+function likesKey(uid)     { return `vignette_likes_${uid}`; }
+function bookmarksKey(uid) { return `vignette_bookmarks_${uid}`; }
+
+function readSet(key) {
+  try { return new Set(JSON.parse(localStorage.getItem(key) ?? "[]")); }
+  catch { return new Set(); }
 }
 
-function saveSet(key, set) {
+function writeSet(key, set) {
   localStorage.setItem(key, JSON.stringify([...set]));
 }
 
-// État global partagé
-const likedIds = ref(loadSet(LIKES_KEY));
-const bookmarkedIds = ref(loadSet(BOOKMARKS_KEY));
-
 export function useScenarioInteractions() {
+  const { currentUser } = useAuth();
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
-  function setLiked(scenarioId, value) {
-    const id = String(scenarioId);
-    const next = new Set(likedIds.value);
-    value ? next.add(id) : next.delete(id);
-    likedIds.value = next;
-    saveSet(LIKES_KEY, next);
+  function uid() {
+    return currentUser.value?.id
+      ?? currentUser.value?.username
+      ?? "guest";
   }
 
-  function setBookmarked(scenarioId, value) {
-    const id = String(scenarioId);
-    const next = new Set(bookmarkedIds.value);
-    value ? next.add(id) : next.delete(id);
-    bookmarkedIds.value = next;
-    saveSet(BOOKMARKS_KEY, next);
+  // Recharge depuis localStorage si l'utilisateur a changé
+  function ensureLoaded() {
+    const currentUid = uid();
+    if (currentUid !== _loadedUid) {
+      _likedIds.value      = readSet(likesKey(currentUid));
+      _bookmarkedIds.value = readSet(bookmarksKey(currentUid));
+      _loadedUid           = currentUid;
+    }
   }
 
-  function applyStatus(scenarioId, status) {
-    setLiked(scenarioId, status.liked);
-    setBookmarked(scenarioId, status.bookmarked);
-  }
-
-  // ── Lecture ───────────────────────────────────────────────────────────────
+  // Se réinitialise automatiquement au changement de compte
+  watch(() => currentUser.value?.id ?? currentUser.value?.username, () => {
+    _loadedUid = null;
+    ensureLoaded();
+  });
 
   function isLiked(scenarioId) {
-    return likedIds.value.has(String(scenarioId));
+    ensureLoaded();
+    return _likedIds.value.has(String(scenarioId));
   }
 
   function isBookmarked(scenarioId) {
-    return bookmarkedIds.value.has(String(scenarioId));
+    ensureLoaded();
+    return _bookmarkedIds.value.has(String(scenarioId));
+  }
+
+  // bookmarkedIds réactif pour BookmarkedScenariosView
+  const bookmarkedIds = computed(() => {
+    ensureLoaded();
+    return _bookmarkedIds.value;
+  });
+
+  const likedIds = computed(() => {
+    ensureLoaded();
+    return _likedIds.value;
+  });
+
+  async function toggleLike(scenarioId) {
+    ensureLoaded();
+    const id = String(scenarioId);
+    const wasLiked = _likedIds.value.has(id);
+
+    // Mise à jour réactive immédiate — crée un nouveau Set pour déclencher la réactivité
+    const next = new Set(_likedIds.value);
+    wasLiked ? next.delete(id) : next.add(id);
+    _likedIds.value = next;
+    writeSet(likesKey(uid()), next);
+
+    try {
+      await apiFetch(`/api/scenarios/${id}/like`, {
+        method: wasLiked ? "DELETE" : "POST",
+      });
+    } catch {}
+  }
+
+  async function toggleBookmark(scenarioId) {
+    ensureLoaded();
+    const id = String(scenarioId);
+    const wasBookmarked = _bookmarkedIds.value.has(id);
+
+    const next = new Set(_bookmarkedIds.value);
+    wasBookmarked ? next.delete(id) : next.add(id);
+    _bookmarkedIds.value = next;
+    writeSet(bookmarksKey(uid()), next);
+
+    try {
+      await apiFetch(`/api/scenarios/${id}/bookmark`, {
+        method: wasBookmarked ? "DELETE" : "POST",
+      });
+    } catch {}
   }
 
   async function fetchStatus(scenarioId) {
     try {
-      const status = await apiFetch(`/api/scenarios/${scenarioId}/interactions`);
-      applyStatus(scenarioId, status);
+      return await apiFetch(`/api/scenarios/${scenarioId}/interactions`);
     } catch {
-      // silencieux — localStorage reste le fallback
-    }
-  }
-
-  // ── Like ──────────────────────────────────────────────────────────────────
-
-  async function toggleLike(scenarioId) {
-    const id = String(scenarioId);
-    const wasLiked = isLiked(id);
-
-    // Optimistic update
-    setLiked(id, !wasLiked);
-
-    try {
-      const method = wasLiked ? "DELETE" : "POST";
-      const status = await apiFetch(`/api/scenarios/${id}/like`, { method });
-      applyStatus(id, status);
-    } catch {
-      // Rollback si erreur réseau ou non authentifié
-      setLiked(id, wasLiked);
-    }
-  }
-
-  // ── Bookmark ──────────────────────────────────────────────────────────────
-
-  async function toggleBookmark(scenarioId) {
-    const id = String(scenarioId);
-    const wasBookmarked = isBookmarked(id);
-
-    // Optimistic update
-    setBookmarked(id, !wasBookmarked);
-
-    try {
-      const method = wasBookmarked ? "DELETE" : "POST";
-      const status = await apiFetch(`/api/scenarios/${id}/bookmark`, { method });
-      applyStatus(id, status);
-    } catch {
-      // Rollback si erreur réseau ou non authentifié
-      setBookmarked(id, wasBookmarked);
+      return null;
     }
   }
 
   return {
     isLiked,
-    toggleLike,
     isBookmarked,
+    toggleLike,
     toggleBookmark,
     fetchStatus,
     likedIds,

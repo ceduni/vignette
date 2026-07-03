@@ -90,6 +90,12 @@ const routes = [
         meta: { requiresAuth: true, title: "My scenarios", description: "Manage your personal scenarios, drafts and publications." },
     },
     {
+        path: "/bookmarked-scenarios",
+        name: "bookmarked-scenarios",
+        component: () => import("../views/BookmarkedScenariosView.vue"),
+        meta: { requiresAuth: true, title: "Bookmarked scenarios", description: "Scenarios you have bookmarked." },
+    },
+    {
         path: "/scenarios/:id/manage",
         name: "scenario-manage",
         component: ScenarioManageView,

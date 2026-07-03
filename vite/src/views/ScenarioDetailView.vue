@@ -110,6 +110,7 @@ const props = defineProps({
 const {currentUser, loadMe, isAuthenticated} = useAuth();
 const toast = useToast();
 const { isLiked, toggleLike, isBookmarked, toggleBookmark, fetchStatus } = useScenarioInteractions();
+const likeCount = ref(0);
 
 const scenario = ref(null);
 const languageName = ref("");
@@ -1497,6 +1498,13 @@ async function loadScenario() {
   } else {
     languageName.value = "-";
   }
+  // Fetch like count
+  try {
+    const status = await apiFetch(`/api/scenarios/${props.id}/interactions`);
+    likeCount.value = status.likeCount ?? 0;
+  } catch {
+    likeCount.value = 0;
+  }
 }
 
 async function loadThumbs() {
@@ -1545,6 +1553,10 @@ async function loadAll() {
     isOwner.value =
         !!currentUser.value &&
         currentUser.value.username === scenario.value.authorUsername;
+    // Non-owners always see the storyboard view, not the studio
+    if (!isOwner.value) {
+      storyboardView.value = "global";
+    }
     await Promise.all([loadThumbs(), checkExistingRequest()]);
     await loadThumbs();
     applyUnclaimedDraftAudio();
@@ -2363,6 +2375,11 @@ onMounted(loadAll);
                 <span class="si-stat__num">{{ scenario.authorUsername || "—" }}</span>
                 <span class="si-stat__lbl">author</span>
               </div>
+              <div class="si-stat__div"></div>
+              <div class="si-stat">
+                <span class="si-stat__num">{{ likeCount }}</span>
+                <span class="si-stat__lbl">likes</span>
+              </div>
             </div>
 
             <!-- Tags -->
@@ -2760,7 +2777,7 @@ onMounted(loadAll);
                   <div class="vg-brand-block">
                     <div class="vg-brand studio-breadcrumb">
                       <span class="vg-brand-dot"></span>
-                      <RouterLink to="/scenarios" class="vg-brand-back">My scenarios</RouterLink>
+                      <RouterLink :to="isOwner ? '/workspace' : '/scenarios'" class="vg-brand-back">{{ isOwner ? 'My scenarios' : 'Scenarios' }}</RouterLink>
                       <strong>/ {{ scenario.title || "New scenario" }}</strong>
                     </div>
                     <Transition name="vg-kicker" mode="out-in">
@@ -2780,6 +2797,7 @@ onMounted(loadAll);
                       Storyboard
                     </button>
                     <button
+                        v-if="isOwner"
                         type="button"
                         class="vg-tab"
                         :class="{ active: storyboardView === 'studio' }"
@@ -2825,6 +2843,37 @@ onMounted(loadAll);
                       </svg>
                     </button>
                     <button
+                        v-if="isPublished && isAuthenticated"
+                        type="button"
+                        class="vg-interaction-btn"
+                        :class="{ 'vg-interaction-btn--active': isLiked(props.id) }"
+                        :title="isLiked(props.id) ? 'Unlike' : 'Like'"
+                        @click="toggleLike(props.id)"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24"
+                           :fill="isLiked(props.id) ? 'currentColor' : 'none'"
+                           stroke="currentColor" stroke-width="2"
+                           stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                      </svg>
+                      <span class="vg-interaction-btn__count">{{ likeCount }}</span>
+                    </button>
+                    <button
+                        v-if="isPublished && isAuthenticated"
+                        type="button"
+                        class="vg-interaction-btn"
+                        :class="{ 'vg-interaction-btn--active': isBookmarked(props.id) }"
+                        :title="isBookmarked(props.id) ? 'Remove bookmark' : 'Bookmark'"
+                        @click="toggleBookmark(props.id)"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24"
+                           :fill="isBookmarked(props.id) ? 'currentColor' : 'none'"
+                           stroke="currentColor" stroke-width="2"
+                           stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                      </svg>
+                    </button>
+                    <button
                         v-if="isOwner && !isPublished"
                         type="button"
                         class="vg-pub"
@@ -2847,9 +2896,9 @@ onMounted(loadAll);
                 >
                   <div class="vg-view__main">
                     <div class="bd-toolbar">
-                      <span class="bd-tlbl">Layout</span>
+                      <span v-if="isOwner" class="bd-tlbl">Layout</span>
 
-                      <div class="bd-presets">
+                      <div v-if="isOwner" class="bd-presets">
                         <button
                             type="button"
                             class="preset-btn"
@@ -5150,4 +5199,25 @@ onMounted(loadAll);
   border-radius: 999px;
   transition: width 200ms ease;
 }
+
+.vg-interaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #785068;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: background 140ms ease, color 140ms ease;
+}
+.vg-interaction-btn:hover { background: rgba(30,8,18,0.08); color: #1E0812; }
+.vg-interaction-btn--active { color: var(--primary); }
+.vg-interaction-btn--active:hover { background: rgba(192,74,8,0.08); }
+.vg-interaction-btn__count { font-size: 0.7rem; font-weight: 800; opacity: 0.8; }
 </style>

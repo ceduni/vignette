@@ -23,17 +23,20 @@ public class ScenarioService {
     private final UserService userService;
     private final LanguageService languageService;
     private final ScenarioTagService scenarioTagService;
+    private final NotificationService notificationService;
 
     public ScenarioService(
             ScenarioRepository scenarioRepository,
             UserService userService,
             LanguageService languageService,
-            ScenarioTagService scenarioTagService
+            ScenarioTagService scenarioTagService,
+            NotificationService notificationService
     ) {
         this.repo = scenarioRepository;
         this.userService = userService;
         this.languageService = languageService;
         this.scenarioTagService = scenarioTagService;
+        this.notificationService = notificationService;
     }
 
     public boolean existsByIdAndAuthorUsername(Long scenarioId, String username) {
@@ -118,7 +121,10 @@ public class ScenarioService {
             scenario.setPublishedAt(Instant.now());
         }
 
-        return repo.save(scenario);
+        Scenario saved = repo.save(scenario);
+        // Notify followers of this language
+        notificationService.notifyNewScenarioInLanguage(saved);
+        return saved;
     }
 
     public Scenario updateStoryboard(Long id, UpdateScenarioStoryboardRequest request, Authentication authentication) {

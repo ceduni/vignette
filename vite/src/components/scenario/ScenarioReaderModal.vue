@@ -457,9 +457,9 @@ onUnmounted(() => {
   max-height: min(92vh, 900px);
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, #2A1200 0%, #1A0A00 100%);
+  background: linear-gradient(160deg, #2A0614 0%, #1E0812 100%);
   border-radius: 24px;
-  border: 1px solid rgba(192, 74, 8, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.04);
   overflow: hidden;
 }
