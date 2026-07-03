@@ -36,3 +36,8 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Local storage (uploads) ###
+/data/
+### Local storage (uploads) ###
+/data/
