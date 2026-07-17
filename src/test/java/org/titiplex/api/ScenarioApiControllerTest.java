@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -86,6 +88,10 @@ class ScenarioApiControllerTest {
                 "GRID_3",
                 3,
                 List.of(),
+                null,
+                "NONE",
+                null,
+                null,
                 null
         );
 
@@ -113,7 +119,8 @@ class ScenarioApiControllerTest {
                 1L, "First", "D1", "chuj", "bob",
                 Instant.parse("2026-03-20T10:15:30Z"),
                 "DRAFT", null, "PRESET", "GRID_3", 3,
-                List.of(), null
+                List.of(), null,
+                "NONE", null, null, null
         );
         ScenarioDto dto2 = new ScenarioDto(
                 2L, "Second", "D2", "kiche", "bob",
@@ -121,7 +128,8 @@ class ScenarioApiControllerTest {
                 "PUBLISHED", Instant.parse("2026-03-22T10:15:30Z"),
                 "CUSTOM", "MANGA", 4,
                 List.of(),
-                null
+                null,
+                "NONE", null, null, null
         );
 
         when(scenarioService.listVisibleScenarios(auth)).thenReturn(List.of(s1, s2));
@@ -147,7 +155,8 @@ class ScenarioApiControllerTest {
                 Instant.parse("2026-03-20T10:15:30Z"),
                 "DRAFT", null, "CUSTOM", "MANGA", 4,
                 List.of(),
-                null
+                null,
+                "NONE", null, null, null
         );
 
         UpdateScenarioStoryboardRequest request = new UpdateScenarioStoryboardRequest("CUSTOM", "MANGA", 4);
@@ -176,7 +185,8 @@ class ScenarioApiControllerTest {
                 "PUBLISHED", Instant.parse("2026-03-22T10:15:30Z"),
                 "PRESET", "GRID_3", 3,
                 List.of(),
-                null
+                null,
+                "NONE", null, null, null
         );
 
         when(scenarioService.publishScenario(21L, auth)).thenReturn(published);
@@ -186,6 +196,60 @@ class ScenarioApiControllerTest {
 
         assertEquals(21L, result.id());
         assertEquals("PUBLISHED", result.visibilityStatus());
+    }
+
+    @Test
+    void approveFork_delegatesToServiceWithApproveTrue() {
+        Authentication auth = auth("alice", "ROLE_USER");
+
+        Scenario approved = new Scenario();
+        approved.setId(30L);
+
+        ScenarioDto dto = new ScenarioDto(
+                30L, "Forked story", "Desc", "chuj", "bob",
+                Instant.parse("2026-03-20T10:15:30Z"),
+                "DRAFT", null, "PRESET", "GRID_3", 3,
+                List.of(),
+                21L,
+                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null
+        );
+
+        when(scenarioService.reviewFork(eq(30L), eq(true), eq((String) null), eq(auth))).thenReturn(approved);
+        when(scenarioService.toDto(approved)).thenReturn(dto);
+
+        ScenarioDto result = controller.approveFork(30L, null, auth);
+
+        assertEquals(30L, result.id());
+        assertEquals("APPROVED", result.reviewStatus());
+        assertEquals("alice", result.reviewedByUsername());
+    }
+
+    @Test
+    void rejectFork_delegatesToServiceWithApproveFalseAndComment() {
+        Authentication auth = auth("alice", "ROLE_USER");
+
+        Scenario rejected = new Scenario();
+        rejected.setId(31L);
+
+        ScenarioDto dto = new ScenarioDto(
+                31L, "Forked story", "Desc", "chuj", "bob",
+                Instant.parse("2026-03-20T10:15:30Z"),
+                "DRAFT", null, "PRESET", "GRID_3", 3,
+                List.of(),
+                21L,
+                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough"
+        );
+
+        ScenarioApiController.ReviewRequest body = new ScenarioApiController.ReviewRequest("Not accurate enough");
+
+        when(scenarioService.reviewFork(31L, false, "Not accurate enough", auth)).thenReturn(rejected);
+        when(scenarioService.toDto(rejected)).thenReturn(dto);
+
+        ScenarioDto result = controller.rejectFork(31L, body, auth);
+
+        assertEquals(31L, result.id());
+        assertEquals("REJECTED", result.reviewStatus());
+        assertEquals("Not accurate enough", result.reviewComment());
     }
 
     @Test
@@ -218,7 +282,8 @@ class ScenarioApiControllerTest {
 
         when(scenarioService.listMyScenarios(auth)).thenReturn(List.of(scenario));
         when(scenarioService.toDto(scenario)).thenReturn(new ScenarioDto(
-                1L, "Mine", null, "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null
+                1L, "Mine", null, "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null,
+                "NONE", null, null, null
         ));
 
         List<ScenarioDto> result = controller.listMine(auth);
@@ -243,7 +308,8 @@ class ScenarioApiControllerTest {
 
         when(scenarioService.updateScenarioMetadata(5L, req, auth)).thenReturn(updated);
         when(scenarioService.toDto(updated)).thenReturn(new ScenarioDto(
-                5L, "New title", "New description", "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null
+                5L, "New title", "New description", "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null,
+                "NONE", null, null, null
         ));
 
         ScenarioDto result = controller.updateMetadata(5L, req, auth);

@@ -119,7 +119,12 @@ export function useNotifications() {
       case "NEW_LIKE":       return "like";
       case "NEW_BOOKMARK":   return "bookmark";
       case "NEW_FOLLOWER":   return "follow";
+      case "FORK_REVIEW_REQUESTED": return "review";
+      case "FORK_APPROVED":         return "check";
+      case "FORK_REJECTED":         return "cross";
       case "SYSTEM":         return "system";
+      case "COLLABORATION_INVITE":  return "invite";
+      case "COLLABORATION_ACCEPTED": return "check";
       default:               return "bell";
     }
   }
@@ -130,7 +135,12 @@ export function useNotifications() {
       case "NEW_LIKE":     return "New like";
       case "NEW_BOOKMARK": return "New bookmark";
       case "NEW_FOLLOWER": return "New follower";
+      case "FORK_REVIEW_REQUESTED": return "Copy pending review";
+      case "FORK_APPROVED":         return "Copy approved";
+      case "FORK_REJECTED":         return "Copy rejected";
       case "SYSTEM":       return "System";
+      case "COLLABORATION_INVITE":   return "Collaboration invite";
+      case "COLLABORATION_ACCEPTED": return "Invite accepted";
       default:             return "Notification";
     }
   }

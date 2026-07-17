@@ -5,10 +5,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.titiplex.api.dto.ScenarioDto;
+import org.titiplex.persistence.model.CollaborationStatus;
+import org.titiplex.persistence.model.CollaboratorRole;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioCollaborator;
 import org.titiplex.persistence.model.User;
+import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
 
 import java.time.Instant;
@@ -17,10 +23,12 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
@@ -33,6 +41,10 @@ class ScenarioServiceTest {
     private UserService userService;
     @Mock
     private LanguageService languageService;
+    @Mock
+    private ScenarioTagService scenarioTagService;
+    @Mock
+    private ScenarioCollaboratorRepository collaboratorRepository;
 
     @InjectMocks
     private ScenarioService scenarioService;
@@ -47,6 +59,7 @@ class ScenarioServiceTest {
 
         when(userService.getUserById(9L)).thenReturn(user);
         when(languageService.getLanguage("fra")).thenReturn(language);
+        when(scenarioTagService.resolveTags(List.of())).thenReturn(List.of());
         when(scenarioRepository.save(any(Scenario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Scenario created = scenarioService.createScenario("Titre", "Desc", 9L, "fra", List.of());
@@ -61,7 +74,7 @@ class ScenarioServiceTest {
 
     @Test
     void getRequiredScenario_throwsWhenMissing() {
-        when(scenarioRepository.findById(11L)).thenReturn(Optional.empty());
+        when(scenarioRepository.findByIdWithTags(11L)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class, () -> scenarioService.getRequiredScenario(11L));
     }
@@ -85,6 +98,7 @@ class ScenarioServiceTest {
         author.setUsername("alice");
 
         when(userService.getUserById(7L)).thenReturn(author);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
 
         Scenario scenario = new Scenario();
         scenario.setId(3L);
@@ -100,5 +114,117 @@ class ScenarioServiceTest {
         assertEquals(3L, dto.id());
         assertEquals("My scenario", dto.title());
         assertEquals("alice", dto.authorUsername());
+    }
+
+    // ── Collaborator permission checks ──────────────────────────────────
+
+    private Authentication authAs(String username) {
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getName()).thenReturn(username);
+        return auth;
+    }
+
+    private Scenario scenarioOwnedBy(Long ownerId) {
+        Scenario scenario = new Scenario();
+        scenario.setId(42L);
+        scenario.setAuthor_id(ownerId);
+        return scenario;
+    }
+
+    private User userWithId(String username, Long id) {
+        User u = new User();
+        u.setId(id);
+        u.setUsername(username);
+        return u;
+    }
+
+    @Test
+    void assertCanEditScenario_allowsAcceptedEditorCollaborator() {
+        Scenario scenario = scenarioOwnedBy(1L);
+        Authentication auth = authAs("bob");
+
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "bob")).thenReturn(false);
+        when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
+
+        ScenarioCollaborator collaborator = new ScenarioCollaborator();
+        collaborator.setRole(CollaboratorRole.EDITOR);
+        collaborator.setStatus(CollaborationStatus.ACCEPTED);
+        when(collaboratorRepository.findByScenarioIdAndUserId(42L, 2L)).thenReturn(Optional.of(collaborator));
+
+        assertDoesNotThrow(() -> scenarioService.assertCanEditScenario(scenario, auth));
+    }
+
+    @Test
+    void assertCanEditScenario_deniesAcceptedViewerCollaborator() {
+        Scenario scenario = scenarioOwnedBy(1L);
+        Authentication auth = authAs("bob");
+
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "bob")).thenReturn(false);
+        when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
+
+        ScenarioCollaborator collaborator = new ScenarioCollaborator();
+        collaborator.setRole(CollaboratorRole.VIEWER);
+        collaborator.setStatus(CollaborationStatus.ACCEPTED);
+        when(collaboratorRepository.findByScenarioIdAndUserId(42L, 2L)).thenReturn(Optional.of(collaborator));
+
+        assertThrows(AccessDeniedException.class, () -> scenarioService.assertCanEditScenario(scenario, auth));
+    }
+
+    @Test
+    void assertCanEditScenario_deniesPendingEditorCollaborator() {
+        Scenario scenario = scenarioOwnedBy(1L);
+        Authentication auth = authAs("bob");
+
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "bob")).thenReturn(false);
+        when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
+
+        ScenarioCollaborator collaborator = new ScenarioCollaborator();
+        collaborator.setRole(CollaboratorRole.EDITOR);
+        collaborator.setStatus(CollaborationStatus.PENDING);
+        when(collaboratorRepository.findByScenarioIdAndUserId(42L, 2L)).thenReturn(Optional.of(collaborator));
+
+        assertThrows(AccessDeniedException.class, () -> scenarioService.assertCanEditScenario(scenario, auth));
+    }
+
+    @Test
+    void assertCanEditScenario_deniesUserWithNoRelationToScenario() {
+        Scenario scenario = scenarioOwnedBy(1L);
+        Authentication auth = authAs("stranger");
+
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "stranger")).thenReturn(false);
+        when(userService.getUserByUsername("stranger")).thenReturn(userWithId("stranger", 3L));
+        when(collaboratorRepository.findByScenarioIdAndUserId(42L, 3L)).thenReturn(Optional.empty());
+
+        assertThrows(AccessDeniedException.class, () -> scenarioService.assertCanEditScenario(scenario, auth));
+    }
+
+    @Test
+    void assertCanViewScenario_allowsAcceptedViewerOnDraftScenario() {
+        Scenario scenario = scenarioOwnedBy(1L);
+        // DRAFT by default, so only owner/collaborator/admin should see it
+        Authentication auth = authAs("bob");
+
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "bob")).thenReturn(false);
+        when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
+
+        ScenarioCollaborator collaborator = new ScenarioCollaborator();
+        collaborator.setRole(CollaboratorRole.VIEWER);
+        collaborator.setStatus(CollaborationStatus.ACCEPTED);
+        when(collaboratorRepository.findByScenarioIdAndUserId(42L, 2L)).thenReturn(Optional.of(collaborator));
+
+        assertDoesNotThrow(() -> scenarioService.assertCanViewScenario(scenario, auth));
+    }
+
+    @Test
+    void assertCanViewScenario_deniesNonCollaboratorOnDraftScenario() {
+        Scenario scenario = scenarioOwnedBy(1L);
+        Authentication auth = authAs("stranger");
+
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "stranger")).thenReturn(false);
+        when(userService.getUserByUsername("stranger")).thenReturn(userWithId("stranger", 3L));
+        when(collaboratorRepository.findByScenarioIdAndUserId(42L, 3L)).thenReturn(Optional.empty());
+
+        assertThrows(NoSuchElementException.class, () -> scenarioService.assertCanViewScenario(scenario, auth));
     }
 }

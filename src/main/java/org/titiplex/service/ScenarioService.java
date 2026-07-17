@@ -7,18 +7,19 @@ import org.springframework.stereotype.Service;
 import org.titiplex.api.dto.ScenarioDto;
 import org.titiplex.api.dto.UpdateScenarioMetadataRequest;
 import org.titiplex.api.dto.UpdateScenarioStoryboardRequest;
+import org.titiplex.persistence.model.CollaboratorRole;
+import org.titiplex.persistence.model.CollaborationStatus;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 import org.titiplex.persistence.model.StoryboardLayoutMode;
+import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.titiplex.persistence.model.Audio;
+import org.titiplex.persistence.model.ReviewStatus;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.repo.AudioRepository;
 import org.titiplex.persistence.repo.ThumbnailRepository;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -34,6 +35,7 @@ public class ScenarioService {
     private final NotificationService notificationService;
     private final ThumbnailRepository thumbnailRepo;
     private final AudioRepository audioRepo;
+    private final ScenarioCollaboratorRepository collaboratorRepo;
 
     public ScenarioService(
             ScenarioRepository scenarioRepository,
@@ -42,7 +44,8 @@ public class ScenarioService {
             ScenarioTagService scenarioTagService,
             NotificationService notificationService,
             ThumbnailRepository thumbnailRepo,
-            AudioRepository audioRepo
+            AudioRepository audioRepo,
+            ScenarioCollaboratorRepository collaboratorRepo
     ) {
         this.repo = scenarioRepository;
         this.userService = userService;
@@ -51,6 +54,7 @@ public class ScenarioService {
         this.notificationService = notificationService;
         this.thumbnailRepo = thumbnailRepo;
         this.audioRepo = audioRepo;
+        this.collaboratorRepo = collaboratorRepo;
     }
 
     public boolean existsByIdAndAuthorUsername(Long scenarioId, String username) {
@@ -110,6 +114,30 @@ public class ScenarioService {
         return repo.findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc(authentication.getName());
     }
 
+    public List<Scenario> listSharedWithMeScenarios(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new InsufficientAuthenticationException("Authentication required");
+        }
+
+        Long userId = userService.getUserByUsername(authentication.getName()).getId();
+        List<Long> scenarioIds = collaboratorRepo.findByUserIdAndStatus(userId, CollaborationStatus.ACCEPTED)
+                .stream()
+                .map(org.titiplex.persistence.model.ScenarioCollaborator::getScenarioId)
+                .toList();
+
+        if (scenarioIds.isEmpty()) {
+            return List.of();
+        }
+
+        return repo.findAllByIdInWithTags(scenarioIds);
+    }
+
+    public List<ScenarioDto> listSharedWithMeScenarioDtos(Authentication authentication) {
+        return listSharedWithMeScenarios(authentication).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     public List<Scenario> listAllScenarios() {
         return repo.findAllByOrderByCreatedAtDesc();
     }
@@ -130,6 +158,13 @@ public class ScenarioService {
         Scenario scenario = getRequiredScenario(id);
         assertCanEditScenario(scenario, authentication);
 
+        if (scenario.getReviewStatus() == ReviewStatus.PENDING) {
+            throw new AccessDeniedException("Ce fork doit être approuvé par l'auteur original avant publication.");
+        }
+        if (scenario.getReviewStatus() == ReviewStatus.REJECTED) {
+            throw new AccessDeniedException("Ce fork a été rejeté par l'auteur original et ne peut pas être publié.");
+        }
+
         scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
         if (scenario.getPublishedAt() == null) {
             scenario.setPublishedAt(Instant.now());
@@ -139,6 +174,12 @@ public class ScenarioService {
         // Notify followers of this language
         notificationService.notifyNewScenarioInLanguage(saved);
         return saved;
+    }
+
+    public boolean hasEditAccess(Long scenarioId, String username) {
+        if (username == null) return false;
+        if (existsByIdAndAuthorUsername(scenarioId, username)) return true;
+        return hasEditorAccess(scenarioId, username);
     }
 
     public Scenario updateStoryboard(Long id, UpdateScenarioStoryboardRequest request, Authentication authentication) {
@@ -192,7 +233,11 @@ public class ScenarioService {
     }
 
     public void assertCanViewScenario(Scenario scenario, Authentication authentication) {
-        if (scenario.getVisibilityStatus() == ScenarioVisibilityStatus.PUBLISHED) {
+        boolean publiclyVisible = scenario.getVisibilityStatus() == ScenarioVisibilityStatus.PUBLISHED
+                && scenario.getReviewStatus() != ReviewStatus.PENDING
+                && scenario.getReviewStatus() != ReviewStatus.REJECTED;
+
+        if (publiclyVisible) {
             return;
         }
         if (isAdmin(authentication)) {
@@ -202,6 +247,18 @@ public class ScenarioService {
         String username = authenticatedUsername(authentication);
         if (username != null && existsByIdAndAuthorUsername(scenario.getId(), username)) {
             return;
+        }
+
+        if (username != null && isAcceptedCollaborator(scenario.getId(), username)) {
+            return;
+        }
+
+        // Original author can view a pending/rejected fork of their own scenario
+        if (username != null && scenario.getParentScenarioId() != null) {
+            Scenario original = repo.findById(scenario.getParentScenarioId()).orElse(null);
+            if (original != null && username.equals(userService.getUserById(original.getAuthor_id()).getUsername())) {
+                return;
+            }
         }
 
         throw new NoSuchElementException("Scenario not found");
@@ -220,7 +277,26 @@ public class ScenarioService {
             return;
         }
 
+        if (username != null && hasEditorAccess(scenario.getId(), username)) {
+            return;
+        }
+
         throw new AccessDeniedException("You are not allowed to edit this scenario");
+    }
+
+    private boolean isAcceptedCollaborator(Long scenarioId, String username) {
+        Long userId = userService.getUserByUsername(username).getId();
+        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, userId)
+                .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
+                .isPresent();
+    }
+
+    private boolean hasEditorAccess(Long scenarioId, String username) {
+        Long userId = userService.getUserByUsername(username).getId();
+        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, userId)
+                .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
+                .filter(c -> c.getRole() == CollaboratorRole.OWNER || c.getRole() == CollaboratorRole.EDITOR)
+                .isPresent();
     }
 
     private boolean isAdmin(Authentication authentication) {
@@ -239,6 +315,9 @@ public class ScenarioService {
 
     public ScenarioDto toDto(Scenario s) {
         String authorUsername = userService.getUserById(s.getAuthor_id()).getUsername();
+        String reviewedByUsername = s.getReviewedById() != null
+                ? userService.getUserById(s.getReviewedById()).getUsername()
+                : null;
 
         return new ScenarioDto(
                 s.getId(),
@@ -253,7 +332,11 @@ public class ScenarioService {
                 s.getStoryboardPreset(),
                 s.getStoryboardColumns(),
                 scenarioTagService.toNames(s.getTags()),
-                s.getParentScenarioId()
+                s.getParentScenarioId(),
+                s.getReviewStatus().name(),
+                reviewedByUsername,
+                s.getReviewedAt(),
+                s.getReviewComment()
         );
     }
 
@@ -289,12 +372,14 @@ public class ScenarioService {
                 .map(this::toDto)
                 .toList();
     }
+
     public List<ScenarioDto> listScenariosByLanguageId(String languageId) {
         return repo.findAllByLanguageIdWithTagsOrderByCreatedAtDesc(languageId)
                 .stream()
                 .map(this::toDto)
                 .toList();
     }
+
     @Transactional
     public Scenario forkScenario(Long originalId, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -323,6 +408,13 @@ public class ScenarioService {
         fork.setStoryboardPreset(original.getStoryboardPreset());
         fork.setStoryboardColumns(original.getStoryboardColumns());
         fork.setParentScenarioId(original.getId());
+
+        if (!userId.equals(original.getAuthor_id())) {
+            fork.setReviewStatus(ReviewStatus.PENDING);
+        } else {
+            fork.setReviewStatus(ReviewStatus.NONE);
+        }
+
         fork.setTags(new LinkedHashSet<>(original.getTags()));
 
         Scenario saved = repo.save(fork);
@@ -371,6 +463,43 @@ public class ScenarioService {
             }
         }
 
+        if (saved.getReviewStatus() == ReviewStatus.PENDING) {
+            notificationService.notifyForkReviewRequested(original.getAuthor_id(), saved, original, userId);
+        }
+
+        return saved;
+    }
+
+    @Transactional
+    public Scenario reviewFork(Long forkId, boolean approve, String comment, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new InsufficientAuthenticationException("Authentication required");
+        }
+
+        Scenario fork = getRequiredScenario(forkId);
+
+        if (fork.getReviewStatus() != ReviewStatus.PENDING) {
+            throw new IllegalStateException("Ce scénario n'est pas en attente de review.");
+        }
+        if (fork.getParentScenarioId() == null) {
+            throw new IllegalStateException("Ce scénario n'est pas un fork.");
+        }
+
+        Scenario original = getRequiredScenario(fork.getParentScenarioId());
+        String username = authentication.getName();
+        Long reviewerId = userService.getUserByUsername(username).getId();
+
+        if (!reviewerId.equals(original.getAuthor_id())) {
+            throw new AccessDeniedException("Seul l'auteur original peut approuver ou rejeter ce fork.");
+        }
+
+        fork.setReviewStatus(approve ? ReviewStatus.APPROVED : ReviewStatus.REJECTED);
+        fork.setReviewedById(reviewerId);
+        fork.setReviewedAt(Instant.now());
+        fork.setReviewComment(comment);
+
+        Scenario saved = repo.save(fork);
+        notificationService.notifyForkReviewed(saved.getAuthor_id(), saved, approve);
         return saved;
     }
 

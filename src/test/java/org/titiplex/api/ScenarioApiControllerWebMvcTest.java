@@ -80,6 +80,10 @@ class ScenarioApiControllerWebMvcTest {
                 "GRID_3",
                 3,
                 List.of(),
+                null,
+                "NONE",
+                null,
+                null,
                 null
         );
 
@@ -122,6 +126,10 @@ class ScenarioApiControllerWebMvcTest {
                 "GRID_3",
                 3,
                 List.of(),
+                null,
+                "NONE",
+                null,
+                null,
                 null
         );
 
@@ -222,5 +230,83 @@ class ScenarioApiControllerWebMvcTest {
                 .andExpect(status().isNoContent());
 
         verify(scenarioService).deleteScenario(77L);
+    }
+
+    @Test
+    void approveFork_requiresAuthentication() throws Exception {
+        mvc.perform(post("/api/scenarios/30/review/approve")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void approveFork_requiresCsrfForSessionAuth() throws Exception {
+        mvc.perform(post("/api/scenarios/30/review/approve")
+                        .with(user("alice").roles("USER"))
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void approveFork_returnsUpdatedDtoWhenAuthorizedWithCsrf() throws Exception {
+        Scenario approved = new Scenario();
+        approved.setId(30L);
+
+        ScenarioDto dto = new ScenarioDto(
+                30L, "Forked story", "Desc", "chuj", "bob",
+                Instant.parse("2026-03-20T10:15:30Z"),
+                "DRAFT", null, "PRESET", "GRID_3", 3,
+                List.of(),
+                21L,
+                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null
+        );
+
+        when(scenarioService.reviewFork(eq(30L), eq(true), any(), any())).thenReturn(approved);
+        when(scenarioService.toDto(approved)).thenReturn(dto);
+
+        mvc.perform(post("/api/scenarios/30/review/approve")
+                        .with(user("alice").roles("USER"))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(30))
+                .andExpect(jsonPath("$.reviewStatus").value("APPROVED"))
+                .andExpect(jsonPath("$.reviewedByUsername").value("alice"));
+    }
+
+    @Test
+    void rejectFork_returnsUpdatedDtoWithComment() throws Exception {
+        Scenario rejected = new Scenario();
+        rejected.setId(31L);
+
+        ScenarioDto dto = new ScenarioDto(
+                31L, "Forked story", "Desc", "chuj", "bob",
+                Instant.parse("2026-03-20T10:15:30Z"),
+                "DRAFT", null, "PRESET", "GRID_3", 3,
+                List.of(),
+                21L,
+                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough"
+        );
+
+        when(scenarioService.reviewFork(eq(31L), eq(false), any(), any())).thenReturn(rejected);
+        when(scenarioService.toDto(rejected)).thenReturn(dto);
+
+        mvc.perform(post("/api/scenarios/31/review/reject")
+                        .with(user("alice").roles("USER"))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "comment": "Not accurate enough"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(31))
+                .andExpect(jsonPath("$.reviewStatus").value("REJECTED"))
+                .andExpect(jsonPath("$.reviewComment").value("Not accurate enough"));
     }
 }

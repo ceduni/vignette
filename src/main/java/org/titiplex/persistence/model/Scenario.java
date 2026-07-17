@@ -1,13 +1,10 @@
 package org.titiplex.persistence.model;
-
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
 @Entity
 @Table(name = "scenario")
 @Getter
@@ -17,22 +14,16 @@ public class Scenario {
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id", nullable = false, updatable = false)
     private Long id;
-
     @Column(nullable = false, unique = true)
     private String title;
-
     @Column
     private String description;
-
     @Column
     private Instant createdAt;
-
     @Column(name = "author_id")
     private Long author_id;
-
     @Column(name = "language_id")
     private String language_id;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "author_id",
@@ -42,7 +33,6 @@ public class Scenario {
             foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT),
             nullable = false)
     private User author;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "language_id",
@@ -52,30 +42,35 @@ public class Scenario {
             foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT),
             nullable = false)
     private Language language;
-
     @OneToMany(mappedBy = "scenario", fetch = FetchType.EAGER)
     private Set<Thumbnail> thumbnails;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "visibility_status", nullable = false)
     private ScenarioVisibilityStatus visibilityStatus = ScenarioVisibilityStatus.DRAFT;
-
     @Column(name = "published_at")
     private Instant publishedAt;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "storyboard_layout_mode", nullable = false)
     private StoryboardLayoutMode storyboardLayoutMode = StoryboardLayoutMode.PRESET;
-
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_status", nullable = false)
+    private ReviewStatus reviewStatus = ReviewStatus.NONE;
+    @Column(name = "reviewed_by_id")
+    private Long reviewedById;
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+    @Column(name = "review_comment")
+    private String reviewComment;
+    // helper
+    public boolean isPendingReview() {
+        return this.reviewStatus == ReviewStatus.PENDING;
+    }
     @Column(name = "storyboard_preset", nullable = false, length = 64)
     private String storyboardPreset = "GRID_3";
-
     @Column(name = "storyboard_columns", nullable = false)
     private Integer storyboardColumns = 3;
-
     @Column(name = "parent_scenario_id")
     private Long parentScenarioId;
-
     @ManyToMany
     @JoinTable(
             name = "scenario_tag_link",

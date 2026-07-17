@@ -116,6 +116,10 @@ class AdminApiControllerTest {
                 "GRID_3",
                 3,
                 List.of(),
+                null,
+                "NONE",
+                null,
+                null,
                 null
         );
 

@@ -22,6 +22,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class NotificationService {
 
     private static final String TYPE_NEW_SCENARIO = "NEW_SCENARIO_IN_FOLLOWED_LANGUAGE";
+    private static final String TYPE_FORK_REVIEW_REQUESTED = "FORK_REVIEW_REQUESTED";
+    private static final String TYPE_FORK_APPROVED = "FORK_APPROVED";
+    private static final String TYPE_FORK_REJECTED = "FORK_REJECTED";
+    private static final String TYPE_COLLABORATION_INVITE = "COLLABORATION_INVITE";
+    private static final String TYPE_COLLABORATION_ACCEPTED = "COLLABORATION_ACCEPTED";
 
     // userId → list of active SSE emitters
     private final Map<Long, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
@@ -151,6 +156,108 @@ public class NotificationService {
             // Notification failure must never block scenario publishing
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
                 .error("Failed to send notifications for scenario {}: {}", scenario.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Called by ScenarioService.forkScenario() when a fork is created by
+     * someone other than the original author. Notifies the original author
+     * that a review is needed before the fork can be published.
+     */
+    @Transactional
+    public void notifyForkReviewRequested(Long originalAuthorId, Scenario fork, Scenario original, Long forkerId) {
+        try {
+            User originalAuthor = userService.getUserById(originalAuthorId);
+            String forkerUsername = userService.getUserById(forkerId).getUsername();
+
+            Notification notif = new Notification();
+            notif.setUser(originalAuthor);
+            notif.setType(TYPE_FORK_REVIEW_REQUESTED);
+            notif.setMessage(forkerUsername + " made a copy of \"" + original.getTitle() + "\" that needs your approval before it can be published");
+            notif.setTargetUrl("/scenarios/" + fork.getId());
+            notif.setReferenceId(fork.getId());
+            repo.save(notif);
+
+            pushToUser(originalAuthorId, notif);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                .error("Failed to send fork review requested notification for scenario {}: {}", fork.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Called by ScenarioService.reviewFork() once the original author has
+     * approved or rejected a fork. Notifies the forker of the outcome.
+     */
+    @Transactional
+    public void notifyForkReviewed(Long forkerId, Scenario fork, boolean approved) {
+        try {
+            User forker = userService.getUserById(forkerId);
+
+            Notification notif = new Notification();
+            notif.setUser(forker);
+            notif.setType(approved ? TYPE_FORK_APPROVED : TYPE_FORK_REJECTED);
+            notif.setMessage(approved
+                    ? "Your copy \"" + fork.getTitle() + "\" was approved and can now be published"
+                    : "Your copy \"" + fork.getTitle() + "\" was not approved for publication");
+            notif.setTargetUrl("/scenarios/" + fork.getId());
+            notif.setReferenceId(fork.getId());
+            repo.save(notif);
+
+            pushToUser(forkerId, notif);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                .error("Failed to send fork review outcome notification for scenario {}: {}", fork.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Called by ScenarioCollaborationService when a user is invited to
+     * collaborate on a scenario (by username, not via invite link).
+     */
+    @Transactional
+    public void notifyCollaborationInvite(Long invitedUserId, Scenario scenario, Long inviterId, String role) {
+        try {
+            User invitedUser = userService.getUserById(invitedUserId);
+            String inviterUsername = userService.getUserById(inviterId).getUsername();
+
+            Notification notif = new Notification();
+            notif.setUser(invitedUser);
+            notif.setType(TYPE_COLLABORATION_INVITE);
+            notif.setMessage(inviterUsername + " invited you to collaborate on \"" + scenario.getTitle() + "\" as " + role.toLowerCase());
+            notif.setTargetUrl("/invitations");
+            notif.setReferenceId(scenario.getId());
+            repo.save(notif);
+
+            pushToUser(invitedUserId, notif);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                .error("Failed to send collaboration invite notification for scenario {}: {}", scenario.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Called by ScenarioCollaborationService when an invited user accepts.
+     * Notifies the scenario owner.
+     */
+    @Transactional
+    public void notifyInviteAccepted(Long ownerId, Scenario scenario, Long acceptedUserId) {
+        try {
+            User owner = userService.getUserById(ownerId);
+            String accepterUsername = userService.getUserById(acceptedUserId).getUsername();
+
+            Notification notif = new Notification();
+            notif.setUser(owner);
+            notif.setType(TYPE_COLLABORATION_ACCEPTED);
+            notif.setMessage(accepterUsername + " accepted your invitation to collaborate on \"" + scenario.getTitle() + "\"");
+            notif.setTargetUrl("/scenarios/" + scenario.getId());
+            notif.setReferenceId(scenario.getId());
+            repo.save(notif);
+
+            pushToUser(ownerId, notif);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                .error("Failed to send invite accepted notification for scenario {}: {}", scenario.getId(), e.getMessage());
         }
     }
 

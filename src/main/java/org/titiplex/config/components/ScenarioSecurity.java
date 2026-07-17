@@ -16,7 +16,7 @@ public class ScenarioSecurity {
     }
 
     public boolean isOwner(Long scenarioId, String username) {
-        return scenarioService.existsByIdAndAuthorUsername(scenarioId, username);
+        return scenarioService.hasEditAccess(scenarioId, username);
     }
 
     public boolean isOwnerByThumbnailId(Long thumbId, String username) {

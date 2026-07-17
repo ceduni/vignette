@@ -15,6 +15,8 @@ import ScenarioManageView from "../views/ScenarioManageView.vue";
 import AdminDashboardView from "../views/AdminDashboardView.vue";
 import AdminCommunityView from "../views/AdminCommunityView.vue";
 import AdminLanguagesView from "../views/AdminLanguagesView.vue";
+import InviteJoinView from "../views/InviteJoinView.vue";
+import InvitationsView from "../views/InvitationsView.vue";
 
 import {useAuth} from "../composables/useAuth";
 import AboutProjectView from "../views/AboutProjectView.vue";
@@ -138,6 +140,19 @@ const routes = [
         name: "admin-scenarios",
         component: AdminScenariosView,
         meta: { requiresAuth: true, requiresAdmin: true, title: "Scenario administration", description: "Manage scenario visibility and moderation." },
+    },
+    {
+        path: "/scenarios/join/:token",
+        name: "scenario-invite-join",
+        component: InviteJoinView,
+        props: true,
+        meta: { requiresAuth: true, title: "Join scenario", description: "Accept an invitation to collaborate on a scenario." },
+    },
+    {
+        path: "/invitations",
+        name: "invitations",
+        component: InvitationsView,
+        meta: { requiresAuth: true, title: "Invitations", description: "Pending collaboration invitations." },
     },
 ];
 

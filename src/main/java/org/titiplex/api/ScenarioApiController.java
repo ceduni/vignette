@@ -293,6 +293,7 @@ public class ScenarioApiController {
                     Publishes a scenario and makes it visible to public users.
                     
                     If the scenario was never published before, the publication timestamp is set.
+                    A fork pending or rejected review cannot be published.
                     Requires scenario ownership or admin privileges.
                     """
     )
@@ -315,7 +316,7 @@ public class ScenarioApiController {
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "User is not allowed to publish this scenario",
+                    description = "User is not allowed to publish this scenario, or fork review is pending/rejected",
                     content = @Content(schema = @Schema(implementation = ApiError.class))
             ),
             @ApiResponse(
@@ -338,6 +339,125 @@ public class ScenarioApiController {
     ) {
         return scenarioService.toDto(scenarioService.publishScenario(id, auth));
     }
+
+    @Operation(
+            summary = "Approve a pending fork",
+            description = """
+                    Approves a fork that is pending review, allowing it to be published.
+                    
+                    Only the original author of the forked scenario can approve it.
+                    """
+    )
+    @UserOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Fork approved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ScenarioDto.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Only the original author can approve this fork",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Scenario not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Scenario is not a fork pending review",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @PostMapping("/{id}/review/approve")
+    public ScenarioDto approveFork(
+            @Parameter(description = "ID of the fork to approve", required = true)
+            @PathVariable Long id,
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Optional review comment",
+                    required = false,
+                    content = @Content(schema = @Schema(implementation = ReviewRequest.class))
+            )
+            @RequestBody(required = false) ReviewRequest body,
+
+            @Parameter(hidden = true)
+            Authentication auth
+    ) {
+        String comment = body != null ? body.comment() : null;
+        return scenarioService.toDto(scenarioService.reviewFork(id, true, comment, auth));
+    }
+
+    @Operation(
+            summary = "Reject a pending fork",
+            description = """
+                    Rejects a fork that is pending review, permanently preventing it from being published.
+                    
+                    Only the original author of the forked scenario can reject it.
+                    """
+    )
+    @UserOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Fork rejected successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ScenarioDto.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Only the original author can reject this fork",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Scenario not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Scenario is not a fork pending review",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @PostMapping("/{id}/review/reject")
+    public ScenarioDto rejectFork(
+            @Parameter(description = "ID of the fork to reject", required = true)
+            @PathVariable Long id,
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Optional review comment explaining the rejection",
+                    required = false,
+                    content = @Content(schema = @Schema(implementation = ReviewRequest.class))
+            )
+            @RequestBody(required = false) ReviewRequest body,
+
+            @Parameter(hidden = true)
+            Authentication auth
+    ) {
+        String comment = body != null ? body.comment() : null;
+        return scenarioService.toDto(scenarioService.reviewFork(id, false, comment, auth));
+    }
+
+    @Schema(name = "ReviewRequest", description = "Optional comment attached to a fork review decision")
+    public record ReviewRequest(String comment) {}
 
     @Operation(
             summary = "List my scenarios",
@@ -470,45 +590,46 @@ public class ScenarioApiController {
     ) {
         scenarioService.deleteScenario(id);
     }
-        @Operation(
-        summary = "Fork a scenario",
-        description = "Creates a copy of a published scenario for the authenticated user."
-        )
-        @UserOperation
-        @ApiResponses({
-        @ApiResponse(
-                responseCode = "201",
-                description = "Fork created successfully",
-                content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = CreateScenarioResponse.class)
-                )
-        ),
-        @ApiResponse(
-                responseCode = "400",
-                description = "Scenario is not published",
-                content = @Content(schema = @Schema(implementation = ApiError.class))
-        ),
-        @ApiResponse(
-                responseCode = "401",
-                description = "Authentication required",
-                content = @Content(schema = @Schema(implementation = ApiError.class))
-        ),
-        @ApiResponse(
-                responseCode = "404",
-                description = "Scenario not found",
-                content = @Content(schema = @Schema(implementation = ApiError.class))
-        )
-        })
-        @PostMapping("/{id}/fork")
-        @ResponseStatus(HttpStatus.CREATED)
-        public CreateScenarioResponse fork(
-        @Parameter(description = "ID of the scenario to fork", required = true)
-        @PathVariable Long id,
-        @Parameter(hidden = true)
-        Authentication auth
-        ) {
+
+    @Operation(
+            summary = "Fork a scenario",
+            description = "Creates a copy of a published scenario for the authenticated user."
+    )
+    @UserOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Fork created successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CreateScenarioResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Scenario is not published",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Scenario not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @PostMapping("/{id}/fork")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CreateScenarioResponse fork(
+            @Parameter(description = "ID of the scenario to fork", required = true)
+            @PathVariable Long id,
+            @Parameter(hidden = true)
+            Authentication auth
+    ) {
         Long forkId = scenarioService.forkScenario(id, auth).getId();
         return new CreateScenarioResponse(forkId);
-        }
+    }
 }

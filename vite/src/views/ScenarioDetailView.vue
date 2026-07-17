@@ -4,6 +4,7 @@ import {RouterLink, useRoute, useRouter} from "vue-router";
 import {fetchLanguage} from "../api/languages";
 import {apiFetch} from "../api/rest";
 import {
+  approveFork,
   deleteAudio,
   deleteThumbnail,
   deleteScenario,
@@ -11,6 +12,7 @@ import {
   fetchScenarioThumbnails,
   fetchThumbnailAudios,
   publishScenario,
+  rejectFork,
   reorderScenarioThumbnails,
   updateAudioGloss,
   updateScenarioStoryboard,
@@ -32,6 +34,8 @@ import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import BaseBadge from "../components/ui/BaseBadge.vue";
 import DiscussionThread from "../components/community/DiscussionThread.vue";
+import CollaboratorsPanel from "../components/community/CollaboratorsPanel.vue";
+import {useCollaborators} from "../composables/useCollaborators";
 import {
   buildPlaybackQueue,
   buildSelectedAudios,
@@ -122,11 +126,40 @@ const error = ref("");
 const uploadError = ref("");
 const uploadSuccess = ref("");
 const isOwner = ref(false);
+
+const collaboratorsPanelOpen = ref(false);
+const scenarioIdRef = computed(() => props.id);
+const authorUsernameRef = computed(() => scenario.value?.authorUsername ?? "");
+const collab = useCollaborators(scenarioIdRef, {authorUsername: authorUsernameRef});
+const canEditScenario = computed(() => isOwner.value || collab.canEdit.value);
+const hasAnyRole = computed(() => isOwner.value || !!collab.myRole.value);
+
+function openCollaboratorsPanel() {
+  collaboratorsPanelOpen.value = true;
+  collab.load();
+  if (isOwner.value) collab.loadInviteLinks();
+}
+
+function closeCollaboratorsPanel() {
+  collaboratorsPanelOpen.value = false;
+}
+
+async function handleInvite(username, role) {
+  await collab.invite(username, role);
+}
+
+async function handleCreateLink(payload) {
+  await collab.createLink(payload);
+}
+
 const loading = ref(false);
 const savingStoryboard = ref(false);
 const savingLayout = ref(false);
 const savingOrder = ref(false);
 const publishing = ref(false);
+const reviewing = ref(false);
+const reviewComment = ref("");
+const originalAuthorUsername = ref("");
 const resizingThumbnailId = ref(null);
 const studioFrontendOnly = false;
 const studioSandboxMode = ref(false);
@@ -299,6 +332,16 @@ const playbackQueue = computed(() => {
 });
 
 const isPublished = computed(() => scenario.value?.visibilityStatus === "PUBLISHED");
+
+const reviewStatus = computed(() => scenario.value?.reviewStatus ?? "NONE");
+const isForkPending = computed(() => reviewStatus.value === "PENDING");
+const isForkRejected = computed(() => reviewStatus.value === "REJECTED");
+const canPublish = computed(() => canEditScenario.value && !isForkPending.value && !isForkRejected.value);
+const canReviewFork = computed(() =>
+    isForkPending.value &&
+    !!currentUser.value?.username &&
+    currentUser.value.username === originalAuthorUsername.value
+);
 
 const playerStateLabel = computed(() => {
   if (autoplay.isLoading.value) return "loading";
@@ -1486,6 +1529,45 @@ async function playSelectedAudioPreview() {
   await toggleSelectedAudioPlayback();
 }
 
+async function loadOriginalAuthorIfFork() {
+  originalAuthorUsername.value = "";
+  if (!scenario.value?.parentScenarioId || scenario.value.reviewStatus !== "PENDING") return;
+  try {
+    const parent = await fetchScenario(scenario.value.parentScenarioId);
+    originalAuthorUsername.value = parent.authorUsername ?? "";
+  } catch {
+    // silencieux — non bloquant pour l'affichage du scénario
+  }
+}
+
+async function approveCurrentFork() {
+  if (!scenario.value || reviewing.value) return;
+  reviewing.value = true;
+  try {
+    scenario.value = await approveFork(props.id, reviewComment.value.trim() || undefined);
+    reviewComment.value = "";
+    toast.success("Fork approved. The author can now publish it.");
+  } catch (e) {
+    toast.error(e.message || "Failed to approve fork.");
+  } finally {
+    reviewing.value = false;
+  }
+}
+
+async function rejectCurrentFork() {
+  if (!scenario.value || reviewing.value) return;
+  reviewing.value = true;
+  try {
+    scenario.value = await rejectFork(props.id, reviewComment.value.trim() || undefined);
+    reviewComment.value = "";
+    toast.success("Fork rejected.");
+  } catch (e) {
+    toast.error(e.message || "Failed to reject fork.");
+  } finally {
+    reviewing.value = false;
+  }
+}
+
 async function loadScenario() {
   scenario.value = await fetchScenario(props.id);
   if (scenario.value?.languageId) {
@@ -1553,8 +1635,11 @@ async function loadAll() {
     isOwner.value =
         !!currentUser.value &&
         currentUser.value.username === scenario.value.authorUsername;
+        await collab.load();
+    await loadOriginalAuthorIfFork();
     // Non-owners always see the storyboard view, not the studio
-    if (!isOwner.value) {
+    // Owners and editors see the storyboard view by default, viewers stay read-only
+    if (!canEditScenario.value) {
       storyboardView.value = "global";
     }
     await Promise.all([loadThumbs(), checkExistingRequest()]);
@@ -1639,7 +1724,7 @@ async function deleteCurrentScenario() {
 }
 
 async function publishCurrentScenario() {
-  if (!scenario.value || publishing.value) return;
+  if (!scenario.value || publishing.value || !canPublish.value) return;
   publishing.value = true;
   try {
     scenario.value = await publishScenario(props.id);
@@ -2351,6 +2436,14 @@ onMounted(loadAll);
                 <span class="si-status__dot"></span>
                 {{ isPublished ? "Published" : "Draft" }}
               </span>
+              <span v-if="isForkPending" class="si-status si-status--review">
+                <span class="si-status__dot"></span>
+                Pending review
+              </span>
+              <span v-else-if="isForkRejected" class="si-status si-status--rejected">
+                <span class="si-status__dot"></span>
+                Fork rejected
+              </span>
               <h2 id="scenario-info-title" class="si-title">{{ scenario.title || "Untitled scenario" }}</h2>
             </div>
 
@@ -2391,6 +2484,16 @@ onMounted(loadAll);
             <div class="si-desc">
               <p class="si-desc__label">Description</p>
               <p class="si-desc__text">{{ scenario.description?.trim() || "No description." }}</p>
+            </div>
+
+            <!-- Fork review info -->
+            <div v-if="scenario.parentScenarioId && reviewStatus !== 'NONE'" class="si-desc">
+              <p class="si-desc__label">Fork review</p>
+              <p class="si-desc__text">
+                <template v-if="isForkPending">This fork is awaiting review from the original author before it can be published.</template>
+                <template v-else-if="isForkRejected">This fork was rejected{{ scenario.reviewComment ? ": " + scenario.reviewComment : "." }}</template>
+                <template v-else-if="reviewStatus === 'APPROVED'">This fork was approved{{ scenario.reviewedByUsername ? " by " + scenario.reviewedByUsername : "" }} and can be published.</template>
+              </p>
             </div>
 
           </section>
@@ -2638,7 +2741,7 @@ onMounted(loadAll);
                         </div>
                       </div>
                       <button
-                          v-if="isOwner && !isPublished"
+                          v-if="canEditScenario && !isPublished && canPublish"
                           type="button"
                           class="ss-pub__btn"
                           :disabled="publishing"
@@ -2647,6 +2750,12 @@ onMounted(loadAll);
                         {{ publishing ? "Publishing…" : "Publish →" }}
                       </button>
                     </div>
+                    <p v-if="isOwner && !isPublished && isForkPending" class="ss-pub__blocked">
+                      This fork must be approved by the original author before it can be published.
+                    </p>
+                    <p v-else-if="isOwner && !isPublished && isForkRejected" class="ss-pub__blocked">
+                      This fork was rejected and cannot be published{{ scenario.reviewComment ? ": " + scenario.reviewComment : "." }}
+                    </p>
                   </div>
 
                   <div v-if="isOwner" class="ss-danger">
@@ -2772,6 +2881,26 @@ onMounted(loadAll);
                 </section>
               </div>
 
+              <div
+                  v-if="collaboratorsPanelOpen"
+                  class="dialog-backdrop"
+                  @click.self="closeCollaboratorsPanel"
+              >
+                <CollaboratorsPanel
+                    :scenario-id="props.id"
+                    :collaborators="collab.collaborators.value"
+                    :invite-links="collab.inviteLinks.value"
+                    :is-owner="isOwner"
+                    :author-username="scenario.authorUsername"
+                    @close="closeCollaboratorsPanel"
+                    @invite="handleInvite"
+                    @remove="collab.remove"
+                    @change-role="collab.changeRole"
+                    @create-link="handleCreateLink"
+                    @revoke-link="collab.revokeLink"
+                />
+              </div>
+
               <div v-if="storyboardItems.length" class="vg-root">
                 <div class="vg-nav">
                   <div class="vg-brand-block">
@@ -2809,7 +2938,7 @@ onMounted(loadAll);
 
                   <div class="vg-actions">
                     <button
-                        v-if="isOwner"
+                        v-if="canEditScenario"
                         type="button"
                         class="vg-icon-btn"
                         title="Add a scene"
@@ -2820,7 +2949,7 @@ onMounted(loadAll);
                       </svg>
                     </button>
                     <button
-                        v-if="isOwner"
+                        v-if="canEditScenario"
                         type="button"
                         class="vg-icon-btn"
                         title="Storyboard settings"
@@ -2840,6 +2969,19 @@ onMounted(loadAll);
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="9"/>
                         <path d="M12 10v6M12 7h.01"/>
+                      </svg>
+                    </button>
+                    <button
+                        v-if="hasAnyRole"
+                        type="button"
+                        class="vg-icon-btn"
+                        title="Collaborators"
+                        @click="openCollaboratorsPanel"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
                       </svg>
                     </button>
                     <button
@@ -2874,7 +3016,7 @@ onMounted(loadAll);
                       </svg>
                     </button>
                     <button
-                        v-if="isOwner && !isPublished"
+                        v-if="canEditScenario && !isPublished && canPublish"
                         type="button"
                         class="vg-pub"
                         :disabled="publishing"
@@ -2883,7 +3025,29 @@ onMounted(loadAll);
                       {{ publishing ? "Publishing…" : "Publish →" }}
                     </button>
                     <span v-if="isPublished" class="vg-status vg-status--pub">Published</span>
-                    <span v-else-if="!isOwner" class="vg-status">Read-only</span>
+                    <span v-else-if="isOwner && isForkPending" class="vg-status vg-status--review">Pending review</span>
+                    <span v-else-if="isOwner && isForkRejected" class="vg-status vg-status--rejected">Fork rejected</span>
+                    <span v-else-if="!canEditScenario" class="vg-status">Read-only</span>
+                  </div>
+                </div>
+
+                <div v-if="canReviewFork" class="vg-review-banner">
+                  <div class="vg-review-banner__text">
+                    <strong>This fork is awaiting your review.</strong>
+                    <span>As the original author, you can approve it for publication or reject it.</span>
+                  </div>
+                  <div class="vg-review-banner__form">
+                    <input
+                        v-model="reviewComment"
+                        class="vg-review-banner__input"
+                        placeholder="Optional comment…"
+                    />
+                    <button type="button" class="vg-review-banner__reject" :disabled="reviewing" @click="rejectCurrentFork">
+                      {{ reviewing ? "…" : "Reject" }}
+                    </button>
+                    <button type="button" class="vg-review-banner__approve" :disabled="reviewing" @click="approveCurrentFork">
+                      {{ reviewing ? "…" : "Approve" }}
+                    </button>
                   </div>
                 </div>
 
@@ -2896,9 +3060,9 @@ onMounted(loadAll);
                 >
                   <div class="vg-view__main">
                     <div class="bd-toolbar">
-                      <span v-if="isOwner" class="bd-tlbl">Layout</span>
+                      <span v-if="canEditScenario" class="bd-tlbl">Layout</span>
 
-                      <div v-if="isOwner" class="bd-presets">
+                      <div v-if="canEditScenario" class="bd-presets">
                         <button
                             type="button"
                             class="preset-btn"
@@ -2961,10 +3125,10 @@ onMounted(loadAll);
                             :selected="selectedThumb?.id === item.id"
                             :highlighted="highlightedThumbnailId === item.id"
                             :quick-recording="String(quickRecordingThumbId ?? '') === String(item.id)"
-                            :can-record="studioFrontendOnly || isOwner"
-                            :can-resize="studioFrontendOnly || isOwner"
-                            :can-delete="studioFrontendOnly || isOwner"
-                            :can-reorder="studioFrontendOnly || isOwner"
+                            :can-record="studioFrontendOnly || canEditScenario"
+                            :can-resize="studioFrontendOnly || canEditScenario"
+                            :can-delete="studioFrontendOnly || canEditScenario"
+                            :can-reorder="studioFrontendOnly || canEditScenario"
                             :active-audio-id="activeAudioId"
                             :player-state="playerStateLabel"
                             :col-span="item._layout?.columnSpan ?? 1"
@@ -3156,7 +3320,7 @@ onMounted(loadAll);
                                   type="button"
                                   class="fiche-add-voice"
                                   :class="{ 'fiche-add-voice--rec': isRecordingThumb(item) }"
-                                  :disabled="!(studioFrontendOnly || isOwner)"
+                                  :disabled="!(studioFrontendOnly || canEditScenario)"
                                   @click.stop="addVoiceForThumb(item)"
                               >
                                 <template v-if="isRecordingThumb(item)">
@@ -3178,10 +3342,9 @@ onMounted(loadAll);
                         </article>
 
                         <button
-                            v-if="studioFrontendOnly || isOwner"
+                            v-if="studioFrontendOnly || canEditScenario"
                             type="button"
                             class="fiche-add-card"
-                            @click="openUploadDialog"
                         >
                           +
                         </button>
@@ -3229,8 +3392,7 @@ onMounted(loadAll);
                             type="button"
                             class="mic-btn"
                             :class="{ rec: quickRecordingThumbId != null }"
-                            :disabled="!(studioFrontendOnly || isOwner) || !selectedThumb"
-                            @click="toggleSelectedQuickRecording"
+                            :disabled="!(studioFrontendOnly || canEditScenario) || !selectedThumb"
                         ></button>
                       </div>
                       <div class="mic-tm">{{ quickRecordingThumbId != null ? "REC" : "0:00" }}</div>
@@ -3314,8 +3476,7 @@ onMounted(loadAll);
                         </button>
                         <button
                             type="button"
-                            :disabled="!(studioFrontendOnly || isOwner) || !selectedThumb"
-                            @click="restartSelectedRecording"
+                            :disabled="!(studioFrontendOnly || canEditScenario) || !selectedThumb"
                         >
                           Recommencer
                         </button>
@@ -3416,7 +3577,7 @@ onMounted(loadAll);
                                 v-model="glossTranscription"
                                 class="side-note-input"
                                 placeholder="Orthographic or phonemic transcription"
-                                :disabled="!isOwner"
+                                :disabled="!canEditScenario"
                                 @blur="saveGloss"
                             />
                           </label>
@@ -3426,7 +3587,7 @@ onMounted(loadAll);
                                 v-model="glossGloss"
                                 class="side-note-input side-note-input--mono"
                                 placeholder="ex. 1SG-PRES-like-FV"
-                                :disabled="!isOwner"
+                                :disabled="!canEditScenario"
                                 @blur="saveGloss"
                             />
                           </label>
@@ -3436,12 +3597,12 @@ onMounted(loadAll);
                                 v-model="glossFreeTranslation"
                                 class="side-note-input"
                                 placeholder="Translation in a reference language"
-                                :disabled="!isOwner"
+                                :disabled="!canEditScenario"
                                 @blur="saveGloss"
                             />
                           </label>
                           <button
-                              v-if="isOwner"
+                              v-if="canEditScenario"
                               type="button"
                               class="gloss-save-btn"
                               :disabled="glossSaving"
@@ -3629,7 +3790,7 @@ onMounted(loadAll);
               </div>
             </section>
 
-            <section v-if="isOwner && selectedThumb" class="card collapsible-card">
+            <section v-if="canEditScenario && selectedThumb" class="card collapsible-card">
               <button type="button" class="collapsible-card__header" @click="toggleSelectedLayoutPanel">
                 <div class="collapsible-card__title-block">
                   <h2 class="collapsible-card__title">Selected thumbnail layout</h2>
@@ -3659,7 +3820,7 @@ onMounted(loadAll);
                 :active-audio-id="activeAudioId"
                 :active-audio-title="autoplay.currentItem?.audioTitle ?? ''"
                 :player-state="playerStateLabel"
-                :is-owner="isOwner"
+                :is-owner="canEditScenario"
                 @uploaded="refreshAudios"
                 @play-audio="setActiveAudio"
             />
@@ -3716,6 +3877,8 @@ onMounted(loadAll);
 }
 .si-status--pub  { background: rgba(74,103,65,0.12);  color: #4A6741; }
 .si-status--draft { background: rgba(72,91,56,0.12); color: #8B3010; }
+.si-status--review { background: rgba(139,48,16,0.12); color: #8B3010; }
+.si-status--rejected { background: rgba(168,51,76,0.12); color: #A8334C; }
 .si-status__dot {
   width: 6px; height: 6px;
   border-radius: 999px;
@@ -4023,6 +4186,12 @@ onMounted(loadAll);
 }
 .ss-pub__btn:hover:not(:disabled) { background: #3d5534; transform: translateY(-1px); }
 .ss-pub__btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.ss-pub__blocked {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: #A8334C;
+  line-height: 1.5;
+}
 
 .ss-danger { border-top: 1.5px solid rgba(168,51,76,0.2); padding-top: 16px; }
 .ss-delete {
@@ -4497,6 +4666,92 @@ onMounted(loadAll);
 
 .vg-status--pub {
   color: #4A6741;
+}
+
+.vg-status--review {
+  color: #8B3010;
+}
+
+.vg-status--rejected {
+  color: #A8334C;
+}
+
+.vg-review-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  margin: 0 16px 16px;
+  border: 2px solid #8B3010;
+  border-radius: 14px;
+  background: rgba(139,48,16,0.06);
+}
+
+.vg-review-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vg-review-banner__text strong {
+  font-size: 0.9rem;
+  color: #1E0812;
+}
+
+.vg-review-banner__text span {
+  font-size: 0.8rem;
+  color: #785068;
+}
+
+.vg-review-banner__form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vg-review-banner__input {
+  min-width: 200px;
+  border: 1.5px solid #D4E5CA;
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: #FFF0EE;
+  color: #1E0812;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.vg-review-banner__approve,
+.vg-review-banner__reject {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.vg-review-banner__approve {
+  background: #4A6741;
+  color: #FFF0EE;
+}
+.vg-review-banner__approve:hover:not(:disabled) { background: #3d5534; }
+
+.vg-review-banner__reject {
+  background: transparent;
+  border: 1.5px solid #A8334C;
+  color: #A8334C;
+}
+.vg-review-banner__reject:hover:not(:disabled) { background: rgba(168,51,76,0.08); }
+
+.vg-review-banner__approve:disabled,
+.vg-review-banner__reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .icon-button {

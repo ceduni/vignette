@@ -28,75 +28,84 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
     long countByVisibilityStatus(ScenarioVisibilityStatus visibilityStatus);
 
     @Query("""
-            select s
-            from Scenario s
-            where s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
-               or lower(s.author.username) = lower(:username)
-            order by s.createdAt desc
-            """)
+                select s
+                from Scenario s
+                where s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
+                   or lower(s.author.username) = lower(:username)
+                order by s.createdAt desc
+    """)
     List<Scenario> findVisibleToUsername(@Param("username") String username);
 
     @EntityGraph(attributePaths = {"tags"})
     @Query("""
-            select s
-            from Scenario s
-            order by s.createdAt desc
-            """)
+                select s
+                from Scenario s
+                order by s.createdAt desc
+    """)
     List<Scenario> findAllWithTagsOrderByCreatedAtDesc();
 
     @EntityGraph(attributePaths = {"tags"})
     @Query("""
-            select s
-            from Scenario s
-            where s.visibilityStatus = :visibilityStatus
-            order by s.createdAt desc
-            """)
+                select s
+                from Scenario s
+                where s.visibilityStatus = :visibilityStatus
+                order by s.createdAt desc
+    """)
     List<Scenario> findAllByVisibilityStatusWithTagsOrderByCreatedAtDesc(
             @Param("visibilityStatus") ScenarioVisibilityStatus visibilityStatus
     );
 
     @EntityGraph(attributePaths = {"tags"})
     @Query("""
-            select s
-            from Scenario s
-            where lower(s.author.username) = lower(:username)
-            order by s.createdAt desc
-            """)
+                select s
+                from Scenario s
+                where lower(s.author.username) = lower(:username)
+                order by s.createdAt desc
+    """)
     List<Scenario> findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc(@Param("username") String username);
 
     @EntityGraph(attributePaths = {"tags"})
     @Query("""
-            select s
-            from Scenario s
-            where s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
-               or lower(s.author.username) = lower(:username)
-            order by s.createdAt desc
-            """)
+                select s
+                from Scenario s
+                where s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
+                   or lower(s.author.username) = lower(:username)
+                order by s.createdAt desc
+    """)
     List<Scenario> findVisibleToUsernameWithTags(@Param("username") String username);
 
     @EntityGraph(attributePaths = {"tags"})
     @Query("""
-            select s
-            from Scenario s
-            where s.language_id = :languageId
-            order by s.createdAt desc
-            """)
+                select s
+                from Scenario s
+                where s.language_id = :languageId
+                order by s.createdAt desc
+    """)
     List<Scenario> findAllByLanguageIdWithTagsOrderByCreatedAtDesc(@Param("languageId") String languageId);
 
     @EntityGraph(attributePaths = {"tags"})
     @Query("""
-            select s
-            from Scenario s
-            where s.id = :id
-            """)
+                select s
+                from Scenario s
+                where s.id = :id
+    """)
     Optional<Scenario> findByIdWithTags(@Param("id") Long id);
 
+    @EntityGraph(attributePaths = {"tags"})
     @Query("""
-            select s
-            from Scenario s
-            where s.language_id = :languageId
-              and s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
-            order by s.createdAt asc, s.id asc
-            """)
+                select s
+                from Scenario s
+                where s.id in :ids
+                order by s.createdAt desc
+    """)
+    List<Scenario> findAllByIdInWithTags(@Param("ids") List<Long> ids);
+
+    @Query("""
+                select s
+                from Scenario s
+                where s.language_id = :languageId
+                  and s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
+                order by s.createdAt asc, s.id asc
+    """)
     List<Scenario> findPublishedByLanguageIdOrderByCreatedAtAscIdAsc(@Param("languageId") String languageId);
 }
