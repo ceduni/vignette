@@ -48,8 +48,7 @@ data/
 !.env.example
 !**/.env.example
 
-### Cursor / local tooling ###
-.cursor/
+### Local tooling ###
 backups/
 
 ### Python ###
