@@ -563,13 +563,17 @@ public class CommunityApiController {
     }
 
     private DiscussionMessageDto toDto(DiscussionMessage message) {
+        String authorUsername = message.getAuthor() != null
+                ? message.getAuthor().getUsername()
+                : userService.getUserById(message.getAuthorId()).getUsername();
+
         return new DiscussionMessageDto(
                 message.getId(),
                 message.getTargetType(),
                 message.getTargetId(),
                 message.getParentMessageId(),
                 message.getAuthorId(),
-                message.getAuthor() == null ? "Unknown" : message.getAuthor().getUsername(),
+                authorUsername,
                 message.getContributionType(),
                 message.getContent(),
                 message.getCreatedAt()

@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onMounted, ref, watch} from "vue";
+import {computed, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {RouterLink} from "vue-router";
 import {fetchScenarios, fetchScenarioThumbnails} from "../api/scenarios";
 import {fetchLanguages} from "../api/languages";
@@ -9,8 +9,10 @@ import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
+import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 import {useScenarioReader} from "../composables/useScenarioReader";
 import {useScenarioInteractions} from "../composables/useScenarioInteractions";
+import {useBookmarkCategories} from "../composables/useBookmarkCategories";
 import {useAuth} from "../composables/useAuth";
 import { forkScenario } from "../api/scenarios";
 import { useRouter } from "vue-router";
@@ -28,11 +30,60 @@ watch(debounced, (v) => { effectiveSearch.value = v.trim().toLowerCase(); });
 const languageFilter = ref("");
 const { openReader, activeScenario, closeReader } = useScenarioReader();
 const { isLiked, toggleLike, isBookmarked, toggleBookmark } = useScenarioInteractions();
+
+const { getCategory, setCategory, removeCategory, categoryList: bookmarkCategoryList, addCategory: addBookmarkCategory } = useBookmarkCategories();
+
+const bookmarkCategoryPickerId = ref(null);
+const newBookmarkCategoryName = ref("");
+const bookmarkPickerEl = ref(null);
+
+function handleBookmarkClick(scenarioId) {
+  const wasBookmarked = isBookmarked(scenarioId);
+  if (wasBookmarked) {
+    removeCategory(scenarioId);
+    toggleBookmark(scenarioId);
+    bookmarkCategoryPickerId.value = null;
+  } else {
+    toggleBookmark(scenarioId);
+    bookmarkCategoryPickerId.value = scenarioId;
+  }
+}
+
+function assignBookmarkCategory(scenarioId, category) {
+  setCategory(scenarioId, category);
+  bookmarkCategoryPickerId.value = null;
+}
+
+function createAndAssignBookmarkCategory(scenarioId) {
+  const name = newBookmarkCategoryName.value.trim();
+  if (!name) return;
+  addBookmarkCategory(name);
+  setCategory(scenarioId, name);
+  newBookmarkCategoryName.value = "";
+  bookmarkCategoryPickerId.value = null;
+}
+
+function onDocumentClickForBookmarkPicker(event) {
+  if (
+      bookmarkCategoryPickerId.value !== null &&
+      bookmarkPickerEl.value &&
+      !bookmarkPickerEl.value.contains(event.target)
+  ) {
+    bookmarkCategoryPickerId.value = null;
+  }
+}
+
+onMounted(() => document.addEventListener("click", onDocumentClickForBookmarkPicker));
+onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBookmarkPicker));
+
 const { isAuthenticated, currentUser } = useAuth();
 
 const router = useRouter();
 const copyingId = ref(null);
 const copyError = ref("");
+const discussionScenario = ref(null);
+function openDiscussion(s) { discussionScenario.value = s; }
+function closeDiscussion() { discussionScenario.value = null; }
 
 async function copyScenario(s) {
   if (copyingId.value) return;
@@ -305,18 +356,55 @@ onMounted(load);
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
               </button>
-              <button
-                v-if="isAuthenticated"
-                type="button"
-                class="sc-card__icon-btn"
-                :class="{ 'sc-card__icon-btn--active': isBookmarked(s.id) }"
-                :title="isBookmarked(s.id) ? 'Remove bookmark' : 'Bookmark'"
-                @click="toggleBookmark(s.id)"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" :fill="isBookmarked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                </svg>
-              </button>
+              <div v-if="isAuthenticated" :ref="el => { if (bookmarkCategoryPickerId === s.id) bookmarkPickerEl = el }" class="sc-card__bookmark-wrap">
+                <button
+                  type="button"
+                  class="sc-card__icon-btn"
+                  :class="{ 'sc-card__icon-btn--active': isBookmarked(s.id) }"
+                  :title="isBookmarked(s.id) ? 'Remove bookmark' : 'Bookmark'"
+                  @click="handleBookmarkClick(s.id)"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" :fill="isBookmarked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
+
+                <div v-if="bookmarkCategoryPickerId === s.id" class="sc-card__bookmark-picker">
+                  <p class="sc-card__bookmark-picker-label">Save to category</p>
+                  <button type="button" class="sc-card__bookmark-picker-item sc-card__bookmark-picker-item--none" @click="assignBookmarkCategory(s.id, null)">
+                    No category
+                  </button>
+                  <div v-if="bookmarkCategoryList.length" class="sc-card__bookmark-picker-divider"></div>
+                  <button
+                    v-for="cat in bookmarkCategoryList"
+                    :key="cat"
+                    type="button"
+                    class="sc-card__bookmark-picker-item"
+                    :class="{ 'sc-card__bookmark-picker-item--active': getCategory(s.id) === cat }"
+                    @click="assignBookmarkCategory(s.id, cat)"
+                  >
+                    {{ cat }}
+                    <span v-if="getCategory(s.id) === cat">✓</span>
+                  </button>
+                  <div class="sc-card__bookmark-picker-divider"></div>
+                  <div class="sc-card__bookmark-picker-new">
+                    <input
+                      v-model="newBookmarkCategoryName"
+                      class="sc-card__bookmark-picker-input"
+                      placeholder="New category…"
+                      @keydown.enter="createAndAssignBookmarkCategory(s.id)"
+                    />
+                    <button
+                      type="button"
+                      class="sc-card__bookmark-picker-add"
+                      :disabled="!newBookmarkCategoryName.trim()"
+                      @click="createAndAssignBookmarkCategory(s.id)"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
               <button
                 v-if="isAuthenticated && currentUser && s.authorUsername !== currentUser.username"
                 type="button"
@@ -329,6 +417,16 @@ onMounted(load);
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="9" y="9" width="13" height="13" rx="2"/>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="sc-card__icon-btn"
+                title="Discussion"
+                @click="openDiscussion(s)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
               </button>
 
@@ -374,6 +472,7 @@ onMounted(load);
     </template>
 
     <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
+    <ScenarioDiscussionModal :scenario="discussionScenario" @close="closeDiscussion" />
     <BaseAlert v-if="copyError" type="error">{{ copyError }}</BaseAlert>
   </main>
 </template>
@@ -515,7 +614,6 @@ onMounted(load);
   display: flex;
   flex-direction: column;
   border-radius: 18px;
-  overflow: hidden;
   background: #fff;
   border: 1.5px solid var(--border);
   box-shadow: 0 2px 8px rgba(42, 21, 0, 0.05);
@@ -531,7 +629,8 @@ onMounted(load);
 .sc-card__thumb {
   position: relative;
   aspect-ratio: 4 / 3;
-  overflow: hidden;
+  overflow: hidden; 
+  border-radius: 18px 18px 0 0; 
   background: var(--surface-alt);
   display: block;
   text-decoration: none;
@@ -768,6 +867,97 @@ onMounted(load);
 .sc-empty__title { margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--text); }
 .sc-empty__sub { margin: 0; font-size: 0.9rem; color: var(--text-soft); }
 
+.sc-card__bookmark-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.sc-card__bookmark-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(42, 21, 0, 0.16);
+}
+
+.sc-card__bookmark-picker-label {
+  margin: 2px 6px 4px;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.sc-card__bookmark-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.sc-card__bookmark-picker-item:hover { background: var(--surface-alt); }
+.sc-card__bookmark-picker-item--active { color: var(--primary); background: rgba(192, 74, 8, 0.06); }
+.sc-card__bookmark-picker-item--none { color: var(--text-soft); }
+
+.sc-card__bookmark-picker-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.sc-card__bookmark-picker-new {
+  display: flex;
+  gap: 6px;
+  padding: 2px;
+}
+
+.sc-card__bookmark-picker-input {
+  flex: 1;
+  min-width: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font: inherit;
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+.sc-card__bookmark-picker-input:focus { border-color: var(--primary); }
+
+.sc-card__bookmark-picker-add {
+  border: 0;
+  border-radius: 8px;
+  padding: 0 11px;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+.sc-card__bookmark-picker-add:hover:not(:disabled) { background: var(--primary-strong); }
+.sc-card__bookmark-picker-add:disabled { opacity: 0.45; cursor: not-allowed; }
+
 @media (max-width: 640px) {
   .sc-root { padding: 20px 14px 60px; gap: 18px; }
   .sc-hero { flex-direction: column; align-items: flex-start; gap: 14px; }
@@ -775,4 +965,5 @@ onMounted(load);
   .sc-search--lang { flex: 1; min-width: 0; }
   .sc-grid { grid-template-columns: 1fr; }
 }
+
 </style>

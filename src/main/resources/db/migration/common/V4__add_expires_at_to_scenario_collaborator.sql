@@ -1,0 +1,1 @@
+ALTER TABLE scenario_collaborator ADD COLUMN expires_at TIMESTAMP WITH TIME ZONE;

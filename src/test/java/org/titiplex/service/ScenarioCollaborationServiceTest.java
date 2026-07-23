@@ -362,13 +362,16 @@ class ScenarioCollaborationServiceTest {
         when(userService.getUserByUsername("owner")).thenReturn(userWithId("owner", 5L));
         when(inviteLinkRepo.save(any(ScenarioInviteLink.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ScenarioInviteLink link = service.createInviteLink(1L, CollaboratorRole.EDITOR, null, null, auth);
+        ScenarioInviteLink link = service.createInviteLink(1L, CollaboratorRole.EDITOR, null, auth);
 
         assertNotNull(link.getToken());
         assertEquals(32, link.getToken().length());
         assertEquals(CollaboratorRole.EDITOR, link.getRole());
         assertEquals(5L, link.getCreatedById());
         assertTrue(link.isActive());
+        assertNotNull(link.getExpiresAt());
+        assertTrue(link.getExpiresAt().isAfter(Instant.now().plusSeconds(6 * 24 * 3600)));
+        assertTrue(link.getExpiresAt().isBefore(Instant.now().plusSeconds(8 * 24 * 3600)));
     }
 
     @Test
@@ -380,7 +383,7 @@ class ScenarioCollaborationServiceTest {
         when(userService.getUserByUsername("owner")).thenReturn(userWithId("owner", 5L));
 
         assertThrows(IllegalArgumentException.class,
-                () -> service.createInviteLink(1L, CollaboratorRole.OWNER, null, null, auth));
+                () -> service.createInviteLink(1L, CollaboratorRole.OWNER, null, auth));
     }
 
     @Test

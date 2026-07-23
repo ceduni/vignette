@@ -86,9 +86,9 @@ export function useCollaborators(scenarioId, {authorUsername} = {}) {
     }
   }
 
-  async function createLink({role, expiresAt, maxUses}) {
+  async function createLink({role, maxUses}) {
     try {
-      const link = await createInviteLink(scenarioId.value, {role, expiresAt, maxUses});
+      const link = await createInviteLink(scenarioId.value, {role, maxUses});
       toast.success("Invite link created.");
       await loadInviteLinks();
       return link;

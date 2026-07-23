@@ -79,7 +79,17 @@ function roleLabel(role) {
 }
 
 function statusLabel(status) {
-  return {PENDING: "Pending", ACCEPTED: "Active", DECLINED: "Declined"}[status] || status;
+  return {PENDING: "Pending", ACCEPTED: "Active", DECLINED: "Declined", EXPIRED: "Expired"}[status] || status;
+}
+
+function formatExpiry(expiresAt) {
+  if (!expiresAt) return null;
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  if (diffMs <= 0) return "Expired";
+  const days = Math.floor(diffMs / (24 * 3600 * 1000));
+  if (days >= 1) return `Expires in ${days}d`;
+  const hours = Math.max(1, Math.floor(diffMs / (3600 * 1000)));
+  return `Expires in ${hours}h`;
 }
 </script>
 
@@ -134,6 +144,7 @@ function statusLabel(status) {
             <span class="cp-member__name">{{ c.displayName || c.username }}</span>
             <span class="cp-member__status" :class="`cp-member__status--${c.status.toLowerCase()}`">
               {{ statusLabel(c.status) }}
+              <template v-if="c.status === 'PENDING' && formatExpiry(c.expiresAt)"> · {{ formatExpiry(c.expiresAt) }}</template>
             </span>
           </div>
           <div class="cp-member__actions">
@@ -175,7 +186,9 @@ function statusLabel(status) {
         <li v-for="link in inviteLinks" :key="link.id" class="cp-link">
           <div class="cp-link__info">
             <span class="cp-badge" :class="`cp-badge--${link.role.toLowerCase()}`">{{ roleLabel(link.role) }}</span>
-            <span class="cp-link__meta">{{ link.useCount }} use(s){{ link.active ? "" : " · revoked" }}</span>
+            <span class="cp-link__meta">
+              {{ link.useCount }} use(s){{ link.active ? "" : " · revoked" }}<template v-if="link.active && formatExpiry(link.expiresAt)"> · {{ formatExpiry(link.expiresAt) }}</template>
+            </span>
           </div>
           <div class="cp-link__actions">
             <button type="button" class="cp-link__copy" :disabled="!link.active" @click="copyLink(link.token)">Copy</button>
@@ -339,6 +352,7 @@ function statusLabel(status) {
 .cp-member__status { font-size: 0.7rem; color: #785068; }
 .cp-member__status--pending { color: #8B3010; }
 .cp-member__status--declined { color: #A8334C; }
+.cp-member__status--expired { color: #785068; }
 
 .cp-member__actions, .cp-link__actions {
   display: flex;

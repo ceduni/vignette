@@ -1,5 +1,5 @@
 <script setup>
-import {computed, nextTick, onMounted, ref, watch} from "vue";
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {RouterLink, useRoute, useRouter} from "vue-router";
 import {fetchLanguage} from "../api/languages";
 import {apiFetch} from "../api/rest";
@@ -25,6 +25,7 @@ import {useAuth} from "../composables/useAuth";
 import {useToast} from "../composables/useToast";
 import {useScenarioAutoplay} from "../composables/useScenarioAutoplay";
 import {useScenarioInteractions} from "../composables/useScenarioInteractions";
+import { useBookmarkCategories } from "../composables/useBookmarkCategories";
 import ThumbnailCard from "../components/ThumbnailCard.vue";
 import AudioPanel from "../components/AudioPanel.vue";
 import StudioRecorderPanel from "../components/StudioRecorderPanel.vue";
@@ -33,7 +34,6 @@ import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import BaseBadge from "../components/ui/BaseBadge.vue";
-import DiscussionThread from "../components/community/DiscussionThread.vue";
 import CollaboratorsPanel from "../components/community/CollaboratorsPanel.vue";
 import {useCollaborators} from "../composables/useCollaborators";
 import {
@@ -114,6 +114,47 @@ const props = defineProps({
 const {currentUser, loadMe, isAuthenticated} = useAuth();
 const toast = useToast();
 const { isLiked, toggleLike, isBookmarked, toggleBookmark, fetchStatus } = useScenarioInteractions();
+const { getCategory, setCategory, removeCategory, categoryList: bookmarkCategoryList, addCategory: addBookmarkCategory } = useBookmarkCategories();
+
+const bookmarkCategoryPickerOpen = ref(false);
+const newBookmarkCategoryName = ref("");
+const bookmarkPickerEl = ref(null);
+
+function handleBookmarkClick() {
+  const wasBookmarked = isBookmarked(props.id);
+  if (wasBookmarked) {
+    removeCategory(props.id);
+    toggleBookmark(props.id);
+    bookmarkCategoryPickerOpen.value = false;
+  } else {
+    toggleBookmark(props.id);
+    bookmarkCategoryPickerOpen.value = true;
+  }
+}
+
+function assignBookmarkCategory(category) {
+  setCategory(props.id, category);
+  bookmarkCategoryPickerOpen.value = false;
+}
+
+function createAndAssignBookmarkCategory() {
+  const name = newBookmarkCategoryName.value.trim();
+  if (!name) return;
+  addBookmarkCategory(name);
+  setCategory(props.id, name);
+  newBookmarkCategoryName.value = "";
+  bookmarkCategoryPickerOpen.value = false;
+}
+
+function onDocumentClickForBookmarkPicker(event) {
+  if (
+      bookmarkCategoryPickerOpen.value &&
+      bookmarkPickerEl.value &&
+      !bookmarkPickerEl.value.contains(event.target)
+  ) {
+    bookmarkCategoryPickerOpen.value = false;
+  }
+}
 const likeCount = ref(0);
 
 const scenario = ref(null);
@@ -336,7 +377,7 @@ const isPublished = computed(() => scenario.value?.visibilityStatus === "PUBLISH
 const reviewStatus = computed(() => scenario.value?.reviewStatus ?? "NONE");
 const isForkPending = computed(() => reviewStatus.value === "PENDING");
 const isForkRejected = computed(() => reviewStatus.value === "REJECTED");
-const canPublish = computed(() => canEditScenario.value && !isForkPending.value && !isForkRejected.value);
+const canPublish = computed(() => isOwner.value && !isForkPending.value && !isForkRejected.value);
 const canReviewFork = computed(() =>
     isForkPending.value &&
     !!currentUser.value?.username &&
@@ -2408,6 +2449,8 @@ watch(
 );
 
 onMounted(loadAll);
+onMounted(() => document.addEventListener("click", onDocumentClickForBookmarkPicker));
+onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBookmarkPicker));
 </script>
 
 <template>
@@ -3000,21 +3043,62 @@ onMounted(loadAll);
                       </svg>
                       <span class="vg-interaction-btn__count">{{ likeCount }}</span>
                     </button>
-                    <button
-                        v-if="isPublished && isAuthenticated"
-                        type="button"
-                        class="vg-interaction-btn"
-                        :class="{ 'vg-interaction-btn--active': isBookmarked(props.id) }"
-                        :title="isBookmarked(props.id) ? 'Remove bookmark' : 'Bookmark'"
-                        @click="toggleBookmark(props.id)"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24"
-                           :fill="isBookmarked(props.id) ? 'currentColor' : 'none'"
-                           stroke="currentColor" stroke-width="2"
-                           stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                      </svg>
-                    </button>
+                    <div v-if="isPublished && isAuthenticated" ref="bookmarkPickerEl" class="vg-bookmark-wrap">
+                      <button
+                          type="button"
+                          class="vg-interaction-btn"
+                          :class="{ 'vg-interaction-btn--active': isBookmarked(props.id) }"
+                          :title="isBookmarked(props.id) ? 'Remove bookmark' : 'Bookmark'"
+                          @click="handleBookmarkClick"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24"
+                            :fill="isBookmarked(props.id) ? 'currentColor' : 'none'"
+                            stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                        </svg>
+                      </button>
+
+                      <div v-if="bookmarkCategoryPickerOpen" class="vg-bookmark-picker">
+                        <p class="vg-bookmark-picker__label">Save to category</p>
+                        <button
+                            type="button"
+                            class="vg-bookmark-picker__item vg-bookmark-picker__item--none"
+                            @click="assignBookmarkCategory(null)"
+                        >
+                          No category
+                        </button>
+                        <div v-if="bookmarkCategoryList.length" class="vg-bookmark-picker__divider"></div>
+                        <button
+                            v-for="cat in bookmarkCategoryList"
+                            :key="cat"
+                            type="button"
+                            class="vg-bookmark-picker__item"
+                            :class="{ 'vg-bookmark-picker__item--active': getCategory(props.id) === cat }"
+                            @click="assignBookmarkCategory(cat)"
+                        >
+                          {{ cat }}
+                          <span v-if="getCategory(props.id) === cat">✓</span>
+                        </button>
+                        <div class="vg-bookmark-picker__divider"></div>
+                        <div class="vg-bookmark-picker__new">
+                          <input
+                              v-model="newBookmarkCategoryName"
+                              class="vg-bookmark-picker__new-input"
+                              placeholder="New category…"
+                              @keydown.enter="createAndAssignBookmarkCategory"
+                          />
+                          <button
+                              type="button"
+                              class="vg-bookmark-picker__new-btn"
+                              :disabled="!newBookmarkCategoryName.trim()"
+                              @click="createAndAssignBookmarkCategory"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                     <button
                         v-if="canEditScenario && !isPublished && canPublish"
                         type="button"
@@ -5471,6 +5555,97 @@ onMounted(loadAll);
   font-weight: 700;
   transition: background 140ms ease, color 140ms ease;
 }
+
+.vg-bookmark-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.vg-bookmark-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(42, 21, 0, 0.14);
+}
+
+.vg-bookmark-picker__label {
+  margin: 2px 6px 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.vg-bookmark-picker__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.vg-bookmark-picker__item:hover { background: var(--surface-alt); }
+.vg-bookmark-picker__item--active { color: var(--primary); background: rgba(192, 74, 8, 0.06); }
+.vg-bookmark-picker__item--none { color: var(--text-soft); }
+
+.vg-bookmark-picker__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.vg-bookmark-picker__new {
+  display: flex;
+  gap: 6px;
+  padding: 2px;
+}
+
+.vg-bookmark-picker__new-input {
+  flex: 1;
+  min-width: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+.vg-bookmark-picker__new-input:focus { border-color: var(--primary); }
+
+.vg-bookmark-picker__new-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+.vg-bookmark-picker__new-btn:hover:not(:disabled) { background: var(--primary-strong); }
+.vg-bookmark-picker__new-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .vg-interaction-btn:hover { background: rgba(30,8,18,0.08); color: #1E0812; }
 .vg-interaction-btn--active { color: var(--primary); }
 .vg-interaction-btn--active:hover { background: rgba(192,74,8,0.08); }

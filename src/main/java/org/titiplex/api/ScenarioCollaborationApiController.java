@@ -135,7 +135,7 @@ public class ScenarioCollaborationApiController {
             @Parameter(hidden = true) Authentication auth
     ) {
         CollaboratorRole role = parseRole(request.role());
-        var link = collaborationService.createInviteLink(scenarioId, role, request.expiresAt(), request.maxUses(), auth);
+        var link = collaborationService.createInviteLink(scenarioId, role, request.maxUses(), auth);
         return collaborationService.toDto(link);
     }
 

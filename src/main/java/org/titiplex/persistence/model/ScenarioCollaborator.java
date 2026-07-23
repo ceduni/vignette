@@ -62,4 +62,7 @@ public class ScenarioCollaborator {
 
     @Column(name = "responded_at")
     private Instant respondedAt;
+
+    @Column(name = "expires_at")
+    private Instant expiresAt;
 }

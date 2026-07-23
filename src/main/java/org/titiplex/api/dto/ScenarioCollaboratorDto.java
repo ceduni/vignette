@@ -16,6 +16,7 @@ public record ScenarioCollaboratorDto(
         @Schema(example = "ACCEPTED") String status,
         String invitedByUsername,
         Instant invitedAt,
-        Instant respondedAt
+        Instant respondedAt,
+        Instant expiresAt
 ) {
 }

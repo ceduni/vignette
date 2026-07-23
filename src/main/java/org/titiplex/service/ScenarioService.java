@@ -156,7 +156,7 @@ public class ScenarioService {
 
     public Scenario publishScenario(Long id, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
-        assertCanEditScenario(scenario, authentication);
+        assertCanPublishScenario(scenario, authentication);
 
         if (scenario.getReviewStatus() == ReviewStatus.PENDING) {
             throw new AccessDeniedException("Ce fork doit être approuvé par l'auteur original avant publication.");
@@ -282,6 +282,22 @@ public class ScenarioService {
         }
 
         throw new AccessDeniedException("You are not allowed to edit this scenario");
+    }
+
+    public void assertCanPublishScenario(Scenario scenario, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new InsufficientAuthenticationException("Authentication required");
+        }
+        if (isAdmin(authentication)) {
+            return;
+        }
+
+        String username = authenticatedUsername(authentication);
+        if (username != null && existsByIdAndAuthorUsername(scenario.getId(), username)) {
+            return;
+        }
+
+        throw new AccessDeniedException("Seul l'auteur original peut publier ce scénario.");
     }
 
     private boolean isAcceptedCollaborator(Long scenarioId, String username) {

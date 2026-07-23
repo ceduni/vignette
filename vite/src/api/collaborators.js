@@ -48,10 +48,10 @@ export function fetchInviteLinks(scenarioId) {
   return apiFetch(`/api/scenarios/${scenarioId}/invite-links`);
 }
 
-export function createInviteLink(scenarioId, {role, expiresAt, maxUses}) {
+export function createInviteLink(scenarioId, {role, maxUses}) {
   return apiFetch(`/api/scenarios/${scenarioId}/invite-links`, {
     method: "POST",
-    body: {role, expiresAt: expiresAt ?? null, maxUses: maxUses ?? null},
+    body: {role, maxUses: maxUses ?? null},
   });
 }
 

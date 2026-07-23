@@ -3,13 +3,18 @@ package org.titiplex.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.titiplex.api.dto.ScenarioDto;
+import org.titiplex.api.security.OwnerOrAdminAspect;
 import org.titiplex.config.SecurityConfig;
+import org.titiplex.config.components.AudioSecurity;
+import org.titiplex.config.components.OwnershipSecurityServiceImpl;
 import org.titiplex.config.components.ScenarioSecurity;
+import org.titiplex.config.components.ThumbnailSecurity;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.User;
 import org.titiplex.service.LanguageService;
@@ -31,7 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ScenarioApiController.class)
-@Import(SecurityConfig.class)
+@EnableAspectJAutoProxy(proxyTargetClass = true)
+@Import({SecurityConfig.class, OwnerOrAdminAspect.class, OwnershipSecurityServiceImpl.class})
 class ScenarioApiControllerWebMvcTest {
 
     @Autowired
@@ -51,6 +57,12 @@ class ScenarioApiControllerWebMvcTest {
 
     @MockitoBean(name = "scenarioSecurity")
     private ScenarioSecurity scenarioSecurity;
+
+    @MockitoBean
+    private ThumbnailSecurity thumbnailSecurity;
+
+    @MockitoBean
+    private AudioSecurity audioSecurity;
 
     @Test
     void listAll_isPublic() throws Exception {
@@ -87,7 +99,7 @@ class ScenarioApiControllerWebMvcTest {
                 null
         );
 
-        when(scenarioService.listVisibleScenarios(any())).thenReturn(List.of(scenario));
+        when(scenarioService.listVisibleScenarioDtos(any())).thenReturn(List.of(dto));
         when(scenarioService.toDto(scenario)).thenReturn(dto);
 
         mvc.perform(get("/api/scenarios"))
@@ -187,7 +199,7 @@ class ScenarioApiControllerWebMvcTest {
         when(userService.getUserByUsername("alice")).thenReturn(user);
         when(scenarioService.existsByTitleAndAuthorNameAndLanguageId("My scenario", "alice", "chuj"))
                 .thenReturn(false);
-        when(scenarioService.createScenario("My scenario", "This is a test", 12L, "chuj", List.of()))
+        when(scenarioService.createScenario(eq("My scenario"), eq("This is a test"), eq(12L), eq("chuj"), any()))
                 .thenReturn(created);
 
         mvc.perform(post("/api/scenarios")
@@ -201,6 +213,7 @@ class ScenarioApiControllerWebMvcTest {
                                   "languageId": "chuj"
                                 }
                                 """))
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(44));
     }
@@ -309,4 +322,56 @@ class ScenarioApiControllerWebMvcTest {
                 .andExpect(jsonPath("$.reviewStatus").value("REJECTED"))
                 .andExpect(jsonPath("$.reviewComment").value("Not accurate enough"));
     }
+
+    @Test
+        void publish_requiresAuthentication() throws Exception {
+        mvc.perform(post("/api/scenarios/21/publish")
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        void publish_requiresCsrfForSessionAuth() throws Exception {
+        mvc.perform(post("/api/scenarios/21/publish")
+                        .with(user("alice").roles("USER")))
+                .andExpect(status().isForbidden());
+        }
+
+    @Test
+        void publish_deniedForNonAuthorCollaborator() throws Exception {
+        when(scenarioSecurity.isAuthor(eq(21L), eq("bob"))).thenReturn(false);
+
+        mvc.perform(post("/api/scenarios/21/publish")
+                        .with(user("bob").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+        void publish_allowedForOriginalAuthorWithCsrf() throws Exception {
+        Scenario published = new Scenario();
+        published.setId(21L);
+
+        ScenarioDto dto = new ScenarioDto(
+                21L, "Story", "Desc", "chuj", "alice",
+                Instant.parse("2026-03-20T10:15:30Z"),
+                "PUBLISHED", Instant.parse("2026-03-22T10:15:30Z"),
+                "PRESET", "GRID_3", 3,
+                List.of(),
+                null,
+                "NONE", null, null, null
+        );
+
+        when(scenarioSecurity.isAuthor(eq(21L), eq("alice"))).thenReturn(true);
+        when(scenarioService.publishScenario(eq(21L), any())).thenReturn(published);
+        when(scenarioService.toDto(published)).thenReturn(dto);
+
+        mvc.perform(post("/api/scenarios/21/publish")
+                        .with(user("alice").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(21))
+                .andExpect(jsonPath("$.visibilityStatus").value("PUBLISHED"));
+    }
+
 }

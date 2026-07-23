@@ -8,6 +8,7 @@ import { useBookmarkCategories, SUGGESTED_CATEGORIES } from "../composables/useB
 import { useScenarioReader } from "../composables/useScenarioReader";
 import BaseLoader from "../components/ui/BaseLoader.vue";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
+import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 
 const { isBookmarked, toggleBookmark, bookmarkedIds } = useScenarioInteractions();
 const { categoryMap, categoryList, getCategory, setCategory, removeCategory, addCategory, deleteCategory, renameCategory, groupByCategory } = useBookmarkCategories();
@@ -17,6 +18,9 @@ const allScenarios = ref([]);
 const previewMap = ref({});
 const loading = ref(false);
 const error = ref("");
+const discussionScenario = ref(null);
+function openDiscussion(s) { discussionScenario.value = s; }
+function closeDiscussion() { discussionScenario.value = null; }
 
 // UI state
 const activeCategory = ref("__all__"); // "__all__" | "__none__" | categoryName
@@ -359,6 +363,16 @@ onMounted(load);
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                 </svg>
               </button>
+              <button
+                type="button"
+                class="bk-card__icon-btn"
+                title="Discussion"
+                @click="openDiscussion(s)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </button>
               <RouterLink :to="`/scenarios/${s.id}`" class="bk-card__action bk-card__action--open">
                 Open
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -389,6 +403,7 @@ onMounted(load);
     </template>
 
     <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
+    <ScenarioDiscussionModal :scenario="discussionScenario" @close="closeDiscussion" />
   </main>
 </template>
 

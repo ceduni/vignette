@@ -294,11 +294,11 @@ public class ScenarioApiController {
                     
                     If the scenario was never published before, the publication timestamp is set.
                     A fork pending or rejected review cannot be published.
-                    Requires scenario ownership or admin privileges.
+                    Only the original author of the scenario can publish it (not editor collaborators).
                     """
     )
     @OwnerOrAdminOperation(
-            resource = ProtectedResource.SCENARIO
+            resource = ProtectedResource.SCENARIO_AUTHOR_ONLY
     )
     @ApiResponses({
             @ApiResponse(
@@ -316,7 +316,7 @@ public class ScenarioApiController {
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "User is not allowed to publish this scenario, or fork review is pending/rejected",
+                    description = "User is not the original author, or fork review is pending/rejected",
                     content = @Content(schema = @Schema(implementation = ApiError.class))
             ),
             @ApiResponse(

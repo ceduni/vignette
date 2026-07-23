@@ -13,6 +13,7 @@ import org.titiplex.persistence.repo.ScenarioInviteLinkRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -22,6 +23,7 @@ public class ScenarioCollaborationService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String TOKEN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final Duration INVITE_EXPIRY = Duration.ofDays(7);
 
     private final ScenarioRepository scenarioRepo;
     private final ScenarioCollaboratorRepository collaboratorRepo;
@@ -75,10 +77,23 @@ public class ScenarioCollaborationService {
         return collaboratorRepo.findByScenarioId(scenarioId);
     }
 
+    @Transactional
     public List<ScenarioCollaborator> listPendingInvitationsForUser(Authentication authentication) {
         requireAuthenticated(authentication);
         Long userId = userService.getUserByUsername(authentication.getName()).getId();
-        return collaboratorRepo.findByUserIdAndStatus(userId, CollaborationStatus.PENDING);
+        List<ScenarioCollaborator> pending = collaboratorRepo.findByUserIdAndStatus(userId, CollaborationStatus.PENDING);
+
+        Instant now = Instant.now();
+        List<ScenarioCollaborator> stillPending = new java.util.ArrayList<>();
+        for (ScenarioCollaborator c : pending) {
+            if (c.getExpiresAt() != null && c.getExpiresAt().isBefore(now)) {
+                c.setStatus(CollaborationStatus.EXPIRED);
+                collaboratorRepo.save(c);
+            } else {
+                stillPending.add(c);
+            }
+        }
+        return stillPending;
     }
 
     // ── Invitation by username ──────────────────────────────────────────
@@ -107,6 +122,7 @@ public class ScenarioCollaborationService {
         collaborator.setStatus(CollaborationStatus.PENDING);
         collaborator.setInvitedById(inviterId);
         collaborator.setInvitedAt(Instant.now());
+        collaborator.setExpiresAt(Instant.now().plus(INVITE_EXPIRY));
 
         ScenarioCollaborator saved = collaboratorRepo.save(collaborator);
         notificationService.notifyCollaborationInvite(target.getId(), scenario, inviterId, role.name());
@@ -126,6 +142,11 @@ public class ScenarioCollaborationService {
         }
         if (collaborator.getStatus() != CollaborationStatus.PENDING) {
             throw new IllegalStateException("This invitation has already been answered");
+        }
+        if (collaborator.getExpiresAt() != null && collaborator.getExpiresAt().isBefore(Instant.now())) {
+            collaborator.setStatus(CollaborationStatus.EXPIRED);
+            collaboratorRepo.save(collaborator);
+            throw new IllegalStateException("This invitation has expired");
         }
 
         collaborator.setStatus(accept ? CollaborationStatus.ACCEPTED : CollaborationStatus.DECLINED);
@@ -176,7 +197,7 @@ public class ScenarioCollaborationService {
     // ── Invite links ─────────────────────────────────────────────────────
 
     @Transactional
-    public ScenarioInviteLink createInviteLink(Long scenarioId, CollaboratorRole role, Instant expiresAt, Integer maxUses, Authentication authentication) {
+    public ScenarioInviteLink createInviteLink(Long scenarioId, CollaboratorRole role, Integer maxUses, Authentication authentication) {
         Scenario scenario = requireScenario(scenarioId);
         Long creatorId = requireOwner(scenario, authentication);
 
@@ -190,7 +211,7 @@ public class ScenarioCollaborationService {
         link.setRole(role);
         link.setCreatedById(creatorId);
         link.setCreatedAt(Instant.now());
-        link.setExpiresAt(expiresAt);
+        link.setExpiresAt(Instant.now().plus(INVITE_EXPIRY));
         link.setMaxUses(maxUses);
         link.setActive(true);
 
@@ -297,7 +318,8 @@ public class ScenarioCollaborationService {
                 c.getStatus().name(),
                 invitedByUsername,
                 c.getInvitedAt(),
-                c.getRespondedAt()
+                c.getRespondedAt(),
+                c.getExpiresAt()
         );
     }
 

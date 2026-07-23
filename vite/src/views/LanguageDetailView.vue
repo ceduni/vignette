@@ -9,6 +9,7 @@ import {useToast} from "../composables/useToast";
 import {useLanguageFollows} from "../composables/useLanguageFollows";
 import {useScenarioInteractions} from "../composables/useScenarioInteractions";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
+import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 import {useScenarioReader} from "../composables/useScenarioReader";
 import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
@@ -74,6 +75,9 @@ const activeTag   = ref("");
 const sortBy      = ref("recent"); // "recent" | "title"
 const sortOpen    = ref(false);
 const infoOpen      = ref(false);
+const discussionScenario = ref(null);
+function openDiscussion(s) { discussionScenario.value = s; }
+function closeDiscussion() { discussionScenario.value = null; }
 const likeCountMap  = ref({}); // reactive local like counts { scenarioId: number }
 const viewMode    = ref("grid");   // "grid" | "single"
 
@@ -407,6 +411,16 @@ watch(() => props.id, (id) => load(id), { immediate: true });
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                 </svg>
               </button>
+              <button
+                  type="button"
+                  class="lv-card__icon-btn"
+                  title="Discussion"
+                  @click="openDiscussion(s)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -529,6 +543,16 @@ watch(() => props.id, (id) => load(id), { immediate: true });
                     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                   </svg>
                 </button>
+                <button
+                    type="button"
+                    class="lv-card__icon-btn"
+                    title="Discussion"
+                    @click="openDiscussion(currentScenario)"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
               </div>
 
               <!-- Nav -->
@@ -646,6 +670,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
     </Teleport>
 
     <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
+    <ScenarioDiscussionModal :scenario="discussionScenario" @close="closeDiscussion" />
   </main>
 </template>
 
@@ -702,7 +727,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-count__filtered { opacity: 0.7; }
 
 /* ── Grid view ── */
-.lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; align-items: start; }
+.lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; align-items: start; }
 .lv-card { display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: #fff; border: 1.5px solid var(--border); box-shadow: 0 2px 8px rgba(42,21,0,0.05); transition: transform 200ms ease, box-shadow 200ms ease; }
 .lv-card:hover { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(42,21,0,0.11); }
 .lv-card__thumb { position: relative; aspect-ratio: 4/3; overflow: hidden; background: var(--surface-alt); display: block; border: 0; padding: 0; cursor: pointer; width: 100%; }
@@ -719,7 +744,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-card__author { font-size: 0.76rem; font-weight: 600; color: var(--text-soft); }
 .lv-card__tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .lv-card__tag { font-size: 0.7rem; font-weight: 700; color: var(--primary); background: rgba(192,74,8,0.08); border-radius: 6px; padding: 2px 7px; }
-.lv-card__actions { display: flex; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
+.lv-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
 .lv-card__read-btn { display: inline-flex; align-items: center; gap: 5px; flex: 1; justify-content: center; border: 0; border-radius: 10px; padding: 7px 12px; background: var(--primary); color: #fff; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: background 140ms; }
 .lv-card__read-btn:hover { background: var(--primary-strong); }
 .lv-card__icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0; border: 1.5px solid var(--border); border-radius: 10px; background: transparent; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }

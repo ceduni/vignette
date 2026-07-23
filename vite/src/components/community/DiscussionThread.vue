@@ -1,7 +1,7 @@
 <script setup>
 import {computed, onMounted, ref, watch} from "vue";
 import {RouterLink} from "vue-router";
-import {CONTRIBUTION_TYPES, createDiscussionMessage, fetchDiscussionMessages} from "../../api/community";
+import {createDiscussionMessage, fetchDiscussionMessages} from "../../api/community";
 import {useAuth} from "../../composables/useAuth";
 import {useToast} from "../../composables/useToast";
 import BaseAlert from "../ui/BaseAlert.vue";
@@ -26,23 +26,9 @@ const error = ref("");
 const messages = ref([]);
 
 const content = ref("");
-const contributionType = ref("GENERAL");
 const replyTo = ref(null);
 
 const normalizedTargetId = computed(() => String(props.targetId ?? ""));
-
-const contextualContributionTypes = computed(() => {
-  if (props.targetType === "LANGUAGE") {
-    return [
-      {value: "GENERAL", label: "General note"},
-      {value: "TRANSCRIPTION", label: "Transcription note"},
-      {value: "TRANSLATION", label: "Translation note"},
-      {value: "GLOSS", label: "Glossing note"},
-      {value: "INTERPRETATION", label: "Interpretation / analysis"},
-    ];
-  }
-  return CONTRIBUTION_TYPES;
-});
 
 const messagesById = computed(() => {
   const map = new Map();
@@ -94,21 +80,6 @@ function avatarColor(username) {
   return colors[index];
 }
 
-function contributionLabel(value) {
-  return contextualContributionTypes.value.find((item) => item.value === value)?.label ?? value ?? "General";
-}
-
-function contributionVariant(value) {
-  const map = {
-    GENERAL: "neutral",
-    TRANSCRIPTION: "info",
-    TRANSLATION: "success",
-    GLOSS: "warning",
-    INTERPRETATION: "info",
-  };
-  return map[value] ?? "neutral";
-}
-
 function formatDate(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -154,12 +125,11 @@ async function submit() {
       targetType: props.targetType,
       targetId: normalizedTargetId.value,
       parentMessageId: replyTo.value?.id ?? null,
-      contributionType: contributionType.value,
+      contributionType: "GENERAL",
       content: content.value.trim(),
     });
     messages.value = [...messages.value, created];
     content.value = "";
-    contributionType.value = "GENERAL";
     replyTo.value = null;
     toast.success("Message posted.");
   } catch (e) {
@@ -174,7 +144,6 @@ watch(
     () => [props.targetType, normalizedTargetId.value],
     () => {
       replyTo.value = null;
-      contributionType.value = "GENERAL";
       loadThread();
     },
     {immediate: true}
@@ -239,9 +208,6 @@ onMounted(() => {
               <span class="discussion-message__author">{{ message.authorUsername || "Unknown user" }}</span>
               <span class="discussion-message__dot">·</span>
               <span class="discussion-message__date">{{ formatDate(message.createdAt) }}</span>
-              <BaseBadge :variant="contributionVariant(message.contributionType)" class="discussion-message__type">
-                {{ contributionLabel(message.contributionType) }}
-              </BaseBadge>
               <BaseBadge v-if="message.parentMessageId" variant="warning" class="discussion-message__type">
                 ↩ Reply
               </BaseBadge>
@@ -295,15 +261,6 @@ onMounted(() => {
       <!-- Formulaire authentifié -->
       <template v-if="isAuthenticated">
         <div class="discussion-thread__form">
-          <label class="discussion-thread__label">
-            Contribution type
-            <select v-model="contributionType" class="discussion-thread__select">
-              <option v-for="option in contextualContributionTypes" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
-            </select>
-          </label>
-
           <label class="discussion-thread__label discussion-thread__label--full">
             Message
             <textarea
@@ -592,15 +549,9 @@ onMounted(() => {
 
 /* Formulaire */
 .discussion-thread__form {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.85rem;
-  grid-template-columns: 200px 1fr;
-}
-
-@media (max-width: 600px) {
-  .discussion-thread__form {
-    grid-template-columns: 1fr;
-  }
 }
 
 .discussion-thread__label {

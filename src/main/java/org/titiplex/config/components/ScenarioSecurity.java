@@ -19,6 +19,10 @@ public class ScenarioSecurity {
         return scenarioService.hasEditAccess(scenarioId, username);
     }
 
+    public boolean isAuthor(Long scenarioId, String username) {
+        return scenarioService.existsByIdAndAuthorUsername(scenarioId, username);
+    }
+
     public boolean isOwnerByThumbnailId(Long thumbId, String username) {
         var t = thumbnailService.getThumbnailById(thumbId);
         return scenarioService.existsByIdAndAuthorUsername(t.getScenarioId(), username);

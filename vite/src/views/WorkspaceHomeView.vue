@@ -8,9 +8,15 @@ import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
 import {useScenarioReader} from "../composables/useScenarioReader";
+import {apiFetch} from "../api/rest";
+import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 
 const scenarios = ref([]);
 const previewMap = ref({});
+const likeCountMap = ref({});
+const discussionScenario = ref(null);
+function openDiscussion(s) { discussionScenario.value = s; }
+function closeDiscussion() { discussionScenario.value = null; }
 const error = ref("");
 const loading = ref(false);
 const statusFilter = ref("ALL");
@@ -126,6 +132,7 @@ async function load() {
     const data = await fetchMyScenarios();
     scenarios.value = Array.isArray(data) ? data : (data.content ?? []);
     const map = {};
+    const likes = {};
     await Promise.all(
       scenarios.value.map(async (s) => {
         try {
@@ -134,9 +141,18 @@ async function load() {
         } catch {
           map[s.id] = null;
         }
+        if (s.visibilityStatus === "PUBLISHED") {
+          try {
+            const status = await apiFetch(`/api/scenarios/${s.id}/interactions`);
+            likes[s.id] = status?.likeCount ?? 0;
+          } catch {
+            likes[s.id] = 0;
+          }
+        }
       })
     );
     previewMap.value = map;
+    likeCountMap.value = likes;
   } catch (e) {
     error.value = e.message;
   } finally {
@@ -269,6 +285,18 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
                 </svg>
                 Read
               </button>
+              <span v-if="s.visibilityStatus === 'PUBLISHED'" class="ms-card__like-count" title="Likes">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                {{ likeCountMap[s.id] ?? 0 }}
+              </span>
+              <button v-if="s.visibilityStatus === 'PUBLISHED'" type="button"
+                      class="ms-card__action ms-card__action--discussion" title="Discussion" @click.stop="openDiscussion(s)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </button>
               <button type="button" class="ms-card__action ms-card__action--edit" title="Edit" @click.stop="openEdit(s)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -366,6 +394,7 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
     </Teleport>
 
     <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
+    <ScenarioDiscussionModal :scenario="discussionScenario" @close="closeDiscussion" />
   </main>
 </template>
 
@@ -425,16 +454,18 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
 .ms-card__tag { font-size: 0.72rem; font-weight: 600; color: var(--text-soft); }
 .ms-card__meta-sep { color: var(--border); }
 .ms-card__desc { margin: 0; font-size: 0.8rem; color: var(--text-soft); line-height: 1.5; }
-.ms-card__actions { display: flex; gap: 6px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.ms-card__actions { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
 .ms-card__action { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--border); border-radius: 10px; padding: 6px 10px; background: transparent; color: var(--text-soft); font: inherit; font-size: 0.78rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: background 140ms ease, color 140ms ease, border-color 140ms ease; }
 .ms-card__action--open { flex: 1; justify-content: center; background: var(--text); color: #fff; border-color: var(--text); }
 .ms-card__action--open:hover { background: var(--primary); border-color: var(--primary); }
 .ms-card__action--open svg { width: 13px; height: 13px; }
-.ms-card__action--read { color: var(--primary); border-color: rgba(192,74,8,0.28); background: rgba(192,74,8,0.05); }
+.ms-card__action--read { color: var(--primary); border-color: rgba(192,74,8,0.28); background: rgba(192,74,8,0.05); flex-shrink: 0; }
 .ms-card__action--read:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
 .ms-card__action--read svg { flex-shrink: 0; }
+.ms-card__action--edit { flex-shrink: 0; }
 .ms-card__action--edit svg { width: 14px; height: 14px; }
 .ms-card__action--edit:hover { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.05); }
+.ms-card__action--delete { flex-shrink: 0; }
 .ms-card__action--delete svg { width: 14px; height: 14px; }
 .ms-card__action--delete:hover { border-color: #A8334C; color: #A8334C; background: rgba(168,51,76,0.06); }
 .ms-noresults { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 20px; text-align: center; }
@@ -514,5 +545,25 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
   .ms-draft { grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 8px; }
   .ms-draft__audio { width: 100%; grid-column: 1 / -1; }
   .ms-draft__actions { grid-column: 1 / -1; justify-content: space-between; }
+}
+.ms-card__like-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.ms-card__action--discussion {
+  padding: 6px 9px;
+  flex-shrink: 0;
+}
+.ms-card__action--discussion:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(192, 74, 8, 0.05);
 }
 </style>
