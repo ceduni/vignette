@@ -5,9 +5,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import org.titiplex.api.dto.ScenarioDto;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.ScenarioRepository;
 
@@ -20,7 +22,8 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
@@ -33,6 +36,8 @@ class ScenarioServiceTest {
     private UserService userService;
     @Mock
     private LanguageService languageService;
+    @Mock
+    private ScenarioTagService scenarioTagService;
 
     @InjectMocks
     private ScenarioService scenarioService;
@@ -100,5 +105,68 @@ class ScenarioServiceTest {
         assertEquals(3L, dto.id());
         assertEquals("My scenario", dto.title());
         assertEquals("alice", dto.authorUsername());
+    }
+
+    @Test
+    void listPublishedScenariosByFamilyId_usesDefaultLimit() {
+        Scenario scenario = publishedScenario(8L, "Family hit");
+        when(scenarioRepository.findPublishedByFamilyIdOrderByCreatedAtDesc(eq("indo1319"), any(Pageable.class)))
+                .thenReturn(List.of(scenario));
+        when(userService.getUserById(7L)).thenReturn(author());
+        when(scenarioTagService.toNames(any())).thenReturn(List.of());
+
+        List<ScenarioDto> result = scenarioService.listPublishedScenariosByFamilyId("indo1319", null);
+
+        assertEquals(1, result.size());
+        verify(languageService).assertFamilyExists("indo1319");
+        verify(scenarioRepository).findPublishedByFamilyIdOrderByCreatedAtDesc(eq("indo1319"), eq(Pageable.ofSize(15)));
+    }
+
+    @Test
+    void listPublishedScenariosByCountryIso_returnsEmptyWhenNoLanguages() {
+        when(languageService.findLanguageIdsByCountryIsoA3("CAN")).thenReturn(List.of());
+
+        List<ScenarioDto> result = scenarioService.listPublishedScenariosByCountryIso("CAN", 10);
+
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    void listPublishedScenariosByCountryIso_clampsLimitToFifteen() {
+        Scenario scenario = publishedScenario(2L, "Country hit");
+        when(languageService.findLanguageIdsByCountryIsoA3("FRA")).thenReturn(List.of("fra", "oci"));
+        when(scenarioRepository.findPublishedByLanguageIdInOrderByCreatedAtDesc(eq(List.of("fra", "oci")), any(Pageable.class)))
+                .thenReturn(List.of(scenario));
+        when(userService.getUserById(7L)).thenReturn(author());
+        when(scenarioTagService.toNames(any())).thenReturn(List.of());
+
+        List<ScenarioDto> result = scenarioService.listPublishedScenariosByCountryIso("FRA", 99);
+
+        assertEquals(1, result.size());
+        verify(scenarioRepository).findPublishedByLanguageIdInOrderByCreatedAtDesc(
+                eq(List.of("fra", "oci")),
+                eq(Pageable.ofSize(15))
+        );
+    }
+
+    private Scenario publishedScenario(long id, String title) {
+        Scenario scenario = new Scenario();
+        scenario.setId(id);
+        scenario.setTitle(title);
+        scenario.setDescription("description");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author());
+        scenario.setCreatedAt(Instant.parse("2025-01-01T00:00:00Z"));
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        scenario.setTags(Set.of());
+        return scenario;
+    }
+
+    private User author() {
+        User author = new User();
+        author.setId(7L);
+        author.setUsername("alice");
+        return author;
     }
 }

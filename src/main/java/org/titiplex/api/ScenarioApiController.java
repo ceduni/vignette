@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -205,6 +207,74 @@ public class ScenarioApiController {
             Authentication auth
     ) {
         return scenarioService.listVisibleScenarioDtos(auth);
+    }
+
+    @Operation(
+            summary = "List published scenarios by language family",
+            description = """
+                    Returns up to 15 published scenarios whose language belongs to the given family.
+                    Results are ordered by most recently created first.
+                    """
+    )
+    @PublicOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Scenarios retrieved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Language family not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @GetMapping("/by-family/{familyId}")
+    public List<ScenarioDto> listByFamily(
+            @Parameter(description = "Glottolog ID of the language family", required = true, example = "indo1319")
+            @PathVariable String familyId,
+
+            @Parameter(description = "Maximum number of scenarios to return (1-15, default 15)")
+            @RequestParam(required = false) @Min(1) @Max(15) Integer limit
+    ) {
+        return scenarioService.listPublishedScenariosByFamilyId(familyId, limit);
+    }
+
+    @Operation(
+            summary = "List published scenarios by country",
+            description = """
+                    Returns up to 15 published scenarios for languages associated with the given ISO_A3 country code.
+                    Results are ordered by most recently created first.
+                    """
+    )
+    @PublicOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Scenarios retrieved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid country code",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @GetMapping("/by-country/{isoA3}")
+    public List<ScenarioDto> listByCountry(
+            @Parameter(description = "ISO 3166-1 alpha-3 country code", required = true, example = "CAN")
+            @PathVariable String isoA3,
+
+            @Parameter(description = "Maximum number of scenarios to return (1-15, default 15)")
+            @RequestParam(required = false) @Min(1) @Max(15) Integer limit
+    ) {
+        return scenarioService.listPublishedScenariosByCountryIso(isoA3, limit);
     }
 
     @Operation(

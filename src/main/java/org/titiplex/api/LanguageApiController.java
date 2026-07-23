@@ -242,36 +242,20 @@ public class LanguageApiController {
     @Operation(
             summary = "Update a language",
             description = """
-                    Updates editable language metadata.
-                    
-                    Requires either:
-                    - ROLE_ADMIN
-                    - or a LANGUAGE_EDIT accreditation matching:
-                      - GLOBAL
-                      - the specific language
-                      - or the language family of the target language
+                    Disabled in Glottolog V1: catalogue fields on language are owned by the external Python pipeline.
+                    Manual edits would be overwritten on the next successful import.
                     """
     )
     @UserOperation
     @ApiResponses({
             @ApiResponse(
-                    responseCode = "200",
-                    description = "Language updated successfully",
-                    content = @Content(schema = @Schema(implementation = LanguageDto.class))
+                    responseCode = "410",
+                    description = "Language catalogue edits are disabled",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
             ),
             @ApiResponse(
                     responseCode = "401",
                     description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "User is not allowed to edit this language",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language not found",
                     content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
@@ -281,10 +265,10 @@ public class LanguageApiController {
             @RequestBody UpdateLanguageRequest request,
             Authentication auth
     ) {
-        if (!languageService.canEditLanguage(auth.getName(), id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to edit this language");
-        }
-        return languageService.updateLanguage(id, request);
+        throw new ResponseStatusException(
+                HttpStatus.GONE,
+                "Language catalogue fields are managed by the Glottolog Python pipeline and cannot be edited via the API."
+        );
     }
 
     /**

@@ -251,4 +251,26 @@ class ScenarioApiControllerTest {
         assertEquals(5L, result.id());
         assertEquals("New title", result.title());
     }
+
+    @Test
+    void listByFamily_delegatesToService() {
+        when(scenarioService.listPublishedScenariosByFamilyId("indo1319", 10)).thenReturn(List.of(
+                new ScenarioDto(1L, "Family story", null, "fra", "alice", null, "PUBLISHED", null, "PRESET", "GRID_3", 3, List.of(), null)
+        ));
+
+        List<ScenarioDto> result = controller.listByFamily("indo1319", 10);
+
+        assertEquals(1, result.size());
+        verify(scenarioService).listPublishedScenariosByFamilyId("indo1319", 10);
+    }
+
+    @Test
+    void listByCountry_delegatesToService() {
+        when(scenarioService.listPublishedScenariosByCountryIso("CAN", null)).thenReturn(List.of());
+
+        List<ScenarioDto> result = controller.listByCountry("CAN", null);
+
+        assertEquals(0, result.size());
+        verify(scenarioService).listPublishedScenariosByCountryIso("CAN", null);
+    }
 }

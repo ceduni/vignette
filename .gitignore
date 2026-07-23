@@ -41,3 +41,22 @@ build/
 data/
 .tools/
 /fond*.avif
+
+### Secrets / local env ###
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+### Cursor / local tooling ###
+.cursor/
+backups/
+
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+
+### Accidental macOS / iCloud duplicates ###
+* 2.*
+*.icloud

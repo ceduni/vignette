@@ -1,5 +1,6 @@
 package org.titiplex.persistence.repo;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -7,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -97,4 +99,31 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
             order by s.createdAt asc, s.id asc
             """)
     List<Scenario> findPublishedByLanguageIdOrderByCreatedAtAscIdAsc(@Param("languageId") String languageId);
+
+    @EntityGraph(attributePaths = {"tags"})
+    @Query("""
+            select s
+            from Scenario s
+            join s.language l
+            where l.familyId = :familyId
+              and s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
+            order by s.createdAt desc, s.id desc
+            """)
+    List<Scenario> findPublishedByFamilyIdOrderByCreatedAtDesc(
+            @Param("familyId") String familyId,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {"tags"})
+    @Query("""
+            select s
+            from Scenario s
+            where s.language_id in :languageIds
+              and s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
+            order by s.createdAt desc, s.id desc
+            """)
+    List<Scenario> findPublishedByLanguageIdInOrderByCreatedAtDesc(
+            @Param("languageIds") Collection<String> languageIds,
+            Pageable pageable
+    );
 }
