@@ -1,5 +1,6 @@
 <script setup>
 import {computed, onMounted, ref} from "vue";
+import AdminWorkspaceShell from "../components/admin/AdminWorkspaceShell.vue";
 import {
   fetchAccreditationRequests,
   fetchAccreditations,
@@ -104,11 +105,13 @@ onMounted(loadAll);
 </script>
 
 <template>
-  <main class="page">
-    <section class="section">
+  <AdminWorkspaceShell
+      title="Community"
+      subtitle="Review requests and manage grants."
+  >
       <div class="section-heading">
         <div>
-          <h1>Admin community</h1>
+          <h2>Community</h2>
           <p class="muted">
             Global moderation for accreditation requests and direct grants.
           </p>
@@ -271,8 +274,7 @@ onMounted(loadAll);
           </section>
         </div>
       </template>
-    </section>
-  </main>
+  </AdminWorkspaceShell>
 </template>
 
 <style scoped>
@@ -304,7 +306,7 @@ onMounted(loadAll);
 .admin-community-panel {
   border-radius: 22px;
   padding: 24px 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 240, 0.96));
+  background: var(--surface);
   box-shadow: var(--shadow);
 }
 
@@ -321,7 +323,7 @@ onMounted(loadAll);
 .community-item {
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--surface-alt);
   padding: 16px 18px;
 }
 
@@ -346,18 +348,20 @@ onMounted(loadAll);
 
 .badge--success {
   background: var(--accent-green);
-  border-color: rgba(6, 118, 71, 0.22);
+  border-color: rgba(64, 92, 50, 0.2);
+  color: var(--vignette-success-text);
 }
 
 .badge--danger {
-  background: rgba(180, 35, 24, 0.1);
-  border-color: rgba(180, 35, 24, 0.2);
-  color: var(--danger);
+  background: var(--vignette-danger-bg);
+  border-color: rgba(138, 31, 45, 0.18);
+  color: var(--vignette-danger-text);
 }
 
 .badge--info {
-  background: var(--accent-cool);
-  border-color: rgba(91, 25, 40, 0.18);
+  background: var(--vignette-primary-soft);
+  border-color: var(--border);
+  color: var(--primary);
 }
 
 .separator {

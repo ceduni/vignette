@@ -10,11 +10,19 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.AdminOverviewDto;
 import org.titiplex.api.dto.AdminUserRowDto;
+import org.titiplex.api.dto.GlottologImportPreviewDto;
+import org.titiplex.api.dto.GlottologSyncResultDto;
+import org.titiplex.api.dto.GlottologUpdateResultDto;
 import org.titiplex.api.dto.ScenarioDto;
 import org.titiplex.persistence.model.Role;
 import org.titiplex.persistence.model.User;
+import org.titiplex.service.GlottologAdminService;
+import org.titiplex.service.GlottologUpdateJobService;
+import org.titiplex.service.GlottologUpdateService;
+import org.titiplex.service.LanguageImportService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
+import org.titiplex.config.GlottologProperties;
 
 import java.time.Instant;
 import java.util.List;
@@ -32,6 +40,21 @@ class AdminApiControllerTest {
 
     @Mock
     private ScenarioService scenarioService;
+
+    @Mock
+    private LanguageImportService languageImportService;
+
+    @Mock
+    private GlottologUpdateService glottologUpdateService;
+
+    @Mock
+    private GlottologUpdateJobService glottologUpdateJobService;
+
+    @Mock
+    private GlottologAdminService glottologAdminService;
+
+    @Mock
+    private GlottologProperties glottologProperties;
 
     @InjectMocks
     private AdminApiController controller;
@@ -140,5 +163,84 @@ class AdminApiControllerTest {
     @Test
     void listScenarios_rejectsNonAdmin() {
         assertThrows(AccessDeniedException.class, () -> controller.listScenarios(userAuth()));
+    }
+
+    @Test
+    void previewGlottolog_returnsPreview_forAdmin() throws Exception {
+        when(glottologUpdateService.preview())
+                .thenReturn(new GlottologImportPreviewDto(27034, 9267, 9000L));
+
+        GlottologImportPreviewDto preview = controller.previewGlottolog(adminAuth());
+
+        assertEquals(27034, preview.sourceRows());
+        assertEquals(9267, preview.selectedRows());
+        assertEquals(9000L, preview.databaseCount());
+    }
+
+    @Test
+    void previewGlottolog_rejectsNonAdmin() {
+        assertThrows(AccessDeniedException.class, () -> controller.previewGlottolog(userAuth()));
+    }
+
+    @Test
+    void syncGlottolog_gone_whenLegacyDisabled() {
+        when(glottologProperties.isLegacyPipelineEnabled()).thenReturn(false);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> controller.syncGlottolog(adminAuth()));
+    }
+
+    @Test
+    void syncGlottolog_returnsResult_forAdmin() throws Exception {
+        when(glottologProperties.isLegacyPipelineEnabled()).thenReturn(true);
+        when(glottologUpdateService.resolveActiveCsvPath()).thenReturn(null);
+        when(languageImportService.syncFromClasspath())
+                .thenReturn(new GlottologSyncResultDto(27034, 9267, 10, 5, 9252, 9277L, 1200L));
+
+        GlottologSyncResultDto result = controller.syncGlottolog(adminAuth());
+
+        assertEquals(10, result.inserted());
+        assertEquals(5, result.updated());
+        assertEquals(9252, result.unchanged());
+    }
+
+    @Test
+    void syncGlottolog_rejectsNonAdmin() {
+        assertThrows(AccessDeniedException.class, () -> controller.syncGlottolog(userAuth()));
+    }
+
+    @Test
+    void updateGlottolog_depositsManualRequest_whenLegacyDisabled() throws Exception {
+        when(glottologProperties.isLegacyPipelineEnabled()).thenReturn(false);
+        when(glottologAdminService.createManualUpdateRequest("admin"))
+                .thenReturn(new org.titiplex.api.dto.GlottologUpdateRequestDto(
+                        7L, "admin", Instant.now(), "PENDING",
+                        null, null, null, null, null, null, null
+                ));
+
+        Object result = controller.updateGlottolog(adminAuth());
+
+        assertInstanceOf(org.titiplex.api.dto.GlottologUpdateRequestDto.class, result);
+        assertEquals(7L, ((org.titiplex.api.dto.GlottologUpdateRequestDto) result).id());
+    }
+
+    @Test
+    void updateGlottolog_runsLegacyPipeline_whenEnabled() throws Exception {
+        when(glottologProperties.isLegacyPipelineEnabled()).thenReturn(true);
+        GlottologSyncResultDto sync = new GlottologSyncResultDto(13947, 13947, 10, 5, 13932, 13957L, 1200L);
+        when(glottologAdminService.runImmediateUpdate("admin"))
+                .thenReturn(new GlottologUpdateResultDto("5.3", 95000L, "Wrote 13,947 rows", sync, false));
+
+        Object result = controller.updateGlottolog(adminAuth());
+
+        GlottologUpdateResultDto typed = (GlottologUpdateResultDto) result;
+        assertEquals("5.3", typed.glottologVersion());
+        assertEquals(95000L, typed.downloadDurationMs());
+        assertEquals(10, typed.sync().inserted());
+        assertFalse(typed.sourceUnchanged());
+    }
+
+    @Test
+    void updateGlottolog_rejectsNonAdmin() {
+        assertThrows(AccessDeniedException.class, () -> controller.updateGlottolog(userAuth()));
     }
 }

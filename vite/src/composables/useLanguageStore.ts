@@ -97,7 +97,7 @@ function buildScenariosForCountry(isoA3: string, rows: LanguageRow[]): ScenarioA
       level: template.level,
       status: template.status,
       type: template.type,
-      ctaLabel: `Lancer le scénario ${index + 1}`,
+      ctaLabel: `Start scenario ${index + 1}`,
     };
   });
 }
@@ -160,7 +160,7 @@ const languageFocusScenarios = computed<ScenarioAction[]>(() => {
     level: template.level,
     status: template.status,
     type: template.type,
-    ctaLabel: `Lancer le scénario ${index + 1}`,
+    ctaLabel: `Start scenario ${index + 1}`,
   }));
 });
 
@@ -173,8 +173,8 @@ const mapFocus = computed(() => {
   if (focusMode.value === "country" && activeCountryId.value) {
     return {
       mode: "country" as const,
-      title: `Zone ${activeCountryId.value}`,
-      subtitle: `${countryFocusLanguages.value.length} langues trouvées dans ce pays`,
+      title: `Region ${activeCountryId.value}`,
+      subtitle: `${countryFocusLanguages.value.length} languages found in this country`,
       scenarios: countryFocusScenarios.value,
     };
   }
@@ -183,16 +183,16 @@ const mapFocus = computed(() => {
     const lang = catalogLanguages.value.find((row) => String(row.id) === String(activeLanguageId.value));
     return {
       mode: "language" as const,
-      title: lang ? `Scénarios de ${lang.name}` : "Scénarios de la langue",
-      subtitle: `${highlightedCountryIds.value.length} pays accentués`,
+      title: lang ? `Scenarios for ${lang.name}` : "Language scenarios",
+      subtitle: `${highlightedCountryIds.value.length} countries highlighted`,
       scenarios: languageFocusScenarios.value,
     };
   }
 
   return {
     mode: "idle" as const,
-    title: "Clique sur un pays ou une langue",
-    subtitle: "La carte et la liste se synchroniseront ici.",
+    title: "Click a country or a language",
+    subtitle: "The map and list will sync here.",
     scenarios: [] as ScenarioAction[],
   };
 });

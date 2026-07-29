@@ -1,5 +1,7 @@
 package org.titiplex.service;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
@@ -28,6 +30,9 @@ import java.util.NoSuchElementException;
 
 @Service
 public class ScenarioService {
+
+    public static final int DISCOVERY_SCENARIO_LIMIT = 15;
+
     private final ScenarioRepository repo;
     private final UserService userService;
     private final LanguageService languageService;
@@ -396,7 +401,35 @@ public class ScenarioService {
                 .toList();
     }
 
-    @Transactional
+    public List<ScenarioDto> listPublishedScenariosByFamilyId(String familyId, Integer limit) {
+        languageService.assertFamilyExists(familyId);
+        Pageable pageable = PageRequest.of(0, clampDiscoveryLimit(limit));
+        return repo.findPublishedByFamilyIdOrderByCreatedAtDesc(familyId, pageable)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    public List<ScenarioDto> listPublishedScenariosByCountryIso(String isoA3, Integer limit) {
+        List<String> languageIds = languageService.findLanguageIdsByCountryIsoA3(isoA3);
+        if (languageIds.isEmpty()) {
+            return List.of();
+        }
+
+        Pageable pageable = PageRequest.of(0, clampDiscoveryLimit(limit));
+        return repo.findPublishedByLanguageIdInOrderByCreatedAtDesc(languageIds, pageable)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    int clampDiscoveryLimit(Integer limit) {
+        if (limit == null) {
+            return DISCOVERY_SCENARIO_LIMIT;
+        }
+        return Math.max(1, Math.min(limit, DISCOVERY_SCENARIO_LIMIT));
+    }
+
     public Scenario forkScenario(Long originalId, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new InsufficientAuthenticationException("Authentication required");

@@ -20,11 +20,13 @@ import org.titiplex.persistence.repo.UserRepository;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -50,8 +52,10 @@ public class LanguageService {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 200);
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("name").ascending());
-        String normalizedQuery = (query == null || query.isBlank()) ? null : query.trim();
-        return repo.search(normalizedQuery, pageable);
+        boolean hasQuery = query != null && !query.isBlank();
+        // Build LIKE pattern in Java — avoids PostgreSQL "lower(bytea)" with bound params.
+        String pattern = hasQuery ? "%" + query.trim().toLowerCase(Locale.ROOT) + "%" : "%";
+        return repo.search(hasQuery, pattern, pageable);
     }
 
     public Page<LanguageDto> listLanguagesDto(int page, int size) {
@@ -100,8 +104,52 @@ public class LanguageService {
         return new ArrayList<>(repo.saveAll(languages));
     }
 
+    public List<Language> findAllByIdIn(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return repo.findAllByIdIn(ids);
+    }
+
+    public List<GlottologLanguageSnapshot> findGlottologSnapshotsByIdIn(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return repo.findGlottologSnapshotsByIdIn(ids);
+    }
+
     public boolean existsById(String id) {
         return repo.existsById(id);
+    }
+
+    public Optional<Language> findByIdExact(String id) {
+        return repo.findById(id);
+    }
+
+    public Optional<Language> findByName(String name) {
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
+        }
+        return repo.findByName(name);
+    }
+
+    public List<Language> findAllFamilies() {
+        return repo.findAllFamilies();
+    }
+
+    public List<Language> findAllReferencingIds(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return repo.findAllReferencingIds(ids);
+    }
+
+    @Transactional
+    public void deleteAll(Collection<Language> languages) {
+        if (languages == null || languages.isEmpty()) {
+            return;
+        }
+        repo.deleteAll(languages);
     }
 
     public boolean canEditLanguage(String username, String languageId) {
@@ -174,14 +222,13 @@ public class LanguageService {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 200);
         Pageable pageable = PageRequest.of(safePage, safeSize);
-        return repo.listOptions(q, pageable);
+        boolean hasQuery = q != null && !q.isBlank();
+        String pattern = hasQuery ? "%" + q.trim().toLowerCase(Locale.ROOT) + "%" : "%";
+        return repo.listOptions(hasQuery, pattern, pageable);
     }
 
     public List<Language> getLanguagesByFamily(String familyId) {
-        Optional<Language> lang = repo.findById(familyId);
-        if (lang.isEmpty() || !Objects.equals(lang.get().getLevel().toLowerCase(), "family")) {
-            return List.of();
-        }
+        assertFamilyExists(familyId);
         var stack = repo.findAllByFamilyId(familyId);
         List<Language> result = new ArrayList<>();
 
@@ -198,6 +245,43 @@ public class LanguageService {
         return result;
     }
 
+    public void assertFamilyExists(String familyId) {
+        Language family = repo.findById(familyId)
+                .orElseThrow(() -> new NoSuchElementException("Language family not found"));
+        if (family.getLevel() == null || !family.getLevel().equalsIgnoreCase("family")) {
+            throw new NoSuchElementException("Language family not found");
+        }
+    }
+
+    public List<String> findLanguageIdsByCountryIsoA3(String isoA3) {
+        String normalizedIso = toIsoA3(isoA3);
+        if (normalizedIso == null) {
+            throw new IllegalArgumentException("Invalid country code");
+        }
+
+        return repo.findAllWithFamilyAndParent().stream()
+                .filter(language -> language.getLevel() == null
+                        || !language.getLevel().equalsIgnoreCase("family"))
+                .filter(language -> languageBelongsToIso(language.getCountryIds(), normalizedIso))
+                .map(Language::getId)
+                .toList();
+    }
+
+    private boolean languageBelongsToIso(String countryIds, String isoA3) {
+        if (countryIds == null || countryIds.isBlank()) {
+            return false;
+        }
+
+        for (String token : countryIds.split("[\\s,;]+")) {
+            String candidate = toIsoA3(token.trim());
+            if (isoA3.equals(candidate)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public Map<String, List<LanguageRowDto>> listLanguagesByCountryIsoA3() {
         List<Language> languages = repo.findAllWithFamilyAndParent();
 
@@ -206,6 +290,9 @@ public class LanguageService {
         for (Language language : languages) {
             String countryIds = language.getCountryIds();
             if (countryIds == null || countryIds.isBlank()) {
+                continue;
+            }
+            if (language.getLevel() != null && language.getLevel().equalsIgnoreCase("family")) {
                 continue;
             }
 

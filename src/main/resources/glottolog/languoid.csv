@@ -34,14 +34,14 @@ abay1238,atla1278,agwa1247,Abayongo,False,dialect,,,,,,0,0,0,
 abaz1241,abkh1242,abkh1243,Abaza,False,language,44.25,42.0,abq,,,0,0,3,RU TR
 abbe1238,atla1278,abee1242,Abbey-Ve,False,dialect,,,,,,0,0,0,
 abbr1238,indo1319,sout3309,Abbruzzesi,False,dialect,,,,,,0,0,0,
-abch1234,indo1319,nayi1242,Abchuya'i,False,dialect,,,,,,0,0,0,
-abda1238,afro1255,soqo1240,'Abd Al-Kuri,False,dialect,12.1959,52.2282,,,,0,0,0,YE
+abch1234,indo1319,nayi1242,Abchuyaꞌi,False,dialect,,,,,,0,0,0,
+abda1238,afro1255,soqo1240,ꞌAbd Al-Kuri,False,dialect,12.1959,52.2282,,,,0,0,0,YE
 abed1238,cent2225,lugb1240,Abedju-Azaki,False,dialect,,,,,,0,0,0,
 abee1242,atla1278,agne1238,Abé,False,language,5.59682,-4.38497,aba,,,0,0,4,CI
 abee1243,atla1278,anyi1245,Abe (Anyin),False,dialect,,,,,,0,0,0,
 abel1234,aust1307,samb1319,Abellen-Botolan,False,family,,,,,,0,2,2,
 aben1247,sino1245,garo1247,Abeng,False,dialect,,,,,,0,0,0,
-aben1248,sino1245,garo1247,A'beng,False,dialect,,,,,,0,0,0,
+aben1248,sino1245,garo1247,Aꞌbeng,False,dialect,,,,,,0,0,0,
 aben1249,aust1307,abel1234,Abenlen Ayta,False,language,15.4131,120.2,abp,,,0,0,0,PH
 aben1250,algi1248,nort3414,Abenaki,False,family,,,,,,0,2,1,
 abgu1238,afro1255,birg1239,Abgue,False,dialect,,,,,,0,0,0,
@@ -71,7 +71,7 @@ abru1239,indo1319,balk1252,Abruzzese-Calabrian-Molisean Romani,False,dialect,,,,
 absh1238,indo1319,musl1236,Absheron,False,dialect,,,,,,0,0,2,
 abua1243,atla1278,cent2028,Abua-Odual,False,family,,,,,,0,3,8,
 abua1244,atla1278,abua1243,Abua,False,language,4.83057,6.61492,abn,,,0,0,4,NG
-abua1245,nucl1708,buki1250,Abu' Arapesh,False,language,-3.461612,142.917031,aah,,,0,0,0,PG
+abua1245,nucl1708,buki1250,Abuꞌ Arapesh,False,language,-3.461612,142.917031,aah,,,0,0,0,PG
 abui1241,timo1261,abui1242,Abui,False,language,-8.31058,124.588,abz,,,0,0,4,ID
 abui1242,timo1261,alor1250,Abuic,False,family,,,,,,0,2,10,
 abuj1237,drav1251,mari1414,Abujmaria,False,dialect,,,,,,0,0,0,
@@ -85,10 +85,10 @@ abur1244,atla1278,uncl1542,Abureni,False,language,4.62301,6.50634,mgj,,,0,0,0,NG
 abus1238,kadu1256,kang1288,Abu Sinun,False,dialect,,,,,,0,0,0,
 abuu1241,ramu1234,agoa1234,Abu,False,language,-4.24027,144.474,ado,,,0,0,3,PG
 abuz1234,indo1319,soii1239,Abuzaydabadi,False,dialect,,,,,,0,0,0,
-abya1234,indo1319,nata1252,Abyane'i,False,dialect,,,,,,0,0,0,
+abya1234,indo1319,nata1252,Abyaneꞌi,False,dialect,,,,,,0,0,0,
 abzh1238,abkh1242,abkh1244,Abzhui,False,dialect,,,,,,0,0,0,
 acad1238,indo1319,stan1290,Acadian,False,dialect,,,,,,0,0,0,
-acat1239,otom1299,west2948,Acatepec Me'phaa,False,language,17.1034,-99.0602,tpx,,,0,0,3,MX
+acat1239,otom1299,west2948,Acatepec Meꞌphaa,False,language,17.1034,-99.0602,tpx,,,0,0,3,MX
 acat1240,otom1299,acat1239,Acatepec,False,dialect,,,,,,0,0,0,
 acch1238,indo1319,nepa1254,Acchami,False,dialect,,,,,,0,0,0,
 acha1249,sino1245,acha1252,Longchuan Achang,False,language,24.3479,97.7438,acn,,,0,0,3,CN MM
@@ -99,10 +99,10 @@ ache1245,narr1279,ache1247,Acheron,False,language,10.8827,30.3187,acz,,,0,0,2,SD
 ache1246,tupi1275,tupi1277,Aché,False,language,-25.5865,-56.4697,guq,,,0,0,0,PY
 ache1247,narr1279,bura1298,Acheron-Tocho,False,family,,,,,,0,2,2,
 achi1247,sino1245,garo1247,Achik,False,dialect,,,,,,0,0,0,
-achi1255,sino1245,garo1247,A'chick,False,dialect,,,,,,0,0,0,
+achi1255,sino1245,garo1247,Aꞌchick,False,dialect,,,,,,0,0,0,
 achi1256,maya1287,quic1275,Achi,False,language,15.073,-90.3513,acr,,,0,0,0,GT
 achi1257,aust1307,cham1327,Acehnese,False,language,3.90757,96.6032,ace,,,0,0,7,ID
-achi1258,book1242,book1242,"Achi', Cubulco",True,language,,,acc,,,0,0,0,GT
+achi1258,book1242,book1242,"Achiꞌ, Cubulco",True,language,,,acc,,,0,0,0,GT
 acht1238,indo1319,west2356,Achterhoeks,False,dialect,52.021,6.47521,act,,,0,0,0,DE NL
 acht1239,tuuu1241,xamm1241,Achterveld,False,dialect,,,,,,0,0,0,
 achu1247,pala1350,pala1350,Achumawi,False,language,41.0979,-121.191,acv,,,0,0,0,US
@@ -137,7 +137,7 @@ addi1234,sign1238,ethi1238,Addis Ababa Ethiopian Sign Language,False,dialect,,,,
 addi1235,afro1255,amha1245,Addis Ababa,False,dialect,,,,,,0,0,0,
 adel1244,atla1278,basi1245,Adele,False,language,8.16975,0.619185,ade,,,0,0,2,GH TG
 aden1241,afro1255,taiz1242,Adeni,False,dialect,,,,,,0,0,0,
-aden1242,afro1255,jude1267,'Aden,False,dialect,,,,,,0,0,0,
+aden1242,afro1255,jude1267,ꞌAden,False,dialect,,,,,,0,0,0,
 ader1239,afro1255,haus1257,Aderawa,False,dialect,,,,,,0,0,0,
 adew1237,drav1251,mari1414,Adewada,False,dialect,,,,,,0,0,0,
 adga1237,aust1307,agus1235,Adgawan,False,dialect,,,,,,0,0,0,
@@ -287,7 +287,7 @@ ahue1234,utoa1244,tono1234,Ahuelicán,False,dialect,,,,,,0,0,0,
 ahva1234,indo1319,khuz1234,Ahvazi,False,dialect,,,,,,0,0,0,
 ahwa1235,atla1278,benu1248,Ndunic,False,language,9.17635,8.56205,nfd,,,0,0,0,NG
 ahwa1239,afro1255,nucl1706,Ahwaz,False,dialect,,,,,,0,0,0,
-aial1237,aust1307,moli1248,Ai'alu,False,dialect,,,,,,0,0,0,
+aial1237,aust1307,moli1248,Aiꞌalu,False,dialect,,,,,,0,0,0,
 aian1241,ramu1234,ramu1234,Aian,False,family,,,,,,0,2,0,
 aibo1237,aust1307,wand1267,Aibondeni,False,dialect,,,,,,0,0,0,
 aich1238,taik1256,maka1300,Ai-Cham,False,language,25.4908,107.844,aih,,,0,0,2,CN
@@ -324,7 +324,7 @@ aitu1237,aust1307,raro1241,Aitutaki,False,dialect,,,,,,0,0,0,
 aiya1239,drav1251,tami1289,Aiyangar,False,dialect,,,,,,0,0,0,
 aiya1240,drav1251,tami1289,Aiyar,False,dialect,,,,,,0,0,0,
 aiye1241,atla1278,west2472,Aiyegunle,False,dialect,,,,,,0,0,0,
-aiye1242,khoe1240,shua1254,||'Aiye,False,dialect,,,,,,0,0,0,
+aiye1242,khoe1240,shua1254,||ꞌAiye,False,dialect,,,,,,0,0,0,
 aizi1248,krua1234,greb1258,Aizi,False,family,,,,,,0,2,0,
 aizu1241,japo1237,sout2953,Aizu,False,dialect,,,,,,0,0,0,
 ajab1235,atla1278,gbee1241,Aja (Benin),False,language,7.06634,1.64992,ajg,,,0,0,4,BJ TG
@@ -378,7 +378,7 @@ akhv1239,nakh1245,akhv1240,Northern Akhvakh,False,language,42.4003,46.3037,akv,,
 akhv1240,nakh1245,andi1254,Akhvakhic,False,family,,,,,,0,2,5,
 akib1234,anem1249,anem1249,Akiblik,False,dialect,,,,,,0,0,0,
 akii1238,nucl1709,apal1256,Aki,False,dialect,,,,,,0,0,0,
-akim1239,utoa1244,toho1245,Akimel O'odham,False,dialect,,,,,,0,0,0,
+akim1239,utoa1244,toho1245,Akimel Oꞌodham,False,dialect,,,,,,0,0,0,
 akit1240,japo1237,nort2934,Akita,False,dialect,,,,,,0,0,0,
 akka1237,ural1272,main1280,Akkala Saami,False,language,67.8625,32.4046,sia,,,0,0,0,RU
 akka1240,afro1255,east2678,Akkadian,False,language,33.1,44.1,akk,,,0,0,11,IQ
@@ -421,7 +421,7 @@ akye1239,atla1278,akan1250,Akyem Bosome,False,dialect,,,,,,0,0,0,
 alab1237,musk1252,alab1247,Alabama,False,language,30.76738,-94.62848,akz,,,0,0,0,US
 alab1246,aust1307,alab1255,Alabat Island Agta,False,language,14.1217,122.014,dul,,,0,0,0,PH
 alab1247,musk1252,musk1252,Alabaman-Koasati,False,family,,,,,,0,3,0,
-alab1254,afro1255,kamb1318,Alaba-K'abeena,False,language,7.39014,38.1732,alw,,,0,0,0,ET
+alab1254,afro1255,kamb1318,Alaba-Kꞌabeena,False,language,7.39014,38.1732,alw,,,0,0,0,ET
 alab1255,aust1307,cent2246,Alabat-Manide Agta,False,family,,,,,,0,2,0,
 alab1256,turk1311,noga1249,Alabugat Tatar,False,dialect,43.59,46.66,,,,0,0,0,RU
 alac1239,kawe1237,kawe1237,Alacalufe-Austral,False,language,-54.788017,-70.140381,,,,0,0,0,CL
@@ -471,7 +471,7 @@ aleu1260,eski1264,aleu1261,Aleut,False,language,52.1228,-174.29,ale,,,0,0,2,RU U
 aleu1261,eski1264,eski1264,Aleutic,False,family,,,,,,0,2,2,
 alew1234,aust1307,hula1239,Alewai,False,dialect,,,,,,0,0,0,
 alfo1240,ural1272,hung1274,Alföld,False,dialect,,,,,,0,0,0,
-alga1234,afro1255,nort3292,'Algaden,False,dialect,,,,,,0,0,0,
+alga1234,afro1255,nort3292,ꞌAlgaden,False,dialect,,,,,,0,0,0,
 alge1235,sign1238,lsfi1234,Algerian Sign Language,False,language,36.4762,3.5462,asp,,,0,0,0,DZ
 alge1239,afro1255,nort3191,Algerian Arabic,False,language,35.4208,3.23033,arq,,,0,0,3,DZ MA TN
 alge1240,afro1255,nort3191,Algerian Saharan Arabic,False,language,20.8884,4.80626,aao,,,0,0,0,DZ EH LY MA NE
@@ -623,7 +623,7 @@ amer1258,sign1238,asli1244,American Sign,False,family,,,,,,0,9,2,
 amer1259,indo1319,sout3302,American Inland South English,False,dialect,,,,,,0,0,2,
 amer1260,sign1238,amer1248,American Sign Language in the USA,False,dialect,,,,,,0,0,0,
 amey1234,utoa1244,oapa1234,Ameyaltepec-Xalitla,False,dialect,,,,,,0,0,0,
-amfo1237,aust1307,uabm1237,Amfoan-Fatule'u,False,dialect,,,,,,0,0,0,
+amfo1237,aust1307,uabm1237,Amfoan-Fatuleꞌu,False,dialect,,,,,,0,0,0,
 amga1235,aust1307,ifug1247,Amganad Ifugao,False,language,16.9016,121.042,ifa,,,0,0,2,PH
 amha1244,afro1255,sout3078,Amharic-Argobba,False,family,,,,,,0,2,5,
 amha1245,afro1255,amha1244,Amharic,False,language,11.708182,39.543456,amh,,,0,0,5,DJ ET
@@ -798,7 +798,7 @@ anha1242,afro1255,cent2218,Anhar,False,dialect,,,,,,0,0,0,
 anha1243,indo1319,nort3313,Anhaltisch,False,dialect,,,,,,0,0,0,
 anhi1238,afro1255,turo1239,Anhil,False,dialect,,,,,,0,0,0,
 anii1245,atla1278,basi1245,Anii,False,language,9.11127,1.60169,blo,,,0,0,7,BJ TG
-anii1246,khoe1240,kxoe1242,//Ani,False,language,-19.0966,22.9088,hnh,,,0,0,0,BW
+anii1246,khoe1240,kxoe1242,ǁAni,False,language,-19.0966,22.9088,hnh,,,0,0,0,BW
 anii1247,khoe1240,kxoe1243,||Ani,False,dialect,,,,,,0,0,0,
 anil1235,sino1245,phow1235,Ani-Labo,False,family,,,,,,0,2,0,
 anim1239,atla1278,kebu1246,Animere,False,language,7.60385,0.41962,anf,,,0,0,0,GH
@@ -871,8 +871,8 @@ aolu1238,tung1282,manc1253,Aoluguya,False,dialect,,,,,,0,0,0,
 aona1235,sino1245,aoic1235,Ao Naga,False,language,26.3241,94.3824,njo,,,0,0,8,IN
 aore1237,aust1307,sout3339,Aore,False,language,-15.5753,167.166,aor,,,0,0,0,VU
 aota1239,aust1305,muon1246,Ao Tá,False,dialect,,,,,,0,0,0,
-aoua1234,taik1256,ahou1236,A'ou,False,language,26.8,105.85,aou,,,0,0,2,CN
-aouu1238,taik1256,aoua1234,Nuclear A'ou,False,dialect,,,,,,0,0,0,
+aoua1234,taik1256,ahou1236,Aꞌou,False,language,26.8,105.85,aou,,,0,0,2,CN
+aouu1238,taik1256,aoua1234,Nuclear Aꞌou,False,dialect,,,,,,0,0,0,
 aowi1238,atla1278,anyi1245,Aowin,False,dialect,,,,,,0,0,0,
 apaa1238,atla1278,east2861,Apa,False,dialect,,,,,,0,0,0,
 apab1234,indo1319,midl1245,Apabhramsic,False,family,,,,,,11,30,58,
@@ -958,7 +958,7 @@ aran1237,sout3418,kemb1251,Dombano,False,language,-2.08016,132.983,jbj,,,0,0,3,I
 aran1260,indo1319,gasc1240,Aranese,False,dialect,,,,,,0,0,0,
 aran1261,drav1251,mala1541,Aranadan,False,language,11.35252,75.79538,aaf,,,0,0,0,IN
 aran1263,pama1250,sout3384,Upper Arrernte,False,family,,,,,,1,5,10,
-aran1264,aust1307,tala1285,Arangka'a,False,dialect,,,,,,0,0,0,
+aran1264,aust1307,tala1285,Arangkaꞌa,False,dialect,,,,,,0,0,0,
 aran1265,uncl1493,uncl1493,Aranama,False,language,28.65425,-97.38526,xrt,,,0,0,0,US
 aran1266,pama1250,pama1250,Arandic-Thura-Yura,False,family,,,,,,9,16,12,
 aran1267,pama1250,aran1266,Arandic,False,family,,,,,,3,7,10,
@@ -1009,7 +1009,7 @@ arch1248,afro1255,egyp1246,Archaic Egyptian,False,dialect,,,,,,0,0,0,
 arda1234,indo1319,sout2645,Ardakani,False,dialect,,,,,,0,0,0,
 arde1234,indo1319,gazi1243,Ardestani,False,dialect,,,,,,0,0,0,
 ardv1234,indo1319,arar1266,Ardvin-Tbilisi,False,dialect,,,,,,0,0,2,
-area1240,aust1307,sout3198,'Are'are,False,language,-9.20699,161.158,alu,,,0,0,2,SB
+area1240,aust1307,sout3198,ꞌAreꞌare,False,language,-9.20699,161.158,alu,,,0,0,2,SB
 areb1238,pama1250,ribg1235,Areba,False,language,-16.63548,142.63107,aea,,,0,0,0,AU
 areb1239,drav1251,sout3362,Arebhashe,False,dialect,,,,,,0,0,0,
 arec1238,cari1283,taul1252,Arecuna,False,dialect,,,,,,0,0,0,
@@ -1111,7 +1111,7 @@ asak1234,nakh1245,nucl1785,Asakh,False,dialect,,,,,,0,0,0,
 asal1234,indo1319,cent1970,Asalemi,False,dialect,,,,,,0,0,0,
 asan1239,atla1278,twii1234,Asante,False,dialect,,,,,,0,0,0,
 asap1239,koia1260,omie1241,Asapa,False,dialect,,,,,,0,0,0,
-asar1240,nucl1709,mole1240,Asaro'o,False,language,-5.68263,146.508,mtv,,,0,0,0,PG
+asar1240,nucl1709,mole1240,Asaroꞌo,False,language,-5.68263,146.508,mtv,,,0,0,0,PG
 asas1240,nucl1709,sins1241,Asas,False,dialect,-5.69345,145.549,asd,,,0,0,0,PG
 asat1235,nucl1709,mura1271,Asat,False,dialect,,,,,,0,0,0,
 asba1238,nucl1709,tifa1245,Asbalmin,False,dialect,,,,,,0,0,0,
@@ -1270,7 +1270,7 @@ auch1238,atla1278,yekh1238,Auchi,False,dialect,,,,,,0,0,0,
 auga1239,atla1278,ukaa1243,Auga,False,dialect,,,,,,0,0,0,
 augu1237,sign1238,mona1241,Augustinian Sign Language,False,dialect,,,,,,0,0,0,
 augu1243,nucl1709,anga1292,Augu,False,dialect,,,,,,0,0,0,
-auhe1237,aust1307,suau1243,'Auhelawa,False,language,-10.0959,151.002,kud,,,0,0,0,PG
+auhe1237,aust1307,suau1243,ꞌAuhelawa,False,language,-10.0959,151.002,kud,,,0,0,0,PG
 auia1238,pauw1244,kark1258,Auia-Tarauwi,False,dialect,,,,,,0,0,0,
 auks1239,indo1319,lith1251,Aukshtaitish,False,dialect,,,,,,0,0,3,
 aulu1238,aust1307,cent2315,Aulua,False,language,-16.3579,167.697,aul,,,0,0,2,VU
@@ -1354,7 +1354,7 @@ awas1234,barb1265,barb1265,Awa-Southern Barbacoan,False,family,,,,,,1,3,0,
 away1237,aust1307,tawa1275,Awayama,False,dialect,,,,,,0,0,0,
 awbo1238,bayo1259,bayo1259,Awbono,False,language,-5.05875,139.724,awh,,,0,0,0,ID
 awee1240,drav1251,peng1244,Awe,False,dialect,,,,,,0,0,0,
-awee1241,sino1245,garo1247,A'we,False,dialect,,,,,,0,0,0,
+awee1241,sino1245,garo1247,Aꞌwe,False,dialect,,,,,,0,0,0,
 awee1242,afro1255,karr1237,Aweer,False,language,-1.40124,41.234,bob,,,0,0,9,KE SO
 aweg1238,atla1278,pong1250,Awege,False,dialect,,,,,,0,0,0,
 awem1238,nucl1709,moni1261,Awembak,False,dialect,,,,,,0,0,0,
@@ -1430,16 +1430,16 @@ azhe1235,sino1245,sani1275,Azhe,False,language,24.405,103.441,yiz,,,0,0,0,CN
 azhi1238,atla1278,pong1250,Azhiga,False,dialect,,,,,,0,0,0,
 azom1238,atla1278,pomo1271,Azom,False,dialect,,,,,,0,0,0,
 azon1238,sino1245,sout2732,Azonyu,False,dialect,,,,,,0,0,0,
-azoy1236,otom1299,meph1234,Azoyú Me'phaa,False,language,16.7584,-98.5241,tpc,,,0,0,0,MX
+azoy1236,otom1299,meph1234,Azoyú Meꞌphaa,False,language,16.7584,-98.5241,tpc,,,0,0,0,MX
 azte1234,utoa1244,cora1261,Aztec,False,family,,,,,,14,31,13,
 azua1234,quec1387,cana1262,Azuay Highland Quichua,False,dialect,,,,,,0,0,0,
 azza1238,saha1256,daza1242,Azzaga,False,dialect,,,,,,0,0,0,
 b10b1234,atla1278,bant1295,B10-B30,False,family,,,,,,4,7,6,
-baaa1237,aust1307,lole1239,Ba'a,False,dialect,,,,,,0,0,0,
+baaa1237,aust1307,lole1239,Baꞌa,False,dialect,,,,,,0,0,0,
 baad1239,afro1255,afar1241,Baadu,False,dialect,,,,,,0,0,0,
 baag1244,atla1278,bang1347,Baagato,False,dialect,,,,,,0,0,0,
 baal1234,surm1244,sout2838,Baale-Olam,False,family,,,,,,0,2,6,
-baam1237,aust1307,ngaj1237,Ba'amang,False,dialect,,,,,,0,0,0,
+baam1237,aust1307,ngaj1237,Baꞌamang,False,dialect,,,,,,0,0,0,
 baan1241,atla1278,west2469,Baan,False,language,4.66709,7.30065,bvj,,,0,0,2,NG
 baan1242,atla1278,east2739,Baangi,False,language,10.8083,5.7261,bqx,,,0,0,0,NG
 baan1243,atla1278,gimm1241,Baanma,False,dialect,,,,,,0,0,0,
@@ -1460,7 +1460,7 @@ baba1274,aust1307,sout3382,Babar,False,family,,,,,,4,12,0,
 baba1275,indo1319,sirv1235,Babadağ,False,dialect,,,,,,0,0,0,
 babb1238,atla1278,khan1278,Babbe,False,dialect,,,,,,0,0,0,
 babe1238,atla1278,ngom1272,Babete,False,dialect,,,,,,0,0,0,
-babi1235,atha1245,carr1250,Witsuwit'en-Babine,False,language,55.0997,-126.41,bcr,,,0,0,2,CA
+babi1235,atha1245,carr1250,Witsuwitꞌen-Babine,False,language,55.0997,-126.41,bcr,,,0,0,2,CA
 babi1236,atha1245,babi1235,Babine-Takla,False,dialect,,,,,,0,0,0,
 babo1241,atla1278,baka1273,Babong,False,dialect,,,,,,0,0,0,
 babo1242,aust1307,nyin1250,Babon,False,dialect,,,,,,0,0,0,
@@ -1500,7 +1500,7 @@ badj1245,atla1278,ewon1239,Badjia,False,dialect,,,,,,0,0,0,
 badj1246,pama1250,karn1253,Badjiri-Eastern Karnic,False,family,,,,,,1,3,7,
 badr1234,indo1319,nata1252,Badrudi,False,dialect,,,,,,0,0,0,
 badu1237,aust1307,bant1285,Badui,False,dialect,-6.35359,106.177,bac,,,0,0,0,ID
-badw1238,atla1278,koon1245,Badwe'e,False,dialect,,,,,,0,0,0,
+badw1238,atla1278,koon1245,Badweꞌe,False,dialect,,,,,,0,0,0,
 bady1239,atla1278,jaad1234,Jaad-Badyara,False,language,12.6425,-13.4759,pbp,,,0,0,0,GN GW SN
 baeg1237,aust1307,nort3284,Baeggu,False,language,-8.49014,160.771,bvd,,,0,0,0,SB
 bael1237,aust1307,nort3284,Baelelea,False,language,-8.41627,160.721,bvc,,,0,0,0,SB
@@ -1632,7 +1632,7 @@ baka1271,atla1278,west2836,Baka-Gundi,False,family,,,,,,1,4,0,
 baka1272,atla1278,baka1278,Baka (Cameroon),False,language,2.16013,13.7804,bkc,,,0,0,0,CF CG CM GA
 baka1273,atla1278,cent2284,Bakaka,False,language,4.79991,9.80402,bqz,,,0,0,6,CM
 baka1274,cent2225,moro1282,Baka (South Sudan),False,language,4.65943,29.59,bdh,,,0,0,0,CD SS
-baka1275,aust1307,beny1238,Bakati',False,family,,,,,,1,3,0,
+baka1275,aust1307,beny1238,Bakatiꞌ,False,family,,,,,,1,3,0,
 baka1276,timo1261,coas1327,Melangvala-Bakalang,False,dialect,,,,,,0,0,0,
 baka1277,cari1283,peko1235,Bakairí,False,language,-14.2628,-54.7034,bkq,,,0,0,0,BR
 baka1278,atla1278,baka1271,Baka complex,False,family,,,,,,0,2,0,
@@ -1641,7 +1641,7 @@ bake1241,bert1248,bert1248,Bake,False,dialect,,,,,,0,0,0,
 bake1242,atla1278,basa1284,Bakem,False,dialect,,,,,,0,0,0,
 bakh1245,indo1319,bakh1252,Bakhtiari,False,language,32.0163,49.7713,bqi,,,0,0,4,IR
 bakh1247,maba1274,kara1484,Bakha,False,dialect,,,,,,0,0,0,
-bakh1251,afro1255,west2763,Bakh'a,False,dialect,,,,,,0,0,0,
+bakh1251,afro1255,west2763,Bakhꞌa,False,dialect,,,,,,0,0,0,
 bakh1252,indo1319,luri1252,Bakhtiari-Southern Lori,False,family,,,,,,0,2,9,
 baki1242,atla1278,kwak1266,Baki (Cameroon),False,dialect,,,,,,0,0,0,
 baki1243,aust1307,epii1237,Baki-Bierebo,False,family,,,,,,0,2,0,
@@ -1667,7 +1667,7 @@ bakw1242,krua1234,east2415,Bakwe-Wane,False,family,,,,,,0,2,5,
 bakw1243,krua1234,bakw1242,Bakwé,False,language,5.23123,-6.51077,bjw,,,0,0,5,CI
 bala1242,tung1282,manc1252,Bala (China),False,dialect,,,,,,0,0,0,
 bala1297,indo1319,absh1238,Balakhani,False,dialect,,,,,,0,0,0,
-bala1298,indo1319,nort2645,Bala-Gariva'i,False,dialect,,,,,,0,0,0,
+bala1298,indo1319,nort2645,Bala-Garivaꞌi,False,dialect,,,,,,0,0,0,
 bala1299,sino1245,sank1254,Bala,False,dialect,,,,,,0,0,0,
 bala1300,atla1278,bakk1238,Balanta,False,family,,,,,,0,2,6,
 bala1301,atla1278,bala1300,Balanta-Kentohe,False,language,11.8203,-15.3221,ble,,,0,0,4,GW
@@ -1701,7 +1701,7 @@ bali1245,atla1278,bali1284,Bali (Nigeria),False,language,8.81345,11.2952,bcn,,,0
 bali1269,atla1278,mung1266,Bali Nyonga,False,dialect,,,,,,0,0,0,
 bali1274,atla1278,bali1286,Bali (Democratic Republic of Congo),False,language,1.1807,26.5941,bcp,,,0,0,4,CD
 bali1275,atla1278,ibal1241,Ibali Teke,False,dialect,,,,,,0,0,0,
-bali1276,cent2225,moru1253,'Bali'ba,False,dialect,,,,,,0,0,0,
+bali1276,cent2225,moru1253,ꞌBaliꞌba,False,dialect,,,,,,0,0,0,
 bali1277,aust1307,mala1545,Bali-Sasak-Sumbawa,False,family,,,,,,1,3,8,
 bali1278,aust1307,bali1277,Balinese,False,language,-8.35714,115.075,ban,,,0,0,3,ID
 bali1279,aust1307,sing1270,Balinese Malay,False,language,-8.355884,114.648391,mhp,,,0,0,0,ID
@@ -1781,7 +1781,7 @@ bana1282,indo1319,bagh1251,Banapari,False,dialect,,,,,,0,0,0,
 bana1283,sino1245,koch1250,Banai,False,dialect,25.8,90.2,,,,0,0,0,BD IN
 bana1284,cent2225,keng1240,Banama,False,dialect,,,,,,0,0,0,
 bana1285,cent2225,keng1240,Banala,False,dialect,,,,,,0,0,0,
-bana1286,aust1307,mala1480,Banana',False,dialect,,,,,,0,0,0,
+bana1286,aust1307,mala1480,Bananaꞌ,False,dialect,,,,,,0,0,0,
 bana1287,aust1307,gilb1244,Banaban,False,dialect,,,,,,0,0,0,
 bana1288,aust1307,nort3231,Banao Itneg,False,language,17.5643,121.05,bjx,,,0,0,3,PH
 bana1289,aust1307,bana1288,Banao Pikekj,False,dialect,,,,,,0,0,0,
@@ -1995,7 +1995,7 @@ bare1275,nucl1709,gain1243,Bareji (Gaina),False,dialect,,,,,,0,0,0,
 bare1276,araw1281,bare1282,Baré,False,language,1.91649,-66.828,bae,,,0,0,0,BR VE
 bare1279,afro1255,bara1406,Barain,False,language,10.970124,17.911727,bva,,,0,0,4,TD
 bare1280,afro1255,east2652,Barentu,False,dialect,,,,,,0,0,0,
-bare1281,tung1282,east2846,Bareya-Amgun',False,dialect,,,,,,0,0,0,
+bare1281,tung1282,east2846,Bareya-Amgunꞌ,False,dialect,,,,,,0,0,0,
 bare1282,araw1281,alto1250,Bareic,False,family,,,,,,0,2,0,
 barg1250,mong1349,russ1264,Barguzin,False,dialect,,,,,,0,0,0,
 barg1251,mong1349,chin1476,Bargu,False,dialect,,,,,,0,0,0,
@@ -2116,7 +2116,7 @@ bata1292,aust1307,nort2831,Batak Alas-Kluet,False,language,3.4293,97.8123,btz,,,
 bata1293,aust1307,nort2831,Batak Karo,False,language,2.12787,98.2517,btx,,,0,0,1,ID
 bata1294,aust1307,nort2831,Batak Dairi,False,language,2.51438,98.2427,btd,,,0,0,0,ID
 bata1295,aust1307,sala1285,Batanta,False,language,-0.862394,130.646,,,,0,0,0,ID
-bata1296,aust1307,maya1282,Batanta Ma'ya,False,dialect,,,,,,0,0,0,
+bata1296,aust1307,maya1282,Batanta Maꞌya,False,dialect,,,,,,0,0,0,
 bata1297,aust1307,samb1319,Bataan Ayta,False,language,14.4153,120.49,ayt,,,0,0,0,PH
 bata1298,aust1307,bata1319,Batad Ifugao,False,language,16.8266,121.23,ifb,,,0,0,3,PH
 bata1299,aust1307,taga1270,Bataan,False,dialect,,,,,,0,0,0,
@@ -2208,7 +2208,7 @@ bayo1259,,,Bayono-Awbono,False,family,,,,,,0,2,0,
 bayo1260,bayo1259,bayo1259,Bayono,False,language,-5.21728,139.617,byl,,,0,0,0,ID
 bayo1261,cent2225,moro1296,Bayo-Morom,False,family,,,,,,0,2,3,
 bayo1262,atla1278,jola1264,Bayot,False,family,,,,,,0,2,4,
-bayr1238,indo1319,feyl1238,Badre'i,False,dialect,,,,,,0,0,0,
+bayr1238,indo1319,feyl1238,Badreꞌi,False,dialect,,,,,,0,0,0,
 bayu1240,pama1250,kany1246,Bayungu,False,language,-23.3809,114.108,bxj,,,0,0,0,AU
 bazi1237,uncl1493,uncl1493,Bazigar,False,language,25.2977,77.2213,bfr,,,0,0,0,IN
 bazz1238,afro1255,nort3096,Baz,False,dialect,,,,,,0,0,0,
@@ -2268,7 +2268,7 @@ beir1241,indo1319,port1283,Beira,False,dialect,,,,,,0,0,0,
 beir1242,indo1319,nort3360,Dom of Beirut,False,dialect,,,,,,0,0,0,
 beja1238,afro1255,cush1243,Beja,False,language,17.2436,36.6666,bej,,,0,0,6,EG ER SD
 beka1240,atla1278,yaka1272,Beka,False,dialect,,,,,,0,0,0,
-beka1241,aust1307,baka1275,Riuk Bekati',False,language,1.3307,109.576,bei,,,0,0,0,ID
+beka1241,aust1307,baka1275,Riuk Bekatiꞌ,False,language,1.3307,109.576,bei,,,0,0,0,ID
 beka1242,aust1307,beta1261,Bekasi,False,dialect,,,,,,0,0,0,
 beke1238,atla1278,bali1274,Bekeni,False,dialect,,,,,,0,0,0,
 beku1238,atla1278,west2472,Bekuma,False,dialect,,,,,,0,0,0,
@@ -2369,7 +2369,7 @@ benu1246,aust1307,lawa1257,Benua,False,dialect,,,,,,0,0,0,
 benu1247,atla1278,volt1241,Benue-Congo,False,family,,,,,,653,1002,1801,
 benu1248,atla1278,benu1247,Benue-Congo Plateau,False,family,,,,,,42,70,67,
 benu1249,atla1278,benu1248,West-Central Benue-Congo Plateau,False,family,,,,,,12,21,18,
-beny1237,aust1307,beny1238,Benyadu',False,language,0.78534,109.753,byd,,,0,0,0,ID
+beny1237,aust1307,beny1238,Benyaduꞌ,False,language,0.78534,109.753,byd,,,0,0,0,ID
 beny1238,aust1307,land1261,Benyadu-Bekati,False,family,,,,,,2,4,0,
 benz1238,atla1278,lige1238,Benza,False,dialect,,,,,,0,0,0,
 beoo1240,atla1278,ngel1238,Beo (Democratic Republic of Congo),False,dialect,,,,,,0,0,0,
@@ -2432,7 +2432,7 @@ bete1265,krua1234,east2415,Beteic,False,family,,,,,,2,5,17,
 bete1266,atla1278,yuku1244,Bete-Lufu,False,family,,,,,,0,2,0,
 bete1267,atla1278,nucl1801,Bete-Obanliku,False,family,,,,,,0,2,7,
 betg1234,afro1255,cent2338,Bet-Guk,False,dialect,,,,,,0,0,0,
-beti1247,aust1305,besi1244,Betise',False,dialect,,,,,,0,0,0,
+beti1247,aust1305,besi1244,Betiseꞌ,False,dialect,,,,,,0,0,0,
 beti1248,atla1278,west2816,Beti (Côte d'Ivoire),False,language,5.26495,-3.28627,eot,,,0,0,0,CI
 beti1249,atla1278,ewon1239,Beti,False,dialect,,,,,,0,0,0,
 beti1250,book1242,book1242,Beti (Cameroon),True,language,3.22265,11.6896,btb,,,0,0,0,CM
@@ -2930,7 +2930,7 @@ bong1282,atla1278,goul1244,Bon Gula,False,language,10.6577,19.5774,glc,,,0,0,0,T
 bong1283,atla1278,mids1243,Bongo (Mid-Southern Banda),False,dialect,,,,,,0,0,0,
 bong1284,atla1278,moki1244,Bongili,False,language,0.37063,16.6079,bui,,,0,0,0,CG
 bong1285,cent2225,sara1341,Bongo,False,language,7.4145,27.9918,bot,,,0,0,3,SD SS
-bong1286,nilo1247,saba1262,Bong'omeek,False,dialect,,,,,,0,0,0,
+bong1286,nilo1247,saba1262,Bongꞌomeek,False,dialect,,,,,,0,0,0,
 bong1287,aust1307,sarm1242,Bonggo,False,language,-2.28044,139.576,bpg,,,0,0,0,ID
 bong1288,aust1307,sout2918,Bongao,False,dialect,,,,,,0,0,0,
 bong1289,aust1307,nort3172,Bonggi,False,language,7.29249,117.174,bdg,,,0,0,0,MY
@@ -2962,7 +2962,7 @@ boon1243,pama1250,woiw1237,Boonwurrung,False,dialect,-38.44632,145.83699,,,,0,0,
 booo1255,atla1278,boru1244,Bo,False,dialect,,,,,,0,0,0,
 booo1256,mand1469,east2426,Bö,False,dialect,,,,,,0,0,0,
 booo1257,mand1469,tour1242,Boo,False,dialect,,,,,,0,0,0,
-booo1258,aust1307,biak1248,Bo'o,False,dialect,,,,,,0,0,0,
+booo1258,aust1307,biak1248,Boꞌo,False,dialect,,,,,,0,0,0,
 boor1238,atla1278,boky1238,Boorim,False,dialect,,,,,,0,0,0,
 boor1242,afro1255,milt1242,Boor,False,language,10.0904,17.5648,bvf,,,0,0,0,TD
 boow1238,atla1278,diii1241,Boow,False,dialect,,,,,,0,0,0,
@@ -3229,7 +3229,7 @@ bula1259,,,Bulaka River,False,family,,,,,,1,3,4,
 bula1260,aust1305,waic1245,Bulangic,False,family,,,,,,0,2,2,
 buld1238,koma1264,dana1255,Dana,False,language,9.267004,33.710946,,,,0,0,0,SS
 bule1241,aust1305,ruch1235,Bulei,False,dialect,,,,,,0,0,0,
-bule1242,atla1278,wali1263,'Bulengee,False,dialect,,,,,,0,0,0,
+bule1242,atla1278,wali1263,ꞌBulengee,False,dialect,,,,,,0,0,0,
 bulg1240,sign1238,cent2306,Bulgarian Sign Language,False,language,42.7918,25.0026,bqn,,,0,0,0,BG
 bulg1262,indo1319,mace1252,Bulgarian,False,language,43.3646,25.047,bul,,,0,0,22,BG GR MD MK RO RS TR UA
 bulg1263,turk1311,gaga1249,Bulgar Gagauz,False,dialect,,,,,,0,0,0,
@@ -3399,7 +3399,7 @@ butu1242,sino1245,sich1238,Butuo Yi,False,dialect,,,,,,0,0,0,
 butu1243,aust1307,sout3175,Butuan-Tausug,False,family,,,,,,0,2,0,
 butu1244,aust1307,butu1243,Butuanon,False,language,8.87009,125.418,btw,,,0,0,0,PH
 buuu1244,atla1278,ninz1247,Bu,False,language,9.05077,8.65697,jid,,,0,0,2,NG
-buuu1245,anga1289,anka1246,Bu'u,False,dialect,,,,,,0,0,0,
+buuu1245,anga1289,anka1246,Buꞌu,False,dialect,,,,,,0,0,0,
 buuu1246,atla1278,jiii1234,Buu,False,language,6.54,10.28,,,,0,0,0,CM
 buwa1239,east2386,buwa1245,Buwag,False,dialect,,,,,,0,0,0,
 buwa1243,afro1255,buwa1244,Buwal,False,language,10.6151,13.8838,bhs,,,0,0,0,CM
@@ -3452,7 +3452,7 @@ byam1234,sino1245,thew1235,Byambab,False,dialect,,,,,,0,0,0,
 byan1241,sino1245,darm1242,Byangsi,False,language,29.92002,80.63653,bee,,,0,0,4,IN NP
 byep1241,atla1278,nort3375,Byep-Besep,False,language,4.57276,13.46245,mkk,,,0,0,2,CM
 bzyb1238,abkh1242,abkh1244,Bzyb,False,dialect,,,,,,0,0,0,
-caaa1238,atla1278,fefe1239,Ca',False,dialect,,,,,,0,0,0,
+caaa1238,atla1278,fefe1239,Caꞌ,False,dialect,,,,,,0,0,0,
 caac1237,aust1307,kumn1236,Caac,False,language,-20.4114,164.578,msq,,,0,0,2,NC
 cabe1245,chib1249,vice1244,Cabécar,False,language,9.67031,-83.4102,cjp,,,0,0,4,CR
 cabi1241,araw1281,nort3362,Cabiyarí,False,language,0.16101,-71.0622,cbb,,,0,0,0,CO
@@ -3493,7 +3493,7 @@ cajo1238,otom1299,cajo1239,Cajonos Zapotec,False,language,17.1427,-96.3352,zad,,
 cajo1239,otom1299,nort2987,Cajonosic,False,family,,,,,,0,5,5,
 caju1236,indo1319,cent2283,Louisiana French,False,language,29.6869,-91.6133,frc,,,0,0,3,US
 caka1240,atla1278,cent2268,Caka,False,language,6.26979,9.77746,ckx,,,0,0,2,CM
-cakc1235,maya1287,kaqc1280,Kakchikel-K'iche' Mixed Language,False,language,14.6467,-90.6989,ckz,,,0,0,0,GT
+cakc1235,maya1287,kaqc1280,Kakchikel-Kꞌicheꞌ Mixed Language,False,language,14.6467,-90.6989,ckz,,,0,0,0,GT
 cakc1244,maya1287,core1251,Cakchiquel-Tzutujil,False,family,,,,,,1,3,0,
 cakf1236,afro1255,kofy1243,Cakfem-Mushere,False,language,9.00924,9.16071,cky,,,0,0,2,NG
 cakk1237,aust1307,duri1242,Cakke,False,dialect,,,,,,0,0,0,
@@ -3731,7 +3731,7 @@ cent2033,atla1278,makh1264,Central Makua,False,dialect,,,,,,0,0,0,
 cent2034,atla1278,chuw1238,Central Chuwabo,False,dialect,,,,,,0,0,0,
 cent2035,atla1278,dibo1245,Central Dibole,False,dialect,,,,,,0,0,0,
 cent2036,atla1278,bomi1238,Central Bomitaba,False,dialect,,,,,,0,0,0,
-cent2037,atla1278,fefe1239,Central Fe'Fe',False,dialect,,,,,,0,0,4,
+cent2037,atla1278,fefe1239,Central FeꞌFeꞌ,False,dialect,,,,,,0,0,4,
 cent2039,krua1234,klao1243,Central Klaoh,False,dialect,,,,,,0,0,0,
 cent2040,krua1234,nucl1418,Central Bassa,False,dialect,,,,,,0,0,0,
 cent2041,krua1234,gbol1236,Central Grebo,False,language,4.88038,-7.88667,grv,,,0,0,5,LR
@@ -4015,11 +4015,11 @@ cerr1235,toto1251,coyu1235,Cerro Grande Totonac,False,dialect,,,,,,0,0,0,
 cerr1236,toto1251,papa1238,Cerro del Carbón,False,dialect,,,,,,0,0,0,
 cerr1237,nucl1710,jeee1236,Cerrado,False,family,,,,,,5,11,20,
 ceru1238,heib1242,shwa1239,Cerumba,False,dialect,,,,,,0,0,0,
-chaa1238,atla1278,mmen1238,Cha',False,dialect,,,,,,0,0,0,
+chaa1238,atla1278,mmen1238,Chaꞌ,False,dialect,,,,,,0,0,0,
 chab1239,sino1245,east2830,Chabcha,False,dialect,,,,,,0,0,0,
 chab1240,indo1319,shab1251,Chabak,False,dialect,,,,,,0,0,0,
 chab1242,nakh1245,kara1516,Chabakoro,False,dialect,,,,,,0,0,0,
-chac1249,barb1265,caya1244,Cha'palaa,False,language,0.71489,-79.0508,cbi,,,0,0,0,EC
+chac1249,barb1265,caya1244,Chaꞌpalaa,False,language,0.71489,-79.0508,cbi,,,0,0,0,EC
 chac1250,quec1387,sanm1306,Chachapoyas Quechua,False,language,-6.27021,-77.6615,quk,,,0,0,4,PE
 chac1251,pano1259,boli1261,Chácobo,False,language,-12.133,-66.7164,cao,,,0,0,0,BO
 chac1252,guai1249,pila1245,Chaco Pilagá,False,dialect,,,,,,0,0,0,
@@ -4347,12 +4347,12 @@ chon1285,sino1245,east2771,Choni,False,language,33.91167,103.46196,cda,,,0,0,17,
 chon1286,sino1245,aona1235,Chungli,False,dialect,26.321,94.515,,,,0,0,0,IN
 chon1287,atla1278,nort3232,Chonyi-Dzihana-Kauma,False,language,-6.518,38.672,coh,,,0,0,0,KE
 chon1288,,,Chonan,False,family,,,,,,2,4,9,
-chon1289,sino1245,minb1236,Chong'an,False,dialect,,,,,,0,0,0,
+chon1289,sino1245,minb1236,Chongꞌan,False,dialect,,,,,,0,0,0,
 chop1242,atla1278,tson1250,Chopi (S.60),False,family,,,,,,0,2,9,
 chop1243,atla1278,chop1242,Chopi,False,language,-24.8327,34.1097,cce,,,0,0,6,MZ
 chor1271,atla1278,gonj1241,Choruba,False,dialect,,,,,,0,0,0,
 chor1272,maya1287,chol1287,Chorti-Cholti,False,family,,,,,,0,2,0,
-chor1273,maya1287,chor1272,Ch'orti',False,language,14.818,-89.2363,caa,,,0,0,0,GT HN
+chor1273,maya1287,chor1272,Chꞌortiꞌ,False,language,14.818,-89.2363,caa,,,0,0,0,GT HN
 chor1274,mata1289,mata1291,Chorote,False,family,,,,,,0,2,2,
 chor1275,book1242,book1242,Chorotega,True,language,10.8154,-85.1228,cjr,,,0,0,0,CR
 chor1276,sino1245,rang1267,Chorai,False,dialect,,,,,,0,0,0,
@@ -4391,7 +4391,7 @@ chuk1272,chuk1271,chuk1271,Chukotian,False,family,,,,,,2,4,20,
 chuk1273,chuk1271,rkor1234,Chukchi,False,language,68.6436,170.045,ckt,,,0,0,8,RU
 chuk1274,atla1278,east2901,Chuka,False,language,-0.27405,37.6116,cuh,,,0,0,0,KE
 chul1246,turk1311,nort3423,Lower Chulym Turkic,False,language,56.87439,86.5892,clw,,,0,0,5,RU
-chul1247,tung1282,east2846,Chul'man-Gilyui,False,dialect,,,,,,0,0,0,
+chul1247,tung1282,east2846,Chulꞌman-Gilyui,False,dialect,,,,,,0,0,0,
 chum1261,atla1278,chum1265,Chumburung,False,language,8.15211,-0.2755,ncu,,,0,0,3,GH
 chum1262,,,Chumashan,False,family,,,,,,2,6,0,
 chum1263,quec1387,nort2976,Chuma,False,dialect,,,,,,0,0,0,
@@ -4399,7 +4399,7 @@ chum1264,book1242,book1242,Chumash,True,language,,,chs,,,0,0,0,US
 chum1265,atla1278,rive1262,Chumbuli,False,family,,,,,,0,2,5,
 chum1266,turk1311,qing1243,Chumar-Ashnu,False,dialect,,,,,,0,0,0,
 chun1246,sino1245,bumt1240,Chunmat,False,dialect,,,,,,0,0,0,
-chun1247,kore1284,chun1248,Ch'ungch'ongdo,False,dialect,36.63,127.31,,,,0,0,0,
+chun1247,kore1284,chun1248,Chꞌungchꞌongdo,False,dialect,36.63,127.31,,,,0,0,0,
 chun1248,kore1284,kore1280,Chungchong-Central Korean,False,dialect,,,,,,0,0,2,
 chuq1241,sino1245,wuch1236,Chuqu,False,dialect,,,,,,0,0,3,
 chuq1242,quec1387,sout2991,Chuquisaca,False,dialect,,,,,,0,0,0,
@@ -4478,7 +4478,7 @@ clas1257,indo1319,indo1319,Classical Indo-European,False,family,,,,,,340,574,223
 clas1258,indo1319,sans1269,Classical Sanskrit,False,dialect,,,cls,,,0,0,0,
 clas1259,afro1255,stan1318,Classical Arabic,False,dialect,,,,,,0,0,0,
 clat1234,atha1245,kwal1258,Clatskanie,False,dialect,,,,,,0,0,0,
-clel1238,atla1278,clel1239,C'lela,False,language,11.4653,5.26544,dri,,,0,0,4,NG
+clel1238,atla1278,clel1239,Cꞌlela,False,language,11.4653,5.26544,dri,,,0,0,4,NG
 clel1239,atla1278,duka1247,Clela-Damakawa,False,family,,,,,,0,2,4,
 coah1252,,,Coahuilteco,False,language,28.2589,-97.89,xcw,,,0,0,0,MX
 coah1253,toto1251,nort3265,Coahuitlán Totonac,False,language,20.258836,-97.729504,,,,0,0,0,MX
@@ -4734,13 +4734,13 @@ czec1258,indo1319,czec1260,Czech,False,language,49.873398,15.10437,ces,,,0,0,10,
 czec1259,indo1319,czec1258,Czecho-Moravian,False,dialect,,,,,,0,0,0,
 czec1260,indo1319,west2792,Czech-Slovak,False,family,,,,,,0,2,10,
 czec1262,indo1319,east2295,Czech Yiddish,False,dialect,,,,,,0,0,0,
-daaa1238,aust1307,daak1235,Da'a,False,dialect,,,,,,0,0,0,
+daaa1238,aust1307,daak1235,Daꞌa,False,dialect,,,,,,0,0,0,
 daai1235,sino1245,choi1241,Daai-Nghmoye-Muun-Kaang,False,family,,,,,,0,3,4,
 daai1236,sino1245,daai1235,Daai Chin,False,language,20.7347,93.7853,dao,,,0,0,3,MM
-daak1235,aust1307,comm1248,Da'a Kaili,False,language,-1.21051,119.527,kzf,,,0,0,2,ID
-daan1235,sout2948,sout3364,Daantanai',False,language,-6.43363,155.748,lni,,,0,0,0,PG
+daak1235,aust1307,comm1248,Daꞌa Kaili,False,language,-1.21051,119.527,kzf,,,0,0,2,ID
+daan1235,sout2948,sout3364,Daantanaiꞌ,False,language,-6.43363,155.748,lni,,,0,0,0,PG
 daas1238,afro1255,west2723,Daasanach,False,language,4.58879,35.9888,dsh,,,0,0,0,ET KE SS
-daat1234,gumu1250,gumu1250,Daats'iin,False,language,11.5284,35.2226,dtn,,,0,0,0,ET
+daat1234,gumu1250,gumu1250,Daatsꞌiin,False,language,11.5284,35.2226,dtn,,,0,0,0,ET
 daba1243,nubi1251,kada1282,Dabatna,False,dialect,,,,,,0,0,0,
 daba1244,atla1278,clel1238,Dabai,False,dialect,,,,,,0,0,0,
 daba1260,afro1255,daba1261,Dabarre,False,language,1.2179,43.3304,dbr,,,0,0,2,SO
@@ -4761,7 +4761,7 @@ dadi1249,atla1278,nucl1371,Dadiya,False,language,9.62705,11.3587,dbd,,,0,0,4,NG
 dadi1250,tebe1251,tebe1251,Dadibi,False,language,-6.65765,144.511,mps,,,0,0,1,PG
 dadi1251,pama1250,lowe1403,Dadi Dadi,False,dialect,,,dda,,,0,0,0,AU
 dadj1238,atla1278,ifee1241,Dadja,False,dialect,,,,,,0,0,0,
-dadu1237,aust1307,iliu1237,Dadu'a,False,dialect,-8.486,125.8637,,,,0,0,0,
+dadu1237,aust1307,iliu1237,Daduꞌa,False,dialect,-8.486,125.8637,,,,0,0,0,
 dafa1241,sino1245,wusa1235,Dafang,False,dialect,,,,,,0,0,0,
 dafa1242,krua1234,bakw1243,Dafa,False,dialect,,,,,,0,0,0,
 daff1239,afro1255,ronn1241,Daffo-Butura,False,dialect,,,,,,0,0,0,
@@ -4780,7 +4780,7 @@ dagh1238,nakh1245,nakh1245,Daghestanian,False,family,,,,,,19,33,129,
 dagi1241,narr1279,ngil1241,Dagik,False,language,10.583,29.9404,dec,,,0,0,0,SD
 dagi1242,nucl1709,koru1245,Dagi,False,dialect,,,,,,0,0,0,
 dagl1238,krua1234,godi1239,Dagli,False,dialect,,,,,,0,0,0,
-dago1244,sino1245,maru1249,Dago' Lawng Bit,False,dialect,,,,,,0,0,0,
+dago1244,sino1245,maru1249,Dagoꞌ Lawng Bit,False,dialect,,,,,,0,0,0,
 dago1245,yang1287,yang1287,Dagoman,False,language,-15.764,132.379,dgn,,,0,0,0,AU
 dagy1234,sino1245,cent2347,Dagyab Tibetan,False,dialect,,,,,,0,0,0,
 daha1240,atla1278,bomu1247,Dahanmu,False,dialect,,,,,,0,0,4,
@@ -4881,7 +4881,7 @@ danm1238,atla1278,peer1241,Dan Muure,False,dialect,,,,,,0,0,0,
 dann1241,mand1469,dant1235,Dan,False,language,7.22812,-8.24535,daf,,,0,0,29,CI GN LR
 dano1240,nucl1709,gahu1246,Dano,False,language,-5.92188,145.254,aso,,,0,0,5,PG
 dans1239,afro1255,nucl1831,Chaari,False,language,10.00982,9.20784,cxh,,,0,0,0,NG
-dans1240,tuuu1241,nuuu1241,Danster !Ui,False,language,-28.11,24.86,gku,,,0,0,2,ZA
+dans1240,tuuu1241,nuuu1241,Danster ǃUi,False,language,-28.11,24.86,gku,,,0,0,2,ZA
 dant1235,mand1469,guro1246,Dan-Toura,False,family,,,,,,1,3,35,
 danu1247,ural1272,hung1274,Danube-Tisza,False,dialect,,,,,,0,0,0,
 danu1248,turk1311,balk1254,Danubian,False,dialect,,,,,,0,0,0,
@@ -4993,7 +4993,7 @@ debr1240,sign1238,hung1263,Debrecen,False,dialect,,,,,,0,0,0,
 debr1242,nubi1251,dill1242,Debri,False,dialect,,,,,,0,0,0,
 decc1239,indo1319,mara1378,Deccan Marathi,False,dialect,18.5919,75.717,dcc,,,0,0,0,IN
 dech1234,sino1245,blac1267,Dechang,False,dialect,,,,,,0,0,0,
-decu1237,cari1283,kaxu1237,De'cuana,False,dialect,,,,,,0,0,0,
+decu1237,cari1283,kaxu1237,Deꞌcuana,False,dialect,,,,,,0,0,0,
 dede1238,afro1255,nzan1240,Dede,False,dialect,,,,,,0,0,0,
 dedi1238,krua1234,gbol1235,Dediebo,False,dialect,,,,,,0,0,0,
 dedu1240,nucl1709,pind1245,Dedua,False,language,-6.38206,147.627,ded,,,0,0,2,PG
@@ -5011,7 +5011,7 @@ dega1239,afro1255,awng1244,Dega,False,dialect,,,,,,0,0,0,
 dege1245,uncl1493,uncl1493,Degere,False,language,,,,,,0,0,0,KE
 dege1246,atla1278,dege1249,Degema,False,language,4.73373,6.80991,deg,,,0,0,2,NG
 dege1247,nucl1709,dege1250,Degenan,False,language,-5.70892,146.572,dge,,,0,0,2,PG
-dege1248,atha1245,koyu1238,Degexit'an,False,language,62.0697,-160.044,ing,,,0,0,2,US
+dege1248,atha1245,koyu1238,Degexitꞌan,False,language,62.0697,-160.044,ing,,,0,0,2,US
 dege1249,atla1278,delt1252,Degema-Engenni,False,family,,,,,,0,2,6,
 dege1250,nucl1709,nucl1777,Degenanic,False,family,,,,,,0,2,2,
 dege1252,nucl1709,dege1247,Degenang,False,dialect,,,,,,0,0,0,
@@ -5165,7 +5165,7 @@ didi1258,surm1244,didi1257,Didinga,False,language,4.21489,33.6869,did,,,0,0,0,SS
 didi1259,aust1307,iama1237,Didigavu,False,dialect,,,,,,0,0,0,
 didi1260,manu1261,mari1438,Didigaru,False,dialect,,,,,,0,0,0,
 dido1241,nakh1245,west2429,Tsez,False,language,42.2646,45.8096,ddo,,,0,0,9,GE RU
-diee1238,taik1256,aich1238,Di'e,False,dialect,,,,,,0,0,0,
+diee1238,taik1256,aich1238,Diꞌe,False,dialect,,,,,,0,0,0,
 dieg1234,coch1271,delt1253,Diegueno,False,family,,,,,,0,2,0,
 dier1240,pama1250,pirl1239,Dieric,False,family,,,,,,0,2,5,
 dier1241,pama1250,dier1240,Dieri,False,language,-28.1667,138.0,dif,,,0,0,2,AU
@@ -5335,7 +5335,7 @@ doko1243,atla1278,agoi1245,Deko-Dusanga,False,language,5.39961,8.26925,uya,,,0,0
 doko1244,atla1278,ngom1268,Doko (Democratic Republic of Congo),False,dialect,,,,,,0,0,0,
 dola1240,sino1245,east2773,Dolakha-Tauthali-Jethal-Listi-Doti,False,dialect,,,,,,0,0,5,
 dolg1241,turk1311,nort2688,Dolgan,False,language,71.10828,94.29358,dlg,,,0,0,0,RU
-doli1238,atla1278,wali1263,'Dolimi,False,dialect,,,,,,0,0,0,
+doli1238,atla1278,wali1263,ꞌDolimi,False,dialect,,,,,,0,0,0,
 doli1242,afro1255,muku1242,Doliki,False,dialect,,,,,,0,0,0,
 dolk1238,sino1245,dola1240,Dolakha,False,dialect,,,,,,0,0,0,
 dolo1238,utoa1244,sant1424,Dolores Cora,False,dialect,,,,,,0,0,0,
@@ -5394,7 +5394,7 @@ dora1242,chib1249,dora1241,Dorasque,False,language,8.567442,-82.375717,,,,0,0,0,
 dorb1242,mong1349,kalm1244,Dörböt,False,dialect,,,,,,0,0,0,
 dorb1243,krua1234,gbii1242,Dorbor,False,dialect,,,,,,0,0,0,
 dord1238,sino1245,aona1235,Dordar,False,dialect,,,,,,0,0,0,
-dori1246,aust1307,sout3198,Dori'o,False,language,-9.11536,160.897,dor,,,0,0,0,SB
+dori1246,aust1307,sout3198,Doriꞌo,False,language,-9.11536,160.897,dor,,,0,0,0,SB
 dori1247,yare1250,yare1250,Doriri-Abia,False,family,,,,,,0,2,5,
 dori1248,indo1319,west2995,Doric,False,dialect,,,,,,0,0,0,
 dori1249,nilo1247,nort3400,Dorik,False,dialect,,,,,,0,0,0,
@@ -5765,7 +5765,7 @@ east2460,aust1307,manu1262,East Manus,False,family,,,,,,3,11,4,
 east2461,aust1307,muss1248,Eastern Mussau,False,dialect,,,,,,0,0,0,
 east2462,aust1307,mase1249,East Masela,False,language,-8.13455,129.873,vme,,,0,0,0,ID
 east2463,aust1307,mang1405,Eastern Manggarai,False,dialect,,,,,,0,0,0,
-east2464,aust1307,ngad1261,Eastern Ngad'a,False,dialect,-8.82745,121.121,nea,,,0,0,0,ID
+east2464,aust1307,ngad1261,Eastern Ngadꞌa,False,dialect,-8.82745,121.121,nea,,,0,0,0,ID
 east2465,aust1307,aruu1241,East Tarangan,False,language,-6.76213,134.288,tre,,,0,0,0,ID
 east2468,aust1307,hoam1238,East Hoamoal,False,family,,,,,,0,2,3,
 east2469,aust1307,adon1237,East Solor,False,dialect,,,,,,0,0,2,
@@ -5930,7 +5930,7 @@ east2754,aust1307,nucl1793,East Santo,False,family,,,,,,2,5,2,
 east2755,aust1307,nucl1806,East Borneo Malay,False,family,,,,,,5,7,5,
 east2756,atla1278,ruvu1235,East Ruvu,False,family,,,,,,2,6,0,
 east2757,aust1307,east2752,Eastern Littoral Piru Bay,False,family,,,,,,0,2,2,
-east2758,aust1307,nucl1485,East Uvean-Niuafo'ou,False,family,,,,,,0,3,0,
+east2758,aust1307,nucl1485,East Uvean-Niuafoꞌou,False,family,,,,,,0,3,0,
 east2759,indo1319,cari1284,Eastern Caribbean Creole,False,family,,,,,,7,12,0,
 east2760,aust1307,choi1242,East Choiseul,False,family,,,,,,1,3,6,
 east2761,aust1307,newg1239,East New Georgia,False,family,,,,,,3,6,4,
@@ -6004,7 +6004,7 @@ east2836,indo1319,mids1245,Eastern Mid Scots,False,dialect,,,,,,0,0,0,
 east2837,indo1319,sout2620,East Dumfries Scots,False,dialect,,,,,,0,0,0,
 east2838,aust1307,nage1237,Eastern Nage,False,dialect,,,,,,0,0,0,
 east2839,turk1311,nort2697,Eastern Azerbaijani,False,dialect,,,,,,0,0,6,
-east2840,aust1307,lioo1240,Eastern Li'o,False,dialect,,,,,,0,0,0,
+east2840,aust1307,lioo1240,Eastern Liꞌo,False,dialect,,,,,,0,0,0,
 east2841,indo1319,dani1285,Eastern Zealand,False,dialect,,,,,,0,0,0,
 east2842,indo1319,dani1285,Eastern Funen,False,dialect,,,,,,0,0,0,
 east2843,indo1319,gila1241,Eastern Gilaki,False,dialect,,,,,,0,0,3,
@@ -6029,7 +6029,7 @@ east2863,pama1250,mudb1240,Eastern Mudbura,False,dialect,,,,,,0,0,0,
 east2864,kera1258,kera1258,East Keram,False,family,,,,,,0,2,3,
 east2865,indo1319,nort3361,Eastern Romanian,False,family,,,,,,0,2,13,
 east2866,ural1272,finn1320,Eastern Finnmarku Saami,False,dialect,,,,,,0,0,0,
-east2867,tuuu1241,kwii1241,Eastern !Ui,False,family,,,,,,0,3,3,
+east2867,tuuu1241,kwii1241,Eastern ǃUi,False,family,,,,,,0,3,3,
 east2868,indo1319,cent1967,East Central Bavarian,False,dialect,,,,,,0,0,4,
 east2869,atla1278,sout2809,East-Southern Koongo,False,dialect,,,,,,0,0,4,
 east2870,kart1248,nucl1302,Eastern Georgian,False,dialect,,,,,,0,0,4,
@@ -6219,7 +6219,7 @@ elun1242,atla1278,akoo1248,Elung,False,dialect,,,,,,0,0,0,
 eluu1240,atla1278,isok1239,Elu (Atlantic-Congo),False,dialect,,,,,,0,0,0,
 eluu1241,aust1307,kurt1252,Elu,False,language,-1.99841,147.101,elu,,,0,0,0,PG
 elym1237,uncl1493,uncl1493,Elymian,False,language,37.94139,12.83222,xly,,,0,0,0,IT
-emab1235,taik1256,nort2744,E'ma Buyang,False,language,23.604572,106.030277,yzg,,,0,0,0,CN
+emab1235,taik1256,nort2744,Eꞌma Buyang,False,language,23.604572,106.030277,yzg,,,0,0,0,CN
 emae1237,aust1307,vanu1245,Emae,False,language,-17.052,168.399,mmw,,,0,0,0,VU
 emai1241,atla1278,emai1243,Emai-Iuleha-Ora,False,language,7.09089,5.84494,ema,,,0,0,4,NG
 emai1242,atla1278,emai1241,Emai,False,dialect,,,,,,0,0,0,
@@ -6441,7 +6441,7 @@ extr1248,sign1238,deaf1237,Extreme North Cameroon Sign Language,False,language,1
 eyak1241,atha1245,atha1246,Eyak,False,language,60.4232,-144.762,eya,,,0,0,0,US
 ezaa1238,atla1278,izie1238,Ezaa,False,dialect,,,eza,,,0,0,0,NG
 ezha1238,afro1255,seba1251,Ezha,False,dialect,,,,,,0,0,0,
-faaa1239,atla1278,cent2037,Fa',False,dialect,,,,,,0,0,0,
+faaa1239,atla1278,cent2037,Faꞌ,False,dialect,,,,,,0,0,0,
 faal1238,atla1278,tupu1244,Faale-Piyew,False,dialect,,,,,,0,0,0,
 fabl1238,indo1319,hait1244,Fablas,False,dialect,,,,,,0,0,0,
 face1237,aust1307,sula1245,Facei,False,dialect,,,,,,0,0,0,
@@ -6532,7 +6532,7 @@ fayu1238,lake1255,fayu1239,Fayu,False,language,-3.14497,136.867,fau,,,0,0,0,ID
 fayu1239,lake1255,west2582,Fayu-Kirikiri,False,family,,,,,,0,2,2,
 fayy1237,afro1255,midd1332,Fayyumic,False,dialect,,,,,,0,0,0,
 fede1238,afro1255,miya1266,Federe,False,dialect,,,,,,0,0,0,
-fefe1239,atla1278,east2862,Fe'fe',False,language,5.18158,10.1442,fmp,,,0,0,12,CM
+fefe1239,atla1278,east2862,Feꞌfeꞌ,False,language,5.18158,10.1442,fmp,,,0,0,12,CM
 fell1238,afro1255,sout3123,Fellahi,False,dialect,,,,,,0,0,0,
 femb1238,east2433,east2433,Fembe,False,language,-5.71596,142.254,agl,,,0,0,0,PG
 feni1234,indo1319,noak1234,Feni (Noakhali),False,dialect,,,,,,0,0,0,
@@ -6727,7 +6727,7 @@ gaaa1245,atla1278,tiba1234,Gaa,False,language,8.4809,11.9603,ttb,,,0,0,0,NG
 gaak1238,khoe1240,gana1274,G||aakhwe,False,dialect,,,,,,0,0,0,
 gaal1238,pama1250,dhan1270,Gaalpu,False,dialect,,,,,,0,0,0,
 gaam1241,east2386,east2386,Gaam,False,language,11.4674,33.9797,tbi,,,0,0,6,SD
-gaan1243,afro1255,east2649,Ga'anda,False,language,10.2955,12.6479,gqa,,,0,0,2,NG
+gaan1243,afro1255,east2649,Gaꞌanda,False,language,10.2955,12.6479,gqa,,,0,0,2,NG
 gaan1244,mand1469,east2794,Gaan Dan,False,dialect,,,,,,0,0,0,
 gaba1234,khoe1240,tsoa1238,Gǁabak’e,False,dialect,,,,,,0,0,0,
 gabi1241,sepi1257,niks1238,Gabiano,False,dialect,,,,,,0,0,0,
@@ -6746,7 +6746,7 @@ gabu1248,book1242,book1242,Gabutamon,True,language,-5.8075,146.621,gav,,,0,0,0,P
 gach1239,indo1319,halb1244,Gachikolo,False,dialect,,,,,,0,0,0,
 gach1240,indo1319,maza1291,Gachsari,False,dialect,,,,,,0,0,0,
 gada1257,atla1278,kwav1236,Ga-Dangme,False,family,,,,,,0,2,6,
-gada1258,aust1307,caga1242,Ga'dang,False,language,17.2238,121.455,gdg,,,0,0,0,PH
+gada1258,aust1307,caga1242,Gaꞌdang,False,language,17.2238,121.455,gdg,,,0,0,0,PH
 gada1262,afro1255,east2775,Gadang,False,language,10.425,16.997,gdk,,,0,0,0,TD
 gada1263,afro1255,nucl1695,Gadam-Bara,False,dialect,,,,,,0,0,0,
 gadd1242,indo1319,cham1331,Gaddi,False,language,32.36,76.5713,gbk,,,0,0,2,IN
@@ -6860,7 +6860,7 @@ gana1270,atla1278,izer1242,Ganang,False,language,9.93195,9.09741,gne,,,0,0,0,NG
 gana1271,atla1278,lere1241,Gana (Nigeria),False,dialect,,,,,,0,0,0,
 gana1272,atla1278,pedi1238,Gananwa,False,dialect,,,,,,0,0,0,
 gana1273,mand1469,bamb1269,Ganadugu,False,dialect,,,,,,0,0,0,
-gana1274,khoe1240,anaa1239,//Gana,False,language,-21.8555,22.2003,gnk,,,0,0,4,BW
+gana1274,khoe1240,anaa1239,ǁGana,False,language,-21.8555,22.2003,gnk,,,0,0,4,BW
 gana1275,khoe1240,gana1274,G||anakhwe,False,dialect,,,,,,0,0,0,
 gana1276,khoe1240,shua1254,Ganádi,False,dialect,,,,,,0,0,0,
 gana1277,aust1307,nort3186,Gana,False,language,5.57583,116.145,gnq,,,0,0,0,MY
@@ -6876,7 +6876,7 @@ gand1257,atla1278,wawa1246,Gandua,False,dialect,,,,,,0,0,0,
 gand1258,indo1319,kore1279,Gandomabi,False,dialect,,,,,,0,0,0,
 gand1259,indo1319,dard1244,Gandhari,False,language,34.15,71.73,pgd,,,0,0,0,PK
 gane1237,aust1307,east2439,Gane,False,language,-0.42618,127.976,gzn,,,0,0,0,ID
-gane1238,tuuu1241,east2867,!Gã!ne,False,language,-31.32,28.75,,,,0,0,0,ZA
+gane1238,tuuu1241,east2867,ǃGãǃne,False,language,-31.32,28.75,,,,0,0,0,ZA
 gang1264,indo1319,garh1243,Gangadi,False,dialect,,,,,,0,0,0,
 gang1265,indo1319,east2875,Gangapari,False,dialect,,,,,,0,0,0,
 gang1266,sino1245,gang1271,Gangte,False,language,24.5113,94.1681,gnb,,,0,0,0,IN MM
@@ -6924,7 +6924,7 @@ gark1239,nakh1245,lezg1247,Garkin,False,dialect,,,,,,0,0,0,
 garm1241,indo1319,sora1257,Garmiyani,False,dialect,,,,,,0,0,0,
 garm1242,pama1250,yann1237,Gamalangga,False,dialect,,,,,,0,0,0,
 garm1243,indo1319,nort2644,Garmsiri,False,dialect,,,,,,0,0,9,
-garm1244,indo1319,kavi1234,Garme'i,False,dialect,,,,,,0,0,0,IR
+garm1244,indo1319,kavi1234,Garmeꞌi,False,dialect,,,,,,0,0,0,IR
 garo1247,sino1245,bodo1279,Garo,False,language,25.2954,90.462,grt,,,0,0,10,BD IN
 garo1248,atla1278,adam1253,Garoua,False,dialect,,,,,,0,0,0,
 garo1255,afro1255,bata1314,Garoua (Bata),False,dialect,,,,,,0,0,0,
@@ -6947,7 +6947,7 @@ gash1251,yoku1255,yoku1256,Gashowu,False,dialect,,,,,,0,0,0,
 gasi1239,afro1255,dera1248,Gasi,False,dialect,,,,,,0,0,0,
 gasm1237,aust1307,avau1237,Gasmata,False,dialect,,,,,,0,0,0,
 gass1238,mand1469,mark1256,Gassan,False,dialect,,,,,,0,0,0,
-gata1239,aust1305,mund1335,Gata',False,language,18.6076,82.984,gaq,,,0,0,2,IN
+gata1239,aust1305,mund1335,Gataꞌ,False,language,18.6076,82.984,gaq,,,0,0,2,IN
 gath1234,pama1250,wori1245,Gathang,False,dialect,,,,,,0,0,0,
 gatu1238,atla1278,thar1283,Gatue,False,dialect,,,,,,0,0,0,
 gaud1237,indo1319,oriy1254,Gauda-Kamrupa,False,family,,,,,,8,18,27,
@@ -6967,7 +6967,7 @@ gavi1250,tupi1275,mond1266,Gavianic,False,family,,,,,,1,4,3,
 gavo1238,indo1319,prov1235,Gavot,False,dialect,,,,,,0,0,0,
 gawa1246,indo1319,indo1321,Gawarbatic,False,family,,,,,,1,3,2,
 gawa1247,indo1319,gawa1246,Gawar-Bati,False,language,35.1982,71.5428,gwt,,,0,0,0,AF PK
-gawa1248,sino1245,maru1249,Gawan Naw',False,dialect,,,,,,0,0,0,
+gawa1248,sino1245,maru1249,Gawan Nawꞌ,False,dialect,,,,,,0,0,0,
 gawa1249,pama1250,gami1243,Gawambaraay,False,dialect,,,,,,0,0,0,
 gawd1238,indo1319,goah1234,Gaudde Goa Hindu Konkani,False,dialect,,,,,,0,0,0,
 gawh1238,indo1319,nucl1271,Gawhara,False,dialect,,,,,,0,0,0,
@@ -7160,7 +7160,7 @@ ghil1238,indo1319,nort2646,Ghilzai,False,dialect,,,,,,0,0,0,
 ghin1238,nucl1708,kama1367,Ghini,False,dialect,,,,,,0,0,0,
 ghod1238,nakh1245,botl1243,Godoberi,False,language,42.7428,46.2252,gdo,,,0,0,2,RU
 ghol1238,nilo1247,sout2834,Ghol,False,dialect,,,,,,0,0,0,
-ghom1247,atla1278,east2862,Ghomálá',False,language,5.39619,10.352,bbj,,,0,0,7,CM
+ghom1247,atla1278,east2862,Ghomáláꞌ,False,language,5.39619,10.352,bbj,,,0,0,7,CM
 ghom1248,atla1278,ghom1247,Ghomálá North,False,dialect,,,,,,0,0,0,
 ghom1249,atla1278,ghom1247,Ghomálá South,False,dialect,,,,,,0,0,3,
 ghom1250,atla1278,ghom1247,Ghomálá Central,False,dialect,,,,,,0,0,0,
@@ -7181,7 +7181,7 @@ giba1247,kiwa1251,kere1286,Gibario,False,dialect,,,,,,0,0,0,
 gich1238,atla1278,kiku1240,Gichugu,False,dialect,,,,,,0,0,0,
 gida1240,pama1250,cond1242,Gidabal,False,dialect,,,,,,0,0,0,
 gida1247,afro1255,nort3156,Gidar,False,language,9.874715,14.07845,gid,,,0,0,1,CM TD
-gida1248,nilo1247,dato1239,Gidang'oodiga of Simhha,False,dialect,,,,,,0,0,0,
+gida1248,nilo1247,dato1239,Gidangꞌoodiga of Simhha,False,dialect,,,,,,0,0,0,
 gido1236,afro1255,kons1242,Gidole-Bussa,False,family,,,,,,0,2,0,
 gifu1238,japo1237,toka1245,Gifu-Aichi,False,dialect,,,,,,0,0,8,
 giga1238,nakh1245,cham1309,Gigatl,False,dialect,,,,,,0,0,0,
@@ -7576,7 +7576,7 @@ gula1266,cent2225,ferg1237,Gula (Central African Republic),False,language,9.4909
 gula1267,cent2225,gula1266,Kotoic Gula,False,dialect,,,,,,0,0,5,
 gula1268,cent2225,sara1344,Gulay,False,language,9.06629,17.3151,gvl,,,0,0,2,TD
 gula1269,cent2225,bayo1261,Gula (Chad),False,language,10.3049,19.2182,glu,,,0,0,0,TD
-gula1270,aust1307,nort2833,Gula'alaa,False,language,-8.74742,161.023,gmb,,,0,0,0,SB
+gula1270,aust1307,nort2833,Gulaꞌalaa,False,language,-8.74742,161.023,gmb,,,0,0,0,SB
 gula1271,aust1307,muna1247,Gulamas,False,dialect,,,,,,0,0,14,
 gula1275,afro1255,marg1265,Gulak,False,dialect,,,,,,0,0,0,
 gulb1238,indo1319,nort2665,Gulbahar,False,dialect,,,,,,0,0,0,
@@ -7735,9 +7735,9 @@ gwen1239,atla1278,chag1248,Gweno,False,language,-3.68407,37.6827,gwe,,,0,0,0,KE 
 gwen1242,afro1255,vame1236,Pelasla,False,dialect,,,,,,0,0,0,
 gweo1238,mand1469,tour1242,Gwéò,False,dialect,,,,,,0,0,0,
 gwer1238,atla1278,east2912,Gwere,False,language,1.11392,33.8227,gwr,,,0,0,0,UG
-gwic1235,atha1245,gwic1236,Gwich'in,False,language,67.4307,-142.963,gwi,,,0,0,2,CA US
+gwic1235,atha1245,gwic1236,Gwichꞌin,False,language,67.4307,-142.963,gwi,,,0,0,2,CA US
 gwic1236,atha1245,cent2371,Gwichin-Han,False,family,,,,,,0,2,4,
-gwii1239,khoe1240,anaa1239,/Gwi,False,language,-22.2708,21.9431,gwj,,,0,0,1,BW
+gwii1239,khoe1240,anaa1239,ǀGwi,False,language,-22.2708,21.9431,gwj,,,0,0,1,BW
 gwor1239,afro1255,bwal1234,Gworam,False,dialect,,,,,,0,0,0,
 gwoz1239,afro1255,nort3048,Gwoza,False,dialect,,,,,,0,0,0,
 gyag1236,sino1245,sder1236,gYagrwa,False,dialect,,,,,,0,0,0,
@@ -7754,7 +7754,7 @@ gyon1234,atla1278,nort3184,Gyong-Kamantan,False,family,,,,,,0,2,0,
 gysi1234,khoe1240,kora1292,Gysiqua,False,dialect,,,,,,0,0,0,
 gyur1234,indo1319,sivr1235,Gyurin-Syolyoz,False,dialect,,,,,,0,0,2,
 haaa1237,taik1256,hlai1239,Ha (China),False,dialect,,,,,,0,0,0,
-haaa1250,aust1305,uppe1406,Ha'aang,False,dialect,,,,,,0,0,0,
+haaa1250,aust1305,uppe1406,Haꞌaang,False,dialect,,,,,,0,0,0,
 haaa1251,sino1245,dzon1239,Ha (Bhutan),False,dialect,,,,,,0,0,0,
 haaa1252,atla1278,rund1244,Ha,False,language,-3.77873,30.4894,haq,,,0,0,0,BI TZ
 haav1238,nucl1709,sout2943,Haaviqinra-Oraura,False,dialect,,,,,,0,0,0,
@@ -7779,7 +7779,7 @@ hady1238,atla1278,nyol1238,Hadyo,False,dialect,,,,,,0,0,0,
 hadz1240,,,Hadza,False,language,-3.83115,35.0458,hts,,,0,0,0,TZ
 haek1239,aust1307,haek1241,Haeke,False,language,-21.0735,164.869,aek,,,0,0,0,NC
 haek1241,aust1307,bwat1242,Haeke-Bwatoo,False,family,,,,,,0,2,0,
-haer1234,sino1245,nort3283,Ha'erbin Mandarin,False,dialect,45.846595,126.551056,,,,0,0,0,
+haer1234,sino1245,nort3283,Haꞌerbin Mandarin,False,dialect,45.846595,126.551056,,,,0,0,0,
 haft1238,indo1319,bakh1245,Haft-Lang,False,dialect,,,,,,0,0,0,
 hage1247,aust1307,bugh1239,Hageulu,False,dialect,,,,,,0,0,0,
 hage1248,nucl1709,cent2120,Hagen,False,family,,,,,,2,4,7,
@@ -7794,7 +7794,7 @@ haig1237,aust1307,east2762,Haigwai,False,language,-10.2741,150.256,hgw,,,0,0,2,P
 haii1241,atla1278,band1343,Hai,False,dialect,,,,,,0,0,0,
 haii1242,atla1278,mach1266,Hai (Tanzania),False,dialect,,,,,,0,0,0,
 haij1242,nucl1709,amel1241,Haija,False,dialect,,,,,,0,0,0,
-hail1246,mong1349,daur1238,Haila'er Dagur,False,dialect,,,,,,0,0,0,
+hail1246,mong1349,daur1238,Hailaꞌer Dagur,False,dialect,,,,,,0,0,0,
 hail1247,sino1245,hakk1236,Hailu,False,dialect,,,,,,0,0,0,
 hail1248,tung1282,manc1253,Urulyungui Khamnigan Evenki,False,dialect,,,,,,0,0,0,
 hain1237,sino1245,hain1238,Fucheng,False,dialect,20.043869,110.329399,,,,0,0,0,
@@ -7802,7 +7802,7 @@ hain1238,sino1245,qion1239,Hainanese,False,language,19.78383,110.68759,hnm,,,0,0
 hain1252,indo1319,pica1241,Hainaut,False,dialect,,,,,,0,0,0,
 hain1253,mand1469,bozo1252,Hainyaxo Bozo,False,language,13.8734,-5.65085,bzx,,,0,0,0,ML
 hain1254,khoe1240,haio1238,Hai||um,False,dialect,,,,,,0,0,0,
-haio1238,khoe1240,nort3245,Hai//om-Akhoe,False,language,-19.7637,17.0299,hgm,,,0,0,3,BW NA ZA
+haio1238,khoe1240,nort3245,Haiǁom-Akhoe,False,language,-19.7637,17.0299,hgm,,,0,0,3,BW NA ZA
 haip1238,sign1238,viet1253,Haiphong Sign Language,False,language,20.8537,106.689,haf,,,0,0,0,VN
 hais1244,waka1280,nort2964,Haisla,False,language,53.964,-128.602,has,,,0,0,2,CA
 hait1241,uncl1493,uncl1493,Haitian Vodoun Culture Language,False,language,18.911,-72.394,hvc,,,0,0,0,HT
@@ -7881,7 +7881,7 @@ hano1247,kiow1265,ariz1237,Hano (USA),False,dialect,,,,,,0,0,0,
 hans1242,pama1250,warl1254,Hansen River Warlpiri,False,dialect,,,,,,0,0,0,
 hans1243,nucl1709,mabu1247,Hanseman,False,family,,,,,,6,19,1,
 hans1244,indo1319,orsa1234,Hansjö,False,dialect,,,,,,0,0,0,
-hant1239,aust1305,lowe1395,Hantong',False,dialect,,,,,,0,0,0,
+hant1239,aust1305,lowe1395,Hantongꞌ,False,dialect,,,,,,0,0,0,
 hanu1241,aust1307,sout2915,Hanunoo,False,language,12.4159,121.221,hnn,,,0,0,4,PH
 hany1234,sino1245,ersu1241,Hanyuan Ersu,False,dialect,,,,,,0,0,0,
 hapa1237,aust1307,tuwa1243,Hapao Ifugao,False,dialect,,,,,,0,0,0,
@@ -7917,7 +7917,7 @@ harz1240,indo1319,harz1239,Harzani,False,dialect,,,,,,0,0,0,
 hasa1247,atla1278,saaf1238,Hasab,False,dialect,,,,,,0,0,0,
 hasa1248,mand1469,band1352,Hasala,False,dialect,,,,,,0,0,0,
 hasa1249,afro1255,anci1245,Hasaitic,False,dialect,,,,,,0,0,0,
-hasa1250,aust1305,mund1320,Hasada',False,dialect,,,,,,0,0,0,
+hasa1250,aust1305,mund1320,Hasadaꞌ,False,dialect,,,,,,0,0,0,
 hash1238,atla1278,hash1239,Hasha,False,language,9.14063,8.66137,ybj,,,0,0,0,NG
 hash1239,atla1278,alum1250,Hasha-Sambe,False,family,,,,,,0,2,0,
 hash1240,indo1319,cent1970,Hashtpari,False,dialect,,,,,,0,0,0,
@@ -7962,9 +7962,9 @@ have1240,sino1245,mukl1234,Have,False,dialect,,,,,,0,0,0,
 have1241,aust1307,bwat1242,Haveke,False,language,-21.0249,164.753,hvk,,,0,0,0,NC
 havu1238,atla1278,hund1240,Havu,False,language,-1.99975,28.8624,hav,,,0,0,0,CD
 havy1234,drav1251,nucl1305,Havyaka Kannada,False,dialect,,,,,,0,0,0,
-hawa1235,sign1238,deaf1237,Hawai'i Sign Language,False,language,21.6311,-158.002,hps,,,0,0,0,US
+hawa1235,sign1238,deaf1237,Hawaiꞌi Sign Language,False,language,21.6311,-158.002,hps,,,0,0,0,US
 hawa1245,aust1307,east2896,Hawaiian,False,language,19.6297,-155.43,haw,,,0,0,0,US
-hawa1247,indo1319,paci1280,Hawai'i Creole English,False,language,19.6287,-155.437,hwc,,,0,0,0,US
+hawa1247,indo1319,paci1280,Hawaiꞌi Creole English,False,language,19.6287,-155.437,hwc,,,0,0,0,US
 hawa1248,pidg1258,pidg1258,Hawaiian-based pidgin,False,family,,,,,,0,1,0,
 hawk1238,sino1245,thad1238,Hawkip,False,dialect,,,,,,0,0,0,
 hawk1239,pama1250,sydn1235,Hawkesbury,False,language,-33.11470744,150.4952383,xda,,,0,0,0,AU
@@ -8074,7 +8074,7 @@ hija1235,afro1255,arab1393,Hijazi Arabic,False,language,22.8346,38.9237,acw,,,0,
 hiju1238,atla1278,basa1290,Hijuk,False,language,4.39641,10.9081,hij,,,0,0,0,CM
 hila1237,aust1307,hitu1239,Hila,False,dialect,,,,,,0,0,0,
 hili1240,aust1307,capi1240,Hiligaynon,False,language,10.4018,122.974,hil,,,0,0,4,PH
-hill1251,aust1305,gata1239,Hill Geta',False,dialect,,,,,,0,0,0,
+hill1251,aust1305,gata1239,Hill Getaꞌ,False,dialect,,,,,,0,0,0,
 hill1255,afro1255,ngas1240,Hill Angas,False,dialect,,,,,,0,0,0,
 hill1256,atla1278,sout2781,Hill South Guang,False,family,,,,,,1,3,2,
 hill1257,drav1251,sout3234,South Bastar Gondi-Koya,False,family,,,,,,0,2,6,
@@ -8132,7 +8132,7 @@ hlen1238,atla1278,tswa1255,Hlengwe,False,dialect,,,,,,0,0,0,
 hlep1235,sino1245,phow1235,Hlepho-Phukha,False,family,,,,,,1,4,0,
 hlep1236,sino1245,hlep1235,Hlepho Phowa,False,language,23.591,103.733,yhl,,,0,0,0,CN
 hler1235,sino1245,unun9959,Hlersu,False,language,24.4,101.4,hle,,,0,0,0,CN
-hlol1236,sino1245,maru1249,Hlo'lan,False,dialect,,,,,,0,0,0,
+hlol1236,sino1245,maru1249,Hloꞌlan,False,dialect,,,,,,0,0,0,
 hlub1242,atla1278,xhos1239,Hlubi,False,dialect,,,,,,0,0,0,
 hmar1240,sino1245,mizo1244,Hmaric,False,family,,,,,,1,5,5,
 hmar1241,sino1245,hmar1242,Hmar,False,language,24.7534,93.5497,hmr,,,0,0,2,IN
@@ -8202,7 +8202,7 @@ hong1247,taik1256,nort3189,Hongshui He,False,family,,,,,,1,3,0,
 honi1244,sino1245,hani1250,Honi,False,language,23.2074,101.886,how,,,0,0,1,CN
 honi1245,east2433,goba1246,Honibo,False,dialect,,,,,,0,0,0,
 honi1246,japo1237,kyus1238,Hōnichi,False,dialect,,,,,,0,0,3,
-hono1237,aust1307,seko1243,Hono',False,dialect,,,,,,0,0,0,
+hono1237,aust1307,seko1243,Honoꞌ,False,dialect,,,,,,0,0,0,
 honp1238,krua1234,tepo1239,Honpo,False,dialect,,,,,,0,0,0,
 hood1240,afro1255,nzan1240,Hoode,False,dialect,,,,,,0,0,0,
 hooo1248,aust1305,homu1234,Ho,False,language,23.9596,87.1188,hoc,,,0,0,2,IN
@@ -8432,7 +8432,7 @@ ibin1242,atla1278,cent2253,Ibino-Iko,False,family,,,,,,0,2,0,
 ibis1234,dogo1299,toro1252,Ibi So,False,dialect,,,,,,0,0,0,
 ibok1234,sign1238,deaf1237,Ibokun Sign Language,False,language,7.78559,4.72799,,,,0,0,0,NG
 ibot1241,atla1278,obol1243,Ibot Obolo,False,dialect,,,,,,0,0,0,
-ibot1242,huit1251,ocai1244,Ibo'tsa,False,dialect,,,,,,0,0,0,
+ibot1242,huit1251,ocai1244,Iboꞌtsa,False,dialect,,,,,,0,0,0,
 ibuc1234,tung1282,xibe1242,Ibuci,False,dialect,,,,,,0,0,0,
 ibuo1241,atla1278,cent2253,Ibuoroic,False,family,,,,,,2,4,0,
 ibuo1242,atla1278,ibuo1244,Ibuoro,False,language,5.49672,7.93108,ibr,,,0,0,0,NG
@@ -8450,7 +8450,7 @@ icel1249,pidg1258,pidg1258,Icelandic-based pidgin,False,family,,,,,,0,1,0,
 icev1238,atla1278,cent2267,Iceve-Maci,False,language,6.42426,9.50264,bec,,,0,0,2,CM NG
 iche1238,atla1278,icev1238,Icheve,False,dialect,,,,,,0,0,0,
 icon1234,atla1278,tivv1240,Icongo,False,dialect,,,,,,0,0,4,
-idaa1241,aust1307,nort3172,Ida'an,False,language,5.29059,118.515,dbj,,,0,0,3,MY
+idaa1241,aust1307,nort3172,Idaꞌan,False,language,5.29059,118.515,dbj,,,0,0,3,MY
 idab1234,uncl1493,uncl1493,Idabaez,False,language,,,,,,0,0,0,CO
 idae1234,ural1272,midd1322,Ida Estonian,False,dialect,,,,,,0,0,0,
 idah1238,atla1278,igal1242,Idah,False,dialect,,,,,,0,0,0,
@@ -8588,7 +8588,7 @@ ilim1234,tung1282,nort3334,Ilimpeya,False,dialect,,,,,,0,0,0,
 ilir1237,aust1307,jamb1236,Jambi Ilir,False,dialect,,,,,,0,0,0,
 ilit1241,turk1311,uigh1243,Ili Turki,False,language,44.0089,80.4957,ili,,,0,0,0,CN KZ
 ilit1242,kuna1268,kuna1268,Ilit,False,dialect,,,,,,0,0,0,
-iliu1237,aust1307,weta1245,Ili'uun,False,language,-7.84385,125.902,ilu,,,0,0,9,ID
+iliu1237,aust1307,weta1245,Iliꞌuun,False,language,-7.84385,125.902,ilu,,,0,0,9,ID
 illo1238,mand1469,busa1253,Illo,False,dialect,,,,,,0,0,0,
 illy1234,uncl1493,uncl1493,Illyrian,False,language,43.0,18.0,xil,,,0,0,0,AL
 ilma1240,aust1307,iliu1237,Ilmaumau,False,dialect,,,,,,0,0,0,
@@ -8847,7 +8847,7 @@ isol1239,unat1236,unat1236,Isolado do Tanaru,False,language,,,,,,0,0,0,BR
 isop1238,atla1278,lega1250,Isopo,False,dialect,,,,,,0,0,0,
 isra1236,sign1238,dgsi1234,Israeli Sign Language,False,language,31.5279,34.7637,isr,,,0,0,0,IL
 isse1238,atla1278,ikom1247,Isenye,False,language,-2.019886,34.413574,,,,0,0,0,TZ
-issi1237,aust1307,bamb1270,Issilita',False,dialect,,,,,,0,0,0,
+issi1237,aust1307,bamb1270,Issilitaꞌ,False,dialect,,,,,,0,0,0,
 isth1238,mixe1284,lowl1263,Isthmus Mixe,False,language,16.9481,-95.0681,mir,,,0,0,0,MX
 isth1240,utoa1244,isth1245,Isthmus-Cosoleacaque Nahuatl,False,language,17.9401,-94.7347,nhk,,,0,0,0,MX
 isth1241,utoa1244,isth1245,Isthmus-Pajapan Nahuatl,False,language,18.2513,-94.6647,nhp,,,0,0,0,MX
@@ -8908,7 +8908,7 @@ itun1238,atla1278,tune1261,Toboanye,False,dialect,,,,,,0,0,0,
 itun1239,otom1299,chal1278,Itundujia Mixtec,False,language,16.77876,-97.59753,mce,,,0,0,0,MX
 itur1238,atla1278,cong1236,Ituri Kingwana,False,dialect,,,,,,0,0,0,
 itut1240,book1242,book1242,Itutang,True,language,,,itu,,,0,0,0,
-itza1241,maya1287,nucl1844,Itza',False,language,17.0269,-89.8734,itz,,,0,0,0,GT
+itza1241,maya1287,nucl1844,Itzaꞌ,False,language,17.0269,-89.8734,itz,,,0,0,0,GT
 iule1238,atla1278,emai1241,Iuleha,False,dialect,,,,,,0,0,0,
 iumi1238,hmon1336,mien1243,Iu Mien,False,language,20.83,101.17,ium,,,0,0,8,CN LA MM TH VN
 ivat1242,aust1307,yami1257,Itbayat,False,language,20.77,121.85,ivv,,,0,0,0,PH
@@ -8977,7 +8977,7 @@ izor1238,atla1278,chok1248,Izora,False,language,10.4735,8.76468,cbo,,,0,0,0,NG
 izum1237,japo1237,umpa1238,Izumo-ben,False,dialect,,,,,,0,0,0,
 izuu1237,japo1237,naga1407,Izu,False,dialect,,,,,,0,0,0,
 jaad1234,atla1278,nort3146,Jaad,False,family,,,,,,0,2,0,
-jaal1238,afro1255,suda1236,Ja'ali,False,dialect,,,,,,0,0,0,
+jaal1238,afro1255,suda1236,Jaꞌali,False,dialect,,,,,,0,0,0,
 jaba1234,afro1255,mode1270,Jabal Razih,False,language,16.9092,43.2416905,rzh,,,0,0,0,YE
 jabo1238,krua1234,sout2826,Jabo,False,dialect,,,,,,0,0,0,
 jabu1247,pama1250,ngar1287,Jaburarra,False,dialect,,,,,,0,0,0,
@@ -9070,7 +9070,7 @@ jara1277,afro1255,cent2334,Jara Aweer,False,dialect,,,,,,0,0,0,
 jarg1234,pidg1258,slav1256,Jargon Loucheux,False,language,,,,,,0,0,0,CA
 jari1243,yare1250,anem1248,Jari,False,dialect,,,,,,0,0,0,
 jarn1234,indo1319,nedr1234,Järna,False,dialect,,,,,,0,0,0,
-jarq1234,indo1319,gazi1243,Jarquya'i,False,dialect,32.2617,52.19802,,,,0,0,0,IR
+jarq1234,indo1319,gazi1243,Jarquyaꞌi,False,dialect,32.2617,52.19802,,,,0,0,0,IR
 jarr1235,,,Jarrakan,False,family,,,,,,1,3,0,
 jarr1236,atla1278,nige1254,Jar,False,family,,,,,,1,4,11,
 jaru1253,aust1305,kens1248,Jarum,False,dialect,,,,,,0,0,0,
@@ -9162,7 +9162,7 @@ jhun1238,indo1319,shek1243,Jhunjhunu-Churu,False,dialect,,,,,,0,0,0,
 jial1234,taik1256,ling1262,Jialai,False,dialect,,,,,,0,0,0,
 jiam1236,taik1256,hlai1238,Jiamao,False,language,18.5548,109.854,jio,,,0,0,0,CN
 jian1239,sino1245,cent2004,Jianchuan,False,dialect,26.538056,99.91,,,,0,0,0,
-jian1240,sino1245,minb1236,Jian'ou,False,dialect,27.04237,118.307419,,,,0,0,0,
+jian1240,sino1245,minb1236,Jianꞌou,False,dialect,27.04237,118.307419,,,,0,0,0,
 jian1241,sino1245,minb1236,Jianyang,False,dialect,,,,,,0,0,0,
 jian1242,sino1245,shao1234,Jiangle,False,dialect,,,,,,0,0,0,
 jian1243,sino1245,yong1285,Jiangyong,False,dialect,,,,,,0,0,0,
@@ -9224,7 +9224,7 @@ jira1248,beto1236,nucl1771,Jirara,False,dialect,,,,,,0,0,0,
 jira1249,jira1235,jira1235,Jirajara,False,dialect,,,,,,0,0,0,
 jire1238,sino1245,sher1254,Jirel,False,language,27.6931,86.3201,jul,,,0,0,0,NP
 jiri1239,mong1349,peri1253,Jirim Mongolian,False,dialect,,,,,,0,0,0,
-jirj1239,pama1250,yiry1245,Jir'jorond,False,dialect,-14.83,141.83,yyr,,,0,0,0,AU
+jirj1239,pama1250,yiry1245,Jirꞌjorond,False,dialect,-14.83,141.83,yyr,,,0,0,0,AU
 jiro1234,indo1319,hali1246,Jirofti,False,dialect,,,,,,0,0,0,
 jiru1238,atla1278,wurb1239,Jiru,False,language,8.64125,10.5872,jrr,,,0,0,0,NG
 jish1241,mong1349,bona1250,Jishishan,False,dialect,,,,,,0,0,0,
@@ -9284,7 +9284,7 @@ juan1250,aust1307,yuag1237,Juanga,False,dialect,,,,,,0,0,0,
 juan1251,utoa1244,luis1253,Juaneño,False,dialect,,,,,,0,0,0,
 juar1239,krua1234,sapo1251,Juarzon,False,dialect,,,,,,0,0,0,
 juba1238,atla1278,nige1255,Ba,False,dialect,,,,,,0,0,0,
-juba1242,afro1255,west2763,Jub-'adin,False,dialect,,,,,,0,0,0,
+juba1242,afro1255,west2763,Jub-ꞌadin,False,dialect,,,,,,0,0,0,
 juba1243,indo1319,rudb1238,Jubanic,False,dialect,,,,,,0,0,0,
 jude1254,indo1319,ladi1251,Judezmo,False,dialect,,,,,,0,0,0,
 jude1255,indo1319,gall1279,Judeo-Italian,False,language,43.1284,11.4723,itk,,,0,0,0,IT
@@ -9375,7 +9375,7 @@ kabe1245,nucl1709,raic1241,Kabenau,False,family,,,,,,0,5,0,
 kabe1249,afro1255,mser1242,Kabe,False,dialect,,,,,,0,0,0,
 kabi1260,pama1250,east2717,Kabikabi,False,language,-25.44486229,153.1539929,gbw,,,0,0,2,AU
 kabi1261,atla1278,kabi1265,Kabiyé,False,language,8.96816,0.495023,kbp,,,0,0,4,BJ GH TG
-kabi1262,aust1307,bala1311,Kabinga'an,False,dialect,,,,,,0,0,0,
+kabi1262,aust1307,bala1311,Kabingaꞌan,False,dialect,,,,,,0,0,0,
 kabi1263,japo1237,yaey1239,Kabira,False,dialect,,,,,,0,0,0,
 kabi1264,book1242,book1242,Kabixí,True,language,-14.2403,-58.9931,xbx,,,0,0,0,BR
 kabi1265,atla1278,east2397,Kabiyeic,False,family,,,,,,0,3,7,
@@ -9412,7 +9412,7 @@ kach1286,sino1245,east2903,Kachai,False,dialect,,,,,,0,0,0,
 kach1287,turk1311,saga1267,Kacha-Iyus,False,dialect,,,,,,0,0,2,
 kaci1244,surm1244,baal1234,Kacipo-Balesi,False,language,6.16512,34.9436,koe,,,0,0,6,ET SS
 kaci1245,surm1244,kaci1244,Kacipo,False,dialect,,,,,,0,0,0,
-kaco1239,aust1305,lama1291,Kaco',False,language,13.8274,107.257,xkk,,,0,0,0,KH
+kaco1239,aust1305,lama1291,Kacoꞌ,False,language,13.8274,107.257,xkk,,,0,0,0,KH
 kada1242,drav1251,mala1541,Kadar,False,language,11.0602,76.7285,kej,,,0,0,0,IN
 kada1282,nubi1251,east2715,Kadaru,False,language,12.1554,30.2709,kdu,,,0,0,6,SD
 kada1283,atla1278,ayiz1245,Kadagbe,False,dialect,,,,,,0,0,0,
@@ -9539,7 +9539,7 @@ kaja1254,afro1255,mubi1247,Kajakse,False,language,12.2492,20.879,ckq,,,0,0,0,TD
 kaja1255,aust1307,mela1262,Kajang,False,family,,,,,,1,3,0,
 kaja1256,aust1307,kaja1255,Kajaman-Lahanan,False,family,,,,,,0,2,0,
 kaja1257,sign1238,deaf1237,Kajana Sign Language,False,language,3.888611,-55.572222,,,,0,0,0,SR
-kaji1238,afro1255,maje1243,Kajire-'dulo,False,dialect,,,,,,0,0,0,
+kaji1238,afro1255,maje1243,Kajire-ꞌdulo,False,dialect,,,,,,0,0,0,
 kajk1237,indo1319,west2804,Kajkavian,False,language,45.649748,16.134109,kjv,,,0,0,2,HR
 kajk1238,indo1319,kajk1237,Srednishnji Kajkavian,False,dialect,,,,,,0,0,0,
 kajo1240,atla1278,bidy1244,Kajoko,False,dialect,,,,,,0,0,0,
@@ -9735,13 +9735,13 @@ kamt1241,taik1256,taik1256,Kam-Tai,False,family,,,,,,49,76,84,
 kamt1242,indo1319,kamt1240,Kamta,False,family,,,,,,1,3,3,
 kamt1243,indo1319,rang1265,Kamta (India),False,dialect,,,,,,0,0,0,
 kamu1237,kari1254,kari1254,Kamurú,False,dialect,,,,,,0,0,0,
-kamu1257,aust1305,uppe1406,Kamuan',False,dialect,,,,,,0,0,0,
+kamu1257,aust1305,uppe1406,Kamuanꞌ,False,dialect,,,,,,0,0,0,
 kamu1258,east2374,east2374,Kamu,False,language,-13.5393,131.098,xmu,,,0,0,0,AU
 kamu1260,kamu1264,kamu1264,Kamula,False,language,-7.28798,142.639,xla,,,0,0,0,PG
 kamu1261,atla1278,shir1273,Kamuku-Hungwarya,False,family,,,,,,3,5,6,
 kamu1262,atla1278,kamu1261,Kamuku,False,family,,,,,,2,4,6,
 kamu1264,,,Kamula-Elevala,False,family,,,,,,1,3,3,
-kamu1265,indo1319,soii1239,Kamu'i,False,dialect,,,,,,0,0,0,
+kamu1265,indo1319,soii1239,Kamuꞌi,False,dialect,,,,,,0,0,0,
 kamv1242,indo1319,kati1270,Kamviri,False,dialect,35.409908,71.338778,xvi,,,0,0,2,AF PK
 kamw1239,afro1255,higi1242,Kamwe,False,language,10.646,13.5136,hig,,,0,0,0,CM NG
 kamw1240,afro1255,kule1247,Kamwai-Marhai,False,dialect,,,,,,0,0,0,
@@ -10230,7 +10230,7 @@ kein1239,nucl1709,koko1271,Kein,False,language,-5.3373,145.483,bmh,,,0,0,0,PG
 keit1238,aust1307,tani1260,Nuclear Tanimbar-Bomberai,False,family,,,,,,3,6,15,
 keiy1238,nilo1247,west3004,Keiyo,False,language,0.510857,35.226745,eyo,,,0,0,5,KE
 keka1234,aust1307,pada1260,Keka,False,dialect,,,,,,0,0,0,
-kekc1242,maya1287,grea1276,Q'eqchi',False,language,15.3788,-89.2452,kek,,,0,0,0,BZ GT SV
+kekc1242,maya1287,grea1276,Qꞌeqchiꞌ,False,language,15.3788,-89.2452,kek,,,0,0,0,BZ GT SV
 keke1238,atla1278,mboc1235,Kekem,False,dialect,,,,,,0,0,0,
 kela1254,atla1278,yela1238,Kela (Democratic Republic of Congo),False,dialect,-1.39085,24.0051,kel,,,0,0,0,CD
 kela1255,aust1307,nort2858,Kela (Papua New Guinea),False,language,-7.47103,147.173,kcl,,,0,0,0,PG
@@ -10314,11 +10314,11 @@ keny1285,nucl1709,lowe1455,Kenyam-Ujung,False,dialect,,,,,,0,0,0,
 keoo1238,aust1307,nage1238,Kéo,False,language,-8.8704,121.256,xxk,,,0,0,0,ID
 keor1235,nucl1580,west2573,Keoru-Ahia,False,language,-7.63603,145.415,xeu,,,0,0,1,PG
 kepk1241,tupi1275,tupi1275,Kepkiriwát,False,language,-11.663,-61.246,kpn,,,0,0,0,BR
-kepo1237,aust1307,mang1430,Kepo',False,language,-8.603241,120.775273,kuk,,,0,0,0,ID
+kepo1237,aust1307,mang1430,Kepoꞌ,False,language,-8.603241,120.775273,kuk,,,0,0,0,ID
 kera1248,atla1278,here1250,Keerak,False,language,12.3652,-16.6857,hhr,,,0,0,0,GW SN
 kera1255,afro1255,east2641,Kera,False,language,9.88165,15.1419,ker,,,0,0,1,CM TD
 kera1256,pama1250,nort2756,Keramin,False,dialect,,,,,,0,0,0,
-kera1257,aust1305,mund1320,Kera' Mundari,False,dialect,,,,,,0,0,0,
+kera1257,aust1305,mund1320,Keraꞌ Mundari,False,dialect,,,,,,0,0,0,
 kera1258,,,Keram,False,family,,,,,,3,5,7,
 kerd1240,aust1305,jahh1242,Kerdau,False,dialect,,,,,,0,0,0,
 kere1280,chuk1271,jkor1234,Kerek,False,language,62.1777,175.07,krk,,,0,0,4,RU
@@ -10352,7 +10352,7 @@ kesa1246,indo1319,anti1246,Kesab-Svedia,False,dialect,,,,,,0,0,0,
 kesa1247,indo1319,kesa1248,Kesaria,False,dialect,,,,,,0,0,0,
 kesa1248,indo1319,sout3417,Kesariaic,False,dialect,,,,,,0,0,4,
 kese1237,japo1237,sout2953,Kesen,False,dialect,,,,,,0,0,0,
-kesh1234,indo1319,soii1239,Kesha'i,False,dialect,33.23,51.47,,,,0,0,0,IR
+kesh1234,indo1319,soii1239,Keshaꞌi,False,dialect,33.23,51.47,,,,0,0,0,IR
 kesk1234,ural1272,midd1322,Kesk Estonian,False,dialect,,,,,,0,0,0,
 keta1242,indo1319,nort3386,Ketabi (Literary),False,dialect,,,,,,0,0,0,
 keta1243,aust1307,nort2900,Ketangalan,False,language,25.0257,121.425,kae,,,0,0,0,CN
@@ -10483,7 +10483,7 @@ khlu1235,sino1245,hlep1235,Khlula-Zokhuo,False,family,,,,,,0,2,0,
 khlu1236,sino1245,khlu1235,Khlula,False,language,23.1,104.45,ykl,,,0,0,0,CN
 khme1253,aust1305,aust1305,Khmeric,False,family,,,,,,0,3,6,
 khmu1236,aust1305,aust1305,Khmuic,False,family,,,,,,5,9,8,
-khmu1255,aust1305,khmu1236,Khmu',False,family,,,,,,0,2,8,
+khmu1255,aust1305,khmu1236,Khmuꞌ,False,family,,,,,,0,2,8,
 khmu1256,aust1305,khmu1255,Khmu,False,language,20.2463,101.671,kjg,,,0,0,8,CN LA MM TH VN
 khoa1239,anim1240,kuni1265,Khoamak,False,dialect,,,,,,0,0,0,
 khob1235,sino1245,sino1245,Kho-Bwa,False,family,,,,,,4,7,20,
@@ -10492,7 +10492,7 @@ khoe1240,,,Khoe-Kwadi,False,family,,,,,,11,14,44,
 khoe1241,khoe1240,khoe1240,Khoe,False,family,,,,,,10,13,43,
 khoe1242,khoe1240,khoe1241,Khoekhoe,False,family,,,,,,2,4,13,
 khoi1249,indo1319,nucl1235,Khoy-Maragha,False,dialect,,,,,,0,0,0,
-khoi1250,indo1319,cent2265,Kho'ini,False,language,36.8997,48.6212,xkc,,,0,0,0,IR
+khoi1250,indo1319,cent2265,Khoꞌini,False,language,36.8997,48.6212,xkc,,,0,0,0,IR
 khoi1251,sino1245,mari1415,Khoibu,False,language,24.2041,94.1345,nkb,,,0,0,0,IN
 khoi1252,sino1245,sart1249,Khoitam,False,dialect,27.3293889,92.4360113,,,,0,0,0,IN
 khoi1253,sino1245,sart1249,Khoina,False,dialect,27.3429306,92.5104585,,,,0,0,0,IN
@@ -10563,12 +10563,12 @@ kibe1241,maba1274,rung1257,Kibet,False,language,11.32054,20.87674,kie,,,0,0,3,TD
 kibi1239,,,Kibiri,False,language,-7.45276,144.296,prm,,,0,0,2,PG
 kibu1236,aust1307,anta1255,Kibushi-Kimaore,False,dialect,,,,,,0,0,0,
 kich1261,surm1244,kaci1244,Kichepo,False,dialect,,,,,,0,0,0,
-kich1262,maya1287,quic1275,K'iche',False,language,14.5278,-91.1696,quc,,,0,0,0,GT MX
-kich1263,book1242,book1242,"K'iche', San Andrés",True,language,,,qxi,,,0,0,0,GT
-kich1264,book1242,book1242,"K'iche', Cunén",True,language,,,cun,,,0,0,0,GT
-kich1265,book1242,book1242,"K'iche', Eastern",True,language,,,quu,,,0,0,0,GT
-kich1266,book1242,book1242,"K'iche', West Central",True,language,,,qut,,,0,0,0,GT
-kich1267,book1242,book1242,"K'iche', Joyabaj",True,language,,,quj,,,0,0,0,GT
+kich1262,maya1287,quic1275,Kꞌicheꞌ,False,language,14.5278,-91.1696,quc,,,0,0,0,GT MX
+kich1263,book1242,book1242,"Kꞌicheꞌ, San Andrés",True,language,,,qxi,,,0,0,0,GT
+kich1264,book1242,book1242,"Kꞌicheꞌ, Cunén",True,language,,,cun,,,0,0,0,GT
+kich1265,book1242,book1242,"Kꞌicheꞌ, Eastern",True,language,,,quu,,,0,0,0,GT
+kich1266,book1242,book1242,"Kꞌicheꞌ, West Central",True,language,,,qut,,,0,0,0,GT
+kich1267,book1242,book1242,"Kꞌicheꞌ, Joyabaj",True,language,,,quj,,,0,0,0,GT
 kick1244,algi1248,foxx1245,Kickapoo,False,language,41.655145,-89.03034,kic,,,0,0,0,MX US
 kida1237,aust1307,obom1235,Kidapawan Manobo,False,dialect,,,,,,0,0,0,
 kidd1235,katl1246,katl1237,Kiddu,False,dialect,,,,,,0,0,0,
@@ -11237,7 +11237,7 @@ krin1238,nucl1710,cent2420,Krinkati,False,dialect,,,,,,0,0,0,
 krio1246,atla1278,pula1262,Krio Fula,False,dialect,,,,,,0,0,0,
 krio1252,indo1319,paci1280,Kriol,False,language,-18.135,137.669,rop,,,0,0,0,AU
 krio1253,indo1319,west2851,Krio,False,language,10.8811,-14.3204,kri,,,0,0,2,GM GN SL SN US
-kris1246,skoo1245,skoo1245,I'saka,False,language,-2.80084,141.303,ksi,,,0,0,0,PG
+kris1246,skoo1245,skoo1245,Iꞌsaka,False,language,-2.80084,141.303,ksi,,,0,0,0,PG
 kriv1234,indo1319,east2819,Kriva Palanka,False,dialect,,,,,,0,0,0,
 krob1243,atla1278,adan1247,Krobo,False,dialect,,,,,,0,0,0,
 krob1245,atla1278,tano1248,Krobu,False,language,5.86161,-4.47739,kxb,,,0,0,0,CI
@@ -11305,7 +11305,7 @@ kugb1242,atla1278,cent2028,Kugboic,False,family,,,,,,0,2,3,
 kuge1238,bosa1245,kalu1248,Kugenesi,False,dialect,,,,,,0,0,0,
 kuge1239,atla1278,bayo1255,Kugere,False,dialect,,,,,,0,0,0,
 kugo1238,atla1278,monk1234,Kugong,False,dialect,,,,,,0,0,0,
-kuhp1234,indo1319,gazi1243,Kuhpa'i,False,dialect,32.7,52.45,,,,0,0,0,IR
+kuhp1234,indo1319,gazi1243,Kuhpaꞌi,False,dialect,32.7,52.45,,,,0,0,0,IR
 kuhr1238,indo1319,bakh1245,Kuhrang,False,dialect,,,,,,0,0,0,
 kuii1252,drav1251,kuik1244,Kui (India),False,language,19.2043,83.5859,kxu,,,0,0,2,IN
 kuii1253,timo1261,alor1250,Kui (Indonesia),False,language,-8.38204,124.791,kvd,,,0,0,3,ID
@@ -11339,7 +11339,7 @@ kuku1277,pama1250,kuku1276,Kuku-Wik,False,family,,,,,,3,7,0,
 kuku1279,book1242,book1242,Kuku-Mangk,True,language,-14.2866,141.824,xmq,,,0,0,0,AU
 kuku1280,pama1250,pama1253,Kuku-Uwanh,False,language,-14.0756,141.724,uwa,,,0,0,0,AU
 kuku1281,pama1250,pama1253,Kuku-Ugbanh,False,language,-13.9882,141.569,ugb,,,0,0,0,AU
-kuku1282,pama1250,pama1253,Kuku-Mu'inh,False,language,-14.201,141.709,xmp,,,0,0,0,AU
+kuku1282,pama1250,pama1253,Kuku-Muꞌinh,False,language,-14.201,141.709,xmp,,,0,0,0,AU
 kuku1283,pama1250,pama1253,Kuku-Muminh,False,language,-14.0959,141.625,xmh,,,0,0,0,AU
 kuku1284,east2386,kula1286,Jog Goor,False,dialect,,,,,,0,0,0,
 kuku1285,nilo1247,nucl1796,Kuku,False,language,3.9613,31.537,ukv,,,0,0,0,SS UG
@@ -11531,7 +11531,7 @@ kusa1253,aust1307,kusa1251,Kusaghe,False,dialect,,,,,,0,0,0,
 kuse1238,atla1278,yend1241,Kuseki,False,dialect,,,,,,0,0,0,
 kusg1238,koma1264,pame1261,Kigile-Kusgilo,False,dialect,,,,,,0,0,0,
 kush1236,afro1255,tang1367,Kushi,False,language,9.40731,10.9396,kuh,,,0,0,0,NG
-kusk1241,eski1264,cent2127,General Central Yup'ik,False,dialect,,,,,,0,0,0,
+kusk1241,eski1264,cent2127,General Central Yupꞌik,False,dialect,,,,,,0,0,0,
 kust1238,araw1281,waur1246,Kustenau,False,language,-14.9,-53.15,,,,0,0,0,BR
 kusu1250,,,Kusunda,False,language,28.33,82.6,kgg,,,0,0,0,NP
 kusu1251,atla1278,bago1245,Kusuntu,False,dialect,,,,,,0,0,0,
@@ -11555,7 +11555,7 @@ kutu1265,atla1278,libi1244,Kutu (Libinza),False,dialect,,,,,,0,0,0,
 kutu1266,east2499,foii1241,Kutubu,False,dialect,,,,,,0,0,0,
 kutu1267,atla1278,cent2287,Kutu-Zaramo,False,family,,,,,,0,2,0,
 kutu1268,atla1278,nucl1832,Kuturmi-Ajiya,False,family,,,,,,0,2,0,
-kuuk1238,pama1250,nort2759,Kuuku-Ya'u,False,language,-12.4947,143.165,kuy,,,0,0,0,AU
+kuuk1238,pama1250,nort2759,Kuuku-Yaꞌu,False,language,-12.4947,143.165,kuy,,,0,0,0,AU
 kuuk1242,afro1255,guru1271,Kuuku,False,dialect,,,,,,0,0,0,
 kuuk1243,pama1250,uppe1456,Kuuk-Yak,False,language,-14.810589,141.788992,uky,,,0,0,0,AU
 kuun1236,pama1250,pirr1239,Kuungkari of Barcoo River,False,language,-24.75108713,143.5365228,lku,,,0,0,0,AU
@@ -11585,10 +11585,10 @@ kven1236,ural1272,nucl1717,Kven Finnish,False,language,69.3772,29.5434,fkv,,,0,0
 kwaa1262,atla1278,came1255,Baa,False,language,9.42222,11.4439,kwb,,,0,0,2,NG
 kwaa1263,atla1278,fipa1238,Kwaafi,False,dialect,,,,,,0,0,0,
 kwaa1264,atla1278,fipa1238,Kwa (Fipa),False,dialect,,,,,,0,0,0,
-kwaa1265,atla1278,east2862,Kwa',False,language,4.88273,10.3453,bko,,,0,0,2,CM
+kwaa1265,atla1278,east2862,Kwaꞌ,False,language,4.88273,10.3453,bko,,,0,0,2,CM
 kwaa1269,afro1255,kwam1256,Kwaami,False,language,10.4141,11.0192,ksq,,,0,0,0,NG
 kwad1244,khoe1240,khoe1240,Kwadi,False,language,-15.8745,12.1147,kwz,,,0,0,1,AO
-kwad1248,afro1255,grea1305,Kw'adza,False,language,-4.00743,35.1828,wka,,,0,0,0,TZ
+kwad1248,afro1255,grea1305,Kwꞌadza,False,language,-4.00743,35.1828,wka,,,0,0,0,TZ
 kwag1238,afro1255,kofy1242,Kwagallak,False,dialect,,,,,,0,0,0,
 kwai1243,aust1307,nort2833,Kwaio,False,language,-8.93744,160.965,kwd,,,0,0,0,SB
 kwai1244,aust1307,sina1266,Kwaibida,False,dialect,,,,,,0,0,0,
@@ -11601,7 +11601,7 @@ kwak1265,atla1278,boky1238,Kwakwagom,False,dialect,,,,,,0,0,0,
 kwak1266,atla1278,maka1327,Kwakum,False,language,4.34393,13.6446,kwu,,,0,0,4,CM
 kwak1267,atla1278,yamb1251,Kwak (Yamba),False,dialect,,,,,,0,0,0,
 kwak1268,waka1280,nort2964,Kwakiutlan,False,family,,,,,,0,2,4,
-kwak1269,waka1280,kwak1268,Kwak'wala,False,language,50.9269,-127.308,kwk,,,0,0,0,CA
+kwak1269,waka1280,kwak1268,Kwakꞌwala,False,language,50.9269,-127.308,kwk,,,0,0,0,CA
 kwak1270,atla1278,kasa1251,Kwa-Kasai North,False,family,,,,,,2,5,12,
 kwak1271,nilo1247,shil1265,Kwak Shilluk,False,dialect,,,,,,0,0,0,
 kwal1254,atla1278,ndon1254,Kwaludhi,False,dialect,,,,,,0,0,0,
@@ -11630,7 +11630,7 @@ kwan1286,sepi1257,nuku1256,Kwanga-Mende,False,family,,,,,,0,2,4,
 kwan1288,atla1278,kune1234,Kwangali-Diriku,False,family,,,,,,0,2,2,
 kwan1289,atla1278,cimb1239,Kwandu,False,language,-13.80147,13.11922,xdo,,,0,0,0,AO
 kwan1290,sali1255,down1241,Kwantlen,False,dialect,,,,,,0,0,0,
-kwar1239,aust1307,nort2833,Kwara'ae,False,language,-8.75779,160.804,kwf,,,0,0,0,SB
+kwar1239,aust1307,nort2833,Kwaraꞌae,False,language,-8.75779,160.804,kwf,,,0,0,0,SB
 kwar1243,afro1255,kare1348,Kwarta Mataci,False,dialect,,,,,,0,0,0,
 kwas1243,atla1278,kwas1245,Kwasio,False,language,2.39354,10.0812,nmg,,,0,0,3,CM GQ
 kwas1244,aust1307,mang1404,Kwasang,False,dialect,,,,,,0,0,0,
@@ -11660,7 +11660,7 @@ kwer1267,nucl1709,kwer1266,Kwer-Burumakok,False,family,,,,,,0,2,0,
 kwes1244,atla1278,phee1234,Kwese,False,language,-5.60445,18.5759,kws,,,0,0,0,CD
 kwes1245,toro1256,tora1268,Kwesten,False,language,-2.03622,138.853,kwt,,,0,0,0,ID
 kwes1246,atla1278,pomo1276,Kweso,False,dialect,,,,,,0,0,0,
-kwii1241,tuuu1241,tuuu1241,!Ui,False,family,,,,,,2,6,14,
+kwii1241,tuuu1241,tuuu1241,ǃUi,False,family,,,,,,2,6,14,
 kwik1234,sali1255,down1241,Kwikwetlem,False,dialect,,,,,,0,0,0,
 kwil1238,atla1278,loan1238,Kwilu-Ngounie,False,family,,,,,,18,28,49,
 kwil1239,atla1278,yans1239,Kwilu-Kamtsha,False,dialect,,,,,,0,0,2,
@@ -11676,8 +11676,8 @@ kwon1238,afro1255,piya1245,Kwonci,False,dialect,,,,,,0,0,0,
 kwus1239,nduu1242,boik1241,Kwusaun,False,dialect,,,,,,0,0,0,
 kwye1234,atla1278,hyam1245,Kwyeny,False,dialect,,,,,,0,0,0,
 kxaa1236,,,Kxa,False,family,,,,,,1,5,6,
-kxau1241,kxaa1236,juho1239,Groot Laagte =/Kx'au//'ein,False,dialect,-21.0554,21.1793,aue,,,0,0,0,BW NA
-kxau1242,tuuu1241,dans1240,/=Ungkue,False,dialect,-29.4046,22.2901,,,,0,0,0,ZA
+kxau1241,kxaa1236,juho1239,Groot Laagte ǂKxꞌauǁꞌein,False,dialect,-21.0554,21.1793,aue,,,0,0,0,BW NA
+kxau1242,tuuu1241,dans1240,ǂUngkue,False,dialect,-29.4046,22.2901,,,,0,0,0,ZA
 kxoe1242,khoe1240,west2506,Kxoe-Ani,False,family,,,,,,0,2,6,
 kxoe1243,khoe1240,kxoe1242,Kxoe,False,language,-16.59051,22.599835,xuu,,,0,0,6,AO BW NA ZA ZM
 kxoe1244,khoe1240,kxoe1243,Kxoedam,False,dialect,,,,,,0,0,0,
@@ -11721,7 +11721,7 @@ laba1242,aust1307,west2541,Labalekan,False,dialect,,,,,,0,0,3,
 labe1239,aust1307,labe1241,Label,False,language,-4.46971,152.678,lbb,,,0,0,0,PG
 labe1240,aust1307,tawa1275,Labe,False,dialect,,,,,,0,0,0,
 labe1241,aust1307,stge1234,Label-Bilur,False,family,,,,,,0,2,0,
-labi1244,spee1234,atla1282,La'bi,False,language,7.85817,15.2895,lbi,,,0,0,0,CM
+labi1244,spee1234,atla1282,Laꞌbi,False,language,7.85817,15.2895,lbi,,,0,0,0,CM
 labi1245,atla1278,jaku1245,Labir,False,language,10.4847,9.59527,jku,,,0,0,0,NG
 labo1236,basq1248,basq1249,Labourdin,False,dialect,,,,,,0,0,0,
 labo1243,sino1245,anil1235,Labo Phowa,False,language,23.9,103.4,ypb,,,0,0,0,CN
@@ -11756,7 +11756,7 @@ ladi1251,indo1319,sout3200,Ladino,False,language,41.205,28.6632,lad,,,0,0,3,AL B
 ladj1234,pama1250,west2443,Ladji Ladji,False,dialect,,,llj,,,0,0,0,AU
 lado1234,ural1272,nort3282,Ladogan,False,family,,,,,,1,5,18,
 laek1243,nucl1708,nucl1708,Laeko-Libuat,False,language,-3.69618,142.237,lkl,,,0,0,0,PG
-lafi1238,atla1278,nort2806,La'fi,False,dialect,,,,,,0,0,0,
+lafi1238,atla1278,nort2806,Laꞌfi,False,dialect,,,,,,0,0,0,
 lafo1243,,,Lafofa,False,language,10.3357,30.7331,laf,,,0,0,3,SD
 laga1241,indo1319,fala1241,Lagarteiru,False,dialect,,,,,,0,0,0,
 laga1242,aust1307,tuwa1243,Lagawe Ifugao,False,dialect,,,,,,0,0,0,
@@ -11808,7 +11808,7 @@ laja1238,quec1387,chac1250,La Jalca,False,dialect,,,,,,0,0,0,
 laju1238,sino1245,noct1238,Laju,False,dialect,26.8954,95.5811,,,,0,0,0,
 laka1251,aust1305,jain1238,Lakadong,False,dialect,,,,,,0,0,0,
 laka1252,cent2225,kaba1281,Laka of Lau (Nigeria),False,dialect,9.14965,11.228,lak,,,0,0,0,NG
-laka1253,cent2225,moru1253,Lakama'di,False,dialect,,,,,,0,0,0,
+laka1253,cent2225,moru1253,Lakamaꞌdi,False,dialect,,,,,,0,0,0,
 laka1254,cent2225,gore1234,Laka (Chad),False,language,7.78997,16.0193,lap,,,0,0,5,CF TD
 laka1255,aust1307,east2733,Lakalei,False,language,-8.86372,125.716,lka,,,0,0,0,TL
 lake1254,aust1307,kono1269,Laket,False,dialect,,,,,,0,0,0,
@@ -11907,7 +11907,7 @@ lamj1247,sino1245,hela1238,Lamjung Yolmo,False,dialect,,,,,,0,0,0,
 lamk1238,sino1245,anal1240,Lamkang,False,language,24.1523,94.2706,lmk,,,0,0,0,IN MM
 lamm1241,timo1261,west2994,Western Pantar,False,language,-8.52787,124.057,lev,,,0,0,3,ID
 lamm1244,afro1255,gida1247,Lam,False,dialect,,,,,,0,0,0,
-lamn1239,atla1278,ring1243,Lamnso',False,language,6.39743,11.0684,lns,,,0,0,2,CM NG
+lamn1239,atla1278,ring1243,Lamnsoꞌ,False,language,6.39743,11.0684,lns,,,0,0,2,CM NG
 lamo1242,atla1278,soga1242,Lamogi,False,dialect,,,,,,0,0,0,
 lamo1243,aust1307,wole1240,Lamotrek,False,dialect,,,,,,0,0,0,
 lamo1244,aust1307,bibl1237,Lamogai,False,language,-5.87071,149.321,lmg,,,0,0,5,PG
@@ -11954,7 +11954,7 @@ lang1326,aust1307,sout2918,Languyan,False,dialect,,,,,,0,0,0,
 lang1327,timo1261,wers1238,Langkuru,False,dialect,,,,,,0,0,0,
 lang1328,kera1258,mwak1234,Pondi,False,language,-4.32557,143.925,lnm,,,0,0,0,PG
 lang1332,afro1255,lund1276,Langas,False,dialect,10.17,9.83,,,,0,0,0,NG
-lang1333,book1242,book1242,Lang'e,True,language,,,yne,,,0,0,0,CN
+lang1333,book1242,book1242,Langꞌe,True,language,,,yne,,,0,0,0,CN
 lang1334,book1242,book1242,Languedocien,True,language,,,lnc,,,0,0,0,
 lang1335,sign1238,deaf1237,Langue des Signes Zairoise,False,language,-3.6211,17.7887,,,,0,0,0,CD
 lang1336,sign1238,deaf1237,Langue des Signes de Bouakako,False,language,8.065846,-3.548218,,,,0,0,0,CI
@@ -12088,7 +12088,7 @@ laze1238,sino1245,nais1236,Laze,False,language,27.85,101.45,,,,0,0,0,CN
 laze1239,sino1245,sumi1235,Lazemi,False,dialect,,,,,,0,0,0,
 lazi1238,indo1319,ital1282,Laziale,False,dialect,,,,,,0,0,0,
 lazz1240,kart1248,zann1245,Laz,False,language,41.5004,41.9096,lzz,,,0,0,7,GE TR
-lbee1237,aust1307,moke1242,L'be,False,dialect,,,,,,0,0,0,
+lbee1237,aust1307,moke1242,Lꞌbe,False,dialect,,,,,,0,0,0,
 ldam1238,afro1255,cent2189,Ldamtsai,False,dialect,,,,,,0,0,0,
 leal1235,otom1299,chin1489,Lealao Chinantec,False,language,17.3162,-95.9265,cle,,,0,0,0,MX
 leba1239,timo1261,teiw1235,Lebang,False,dialect,,,,,,0,0,0,
@@ -12210,7 +12210,7 @@ lepc1244,sino1245,hima1249,Lepcha,False,language,27.0869,88.5726,lep,,,0,0,3,BT 
 lepk1238,lepk1239,lepk1239,Lepki,False,language,-4.1059,140.464,lpe,,,0,0,0,ID
 lepk1239,,,Lepki-Murkim-Kembra,False,family,,,,,,0,3,0,
 lepo1240,indo1319,cisa1238,Lepontic,False,language,45.98,8.92,xlp,,,0,0,0,CH
-lepo1241,aust1307,main1275,Lepo' Kulit,False,dialect,,,,,,0,0,0,
+lepo1241,aust1307,main1275,Lepoꞌ Kulit,False,dialect,,,,,,0,0,0,
 lepu1239,aust1307,lund1271,Lepu Potong (Lundayeh),False,dialect,,,,,,0,0,0,
 lepu1240,aust1307,kela1258,Lepu Potong,False,dialect,,,,,,0,0,0,
 leqi1234,sino1245,maru1254,Leqic,False,family,,,,,,0,2,0,
@@ -12376,8 +12376,8 @@ ling1272,sign1238,deaf1237,Língua de sinais de Caiçara,False,language,-6.76776
 ling1273,sign1238,deaf1237,Língua de sinais do Uiramutã,False,language,4.59501,-60.16245,,,,0,0,0,BR
 lins1238,sino1245,nort3273,Lin-Shao,False,dialect,,,,,,0,0,0,
 lint1237,aust1307,cent2053,Lintang,False,dialect,,,lnt,,,0,0,0,
-lioo1240,aust1307,ende1247,Li'o,False,language,-8.68615,121.832,ljl,,,0,0,2,ID
-lioo1241,ramu1234,raoo1244,Li'o (Papua New Guinea),False,dialect,,,,,,0,0,0,
+lioo1240,aust1307,ende1247,Liꞌo,False,language,-8.68615,121.832,ljl,,,0,0,2,ID
+lioo1241,ramu1234,raoo1244,Liꞌo (Papua New Guinea),False,dialect,,,,,,0,0,0,
 lipa1240,atla1278,maba1270,Lipanja,False,dialect,,,,,,0,0,0,
 lipa1241,atha1245,east2723,Lipan Apache,False,language,29.93117,-98.94286,apl,,,0,0,0,US
 lipi1238,aust1305,sema1266,Lipis,False,dialect,,,,,,0,0,0,
@@ -12573,7 +12573,7 @@ long1400,aust1307,sebo1238,Long Ekang,False,dialect,,,,,,0,0,0,
 long1401,aust1307,umal1239,Long Bangan,False,dialect,,,,,,0,0,0,
 long1402,aust1307,ngor1244,Long Semiang,False,dialect,,,,,,0,0,0,
 long1403,aust1307,ngor1244,Long Banyuq,False,dialect,,,,,,0,0,0,
-long1404,aust1307,moda1244,Long Bento',False,dialect,,,,,,0,0,0,
+long1404,aust1307,moda1244,Long Bentoꞌ,False,dialect,,,,,,0,0,0,
 long1405,aust1307,moda1244,Long Glat,False,dialect,,,,,,0,0,0,
 long1406,aust1307,west2875,Western Lowland Kenyah,False,language,3.85226,114.82,ttw,,,0,0,3,MY
 long1407,aust1307,long1406,Long Labid,False,dialect,,,,,,0,0,0,
@@ -12662,7 +12662,7 @@ lowe1391,indo1319,sadr1248,Lower Sadri,False,dialect,,,,,,0,0,0,
 lowe1392,ural1272,ingr1248,Lower Luga,False,dialect,,,,,,0,0,2,
 lowe1393,aust1305,lame1256,Lower Lamet,False,dialect,,,,,,0,0,0,
 lowe1394,aust1305,bond1245,Lower Bondo,False,dialect,,,,,,0,0,0,
-lowe1395,aust1305,ongt1234,Lower Ta'oih,False,language,15.9083,106.873,tto,,,0,0,2,LA
+lowe1395,aust1305,ongt1234,Lower Taꞌoih,False,language,15.9083,106.873,tto,,,0,0,2,LA
 lowe1397,kart1248,svan1243,Lower Bal,False,dialect,,,,,,0,0,0,
 lowe1398,sino1245,grom1238,Lower Groma,False,dialect,,,,,,0,0,0,
 lowe1399,sino1245,khen1241,Lower Kheng,False,dialect,,,,,,0,0,0,
@@ -12746,7 +12746,7 @@ loya1239,aust1307,newc1243,Loyalty Islands,False,family,,,,,,0,3,2,
 lozi1239,atla1278,seso1234,Lozi,False,language,-17.7052,24.7398,loz,,,0,0,0,BW NA ZM ZW
 lozo1238,krua1234,yoco1235,Lozoua,False,dialect,,,,,,0,0,0,
 lsfi1234,sign1238,deaf1237,LSFic,False,family,,,,,,16,59,14,
-luaa1235,book1242,book1242,Lua',True,language,19.1198,101.217,prb,,,0,0,0,LA TH
+luaa1235,book1242,book1242,Luaꞌ,True,language,19.1198,101.217,prb,,,0,0,0,LA TH
 luac1241,nilo1247,nort2815,Luac,False,dialect,,,,,,0,0,0,
 luac1242,nilo1247,sout2832,Luac (Southwestern Dinka),False,dialect,,,,,,0,0,0,
 lual1238,atla1278,cong1236,Lualaba Kingwana,False,dialect,,,,,,0,0,0,
@@ -12795,7 +12795,7 @@ luia1234,book1242,book1242,Lui,True,language,21.3635,99.6619,lba,,,0,0,0,IN
 luim1238,atla1278,mbwe1239,Luimbi,False,language,-11.2221,17.5385,lum,,,0,0,0,AO
 luis1253,utoa1244,cupa1239,Luiseno-Juaneño,False,language,33.3184,-116.939,lui,,,0,0,2,US
 luis1254,utoa1244,luis1253,Luiseño,False,dialect,,,,,,0,0,0,
-luja1234,ural1272,kild1236,Lujaa'vvr,False,dialect,,,,,,0,0,0,
+luja1234,ural1272,kild1236,Lujaaꞌvvr,False,dialect,,,,,,0,0,0,
 luka1238,mand1469,band1352,Lukasa,False,dialect,,,,,,0,0,0,
 luko1238,atla1278,nkoy1244,Lukolwe,False,dialect,,,,,,0,0,0,
 lukp1238,atla1278,kabi1265,Lukpa,False,language,9.51949,1.66954,dop,,,0,0,0,BJ TG
@@ -12934,9 +12934,9 @@ lyoo1238,taik1256,makc1235,Lyo,False,dialect,,,,,,0,0,0,
 lytt1234,sali1255,thom1243,Lytton-Canyon,False,dialect,,,,,,0,0,0,
 lyyy1238,aust1305,khmu1256,Lyy,False,dialect,,,,,,0,0,0,
 maaa1253,aust1305,koho1243,Maa,False,language,11.5205,107.339,cma,,,0,0,0,VN
-maag1237,aust1307,reja1241,Ma'aging,False,dialect,,,,,,0,0,0,
+maag1237,aust1307,reja1241,Maꞌaging,False,dialect,,,,,,0,0,0,
 maak1236,afro1255,unun9876,Maaka,False,language,11.5007,11.9035,mew,,,0,0,0,NG
-maan1238,aust1307,maan1240,Ma'anyan,False,language,-2.1239,115.092,mhy,,,0,0,3,ID
+maan1238,aust1307,maan1240,Maꞌanyan,False,language,-2.1239,115.092,mhy,,,0,0,3,ID
 maan1239,sino1245,mond1268,Maang,False,language,23.555104,105.70091,,,,0,0,0,CN VN
 maan1240,aust1307,sout2919,Maanyan-Paku,False,family,,,,,,0,2,3,
 maas1239,atla1278,fula1264,Maasina Fulfulde,False,language,11.1324,-3.64763,ffm,,,0,0,2,BF CI GH ML MR NE
@@ -13021,7 +13021,7 @@ madh1243,sino1245,jeru1240,Madhavpur,False,dialect,,,,,,0,0,0,
 madh1244,pama1250,west2443,Madhi Madhi,False,dialect,-34.5,143.5,dmd,,,0,0,0,AU
 madi1258,atla1278,mayo1261,Madipia,False,dialect,,,,,,0,0,0,
 madi1259,atla1278,mayo1261,Madimadoko,False,dialect,,,,,,0,0,0,
-madi1260,cent2225,sout2827,Ma'di,False,language,3.62499,31.8471,mhi,,,0,0,5,SS UG
+madi1260,cent2225,sout2827,Maꞌdi,False,language,3.62499,31.8471,mhi,,,0,0,5,SS UG
 madi1261,nucl1709,gira1248,Madi (Papua New Guinea),False,language,-5.63017,146.407,grg,,,0,0,0,PG
 madi1262,araw1282,araw1282,Madi-Madiha,False,family,,,,,,1,3,9,
 madi1263,araw1282,madi1262,Madiha,False,family,,,,,,0,2,6,
@@ -13032,7 +13032,7 @@ mado1239,nucl1709,baru1269,Mado,False,dialect,,,,,,0,0,0,
 madr1237,drav1251,tami1289,Madrasi,False,dialect,,,,,,0,0,0,
 madr1238,pano1259,pano1257,Madre de Dios Pano,False,family,,,,,,0,2,0,
 madr1239,araw1281,yine1238,Madre de Dios Yine,False,dialect,,,,,,0,0,0,
-madu1246,cent2225,moro1284,Ma'du,False,dialect,,,,,,0,0,0,
+madu1246,cent2225,moro1284,Maꞌdu,False,dialect,,,,,,0,0,0,
 madu1247,aust1307,mala1545,Maduresic,False,family,,,,,,0,2,6,
 madu1248,aust1307,sout3207,Madukayang Kalinga,False,language,17.1794,121.236,kmd,,,0,0,0,PH
 mady1238,pama1250,yidi1250,Madyay,False,dialect,,,,,,0,0,0,
@@ -13217,7 +13217,7 @@ maku1273,sino1245,maku1272,Makuri Naga,False,language,26.6,94.95,jmn,,,0,0,0,MM
 maku1274,atla1278,balo1261,Makutu,False,dialect,,,,,,0,0,0,
 maku1275,cent2225,mang1396,Makutana,False,dialect,,,,,,0,0,0,
 maku1276,aust1307,nama1268,Makura,False,dialect,,,,,,0,0,0,
-maku1277,aust1307,sout3382,Maku'a,False,language,-8.40372,127.239,lva,,,0,0,0,TL
+maku1277,aust1307,sout3382,Makuꞌa,False,language,-8.40372,127.239,lva,,,0,0,0,TL
 maku1278,tupi1275,tupa1251,Makuráp,False,language,-11.8701,-64.3201,mpu,,,0,0,0,BR
 maku1279,atla1278,maku1247,Makua-Lomwe,False,family,,,,,,1,8,12,
 makw1236,atla1278,mako1254,Makwe,False,language,-10.4673,40.0274,ymk,,,0,0,2,MZ TZ
@@ -13298,7 +13298,7 @@ male1291,nucl1709,inla1274,Male (Papua New Guinea),False,language,-5.49975,145.7
 male1292,algi1248,micm1234,Malecite-Passamaquoddy,False,language,45.494475,-67.40805,pqm,,,0,0,2,CA US
 male1293,algi1248,male1292,Malecite,False,dialect,,,,,,0,0,0,
 male1297,chib1249,voti1248,Maléku Jaíka,False,language,10.7485,-84.7318,gut,,,0,0,0,CR
-malf1237,aust1307,sout3197,Na'ahai,False,language,-16.5499,167.509,mlx,,,0,0,1,VU
+malf1237,aust1307,sout3197,Naꞌahai,False,language,-16.5499,167.509,mlx,,,0,0,1,VU
 malg1242,pama1250,kart1250,Malgana,False,language,-26.211,114.245,vml,,,0,0,0,AU
 malg1250,afro1255,koto1269,Malgbe,False,language,12.5342,14.8475,mxf,,,0,0,6,CM TD
 malg1251,afro1255,wand1281,Malgwa,False,language,11.77,13.61,,,,0,0,0,NG
@@ -13313,7 +13313,7 @@ mali1281,aust1307,bana1288,Malibcong Banao,False,dialect,,,,,,0,0,0,
 mali1282,aust1307,taga1273,Maligan,False,dialect,,,,,,0,0,0,
 mali1283,aust1307,bugi1245,Malimpung,False,language,-3.6996,119.76,mli,,,0,0,0,ID
 mali1284,bain1263,bain1263,Mali,False,language,-4.71826,152.214,gcc,,,0,0,0,PG
-mali1285,otom1299,nort3350,Malinaltepec Me'phaa,False,language,17.2122,-98.6322,tcf,,,0,0,3,MX
+mali1285,otom1299,nort3350,Malinaltepec Meꞌphaa,False,language,17.2122,-98.6322,tcf,,,0,0,3,MX
 mali1286,otom1299,mali1285,Malinaltepec,False,dialect,,,,,,0,0,0,
 mali1287,book1242,book1242,Maligo,True,language,-7.93095,15.7421,mwj,,,0,0,0,AO
 mali1288,book1242,book1242,Malinguat,True,language,,,sic,,,0,0,0,PG
@@ -13355,7 +13355,7 @@ mama1276,aust1307,tora1260,Mamasa,False,language,-3.0811,119.484,mqj,,,0,0,3,ID
 mama1277,nucl1709,finu1234,Mamaa,False,language,-6.35558,146.576,mhf,,,0,0,0,PG
 mama1278,namb1299,nort3153,Mamaindé,False,language,-12.986439,-60.101072,wmd,,,0,0,0,BR
 mamb1292,pama1250,ngur1261,Mambangura,False,dialect,,,,,,0,0,0,
-mamb1293,atla1278,diii1241,Mambe',False,dialect,,,,,,0,0,0,
+mamb1293,atla1278,diii1241,Mambeꞌ,False,dialect,,,,,,0,0,0,
 mamb1294,atla1278,tupu1245,Mambai,False,language,9.6121,14.0013,mcs,,,0,0,0,CM TD
 mamb1295,atla1278,zimb1251,Mamba (Democratic Republic of Congo),False,dialect,,,,,,0,0,0,
 mamb1296,atla1278,malu1251,Mambwe-Lungu,False,language,-8.86817,31.2269,mgr,,,0,0,2,TZ ZM
@@ -13375,7 +13375,7 @@ mamc1234,book1242,book1242,"Mam, Central",True,language,,,mvc,,,0,0,0,GT
 mame1240,maya1287,grea1277,Mamean,False,family,,,,,,0,2,0,
 mamf1238,atla1278,sout3152,Mamfe,False,family,,,,,,1,3,7,
 mamm1241,maya1287,mame1240,Mam,False,language,14.8034,-91.7231,mam,,,0,0,0,GT MX
-mamn1243,atla1278,diii1241,Mamna'a,False,dialect,,,,,,0,0,0,
+mamn1243,atla1278,diii1241,Mamnaꞌa,False,dialect,,,,,,0,0,0,
 mamn1244,pama1250,awng1245,Mamangathi,False,dialect,,,,,,0,0,0,
 mamo1239,araw1282,deni1241,Nuclear Deni,False,dialect,,,,,,0,0,2,
 mamp1244,atla1278,mamp1246,Mampruli,False,language,10.3884,-0.74675,maw,,,0,0,2,GH TG
@@ -13565,7 +13565,7 @@ mans1260,hata1242,hata1242,Mansim,False,language,-0.915054,134.011116,,,,0,0,0,I
 mans1261,aust1307,cent2246,Mansakan,False,family,,,,,,3,7,6,
 mans1262,aust1307,east2477,Mansaka,False,language,6.79221,126.181,msk,,,0,0,0,PH
 mans1263,yura1255,yura1255,Mansinyo,False,dialect,,,,,,0,0,0,
-mans1267,afro1255,cent2338,Mansa',False,dialect,,,,,,0,0,0,
+mans1267,afro1255,cent2338,Mansaꞌ,False,dialect,,,,,,0,0,0,
 mans1269,ural1272,ural1272,Mansic,False,family,,,,,,1,3,15,
 mant1264,indo1319,lomb1257,Mantovano,False,dialect,,,,,,0,0,0,
 mant1265,sino1245,munj1248,Mantsi,False,language,23.1829,105.405,nty,,,0,0,0,VN
@@ -13626,7 +13626,7 @@ mapp1234,nucl1709,awyu1264,Mappi-Digul Awyu,False,family,,,,,,0,2,0,
 mapr1240,nduu1242,ambu1247,Maprik,False,dialect,,,,,,0,0,0,
 mapu1244,aust1307,born1254,Mapun,False,language,6.09061,118.75,sjm,,,0,0,0,MY PH
 mapu1245,arau1255,arau1255,Mapudungun,False,language,-38.7392,-71.277,arn,,,0,0,3,AR CL
-maqu1238,cari1283,maqu1239,Ye'kwana,False,language,4.70705,-64.3877,mch,,,0,0,2,BR VE
+maqu1238,cari1283,maqu1239,Yeꞌkwana,False,language,4.70705,-64.3877,mch,,,0,0,2,BR VE
 maqu1239,cari1283,guia1242,Maquiritari-Wayumara,False,family,,,,,,0,2,2,
 mara1266,,,Maratino,False,language,24.339089,-98.576661,,,,0,0,0,MX
 mara1372,indo1319,roma1327,Maramuresh,False,dialect,,,,,,0,0,0,
@@ -13910,7 +13910,7 @@ matu1261,aust1307,nucl1510,Matukar,False,language,-4.9078,145.779,mjk,,,0,0,0,PG
 matu1262,aust1307,daro1239,Matu Melanau,False,dialect,,,,,,0,0,0,
 matu1263,atla1278,rufi1236,Matumbic,False,family,,,,,,0,2,1,
 matu1264,aust1307,natu1246,Matu,False,dialect,,,,,,0,0,0,
-matu1265,aust1307,nucl1837,Matu'aw,False,dialect,,,,,,0,0,0,
+matu1265,aust1307,nucl1837,Matuꞌaw,False,dialect,,,,,,0,0,0,
 matw1238,sino1245,rawa1265,Matwanly,False,dialect,,,,,,0,0,0,
 maty1235,mand1469,mand1437,Matya Samo,False,language,13.1027,-3.25128,stj,,,0,0,0,BF ML
 maub1238,sino1245,pwow1235,Maubin,False,dialect,,,,,,0,0,0,
@@ -13951,7 +13951,7 @@ maya1278,sino1245,stod1241,Mayar,False,dialect,,,,,,0,0,0,
 maya1279,pama1250,pama1251,Mayabic,False,family,,,,,,1,3,4,
 maya1280,pama1250,maya1279,Mayaguduna,False,language,-18.1147,140.337,xmy,,,0,0,0,AU
 maya1281,mand1469,mand1437,Maya Samo,False,language,13.1811,-2.72732,sym,,,0,0,4,BF
-maya1282,aust1307,raja1258,Misool-Salawati Ma'ya,False,language,-1.22329,130.909,slz,,,0,0,3,ID
+maya1282,aust1307,raja1258,Misool-Salawati Maꞌya,False,language,-1.22329,130.909,slz,,,0,0,3,ID
 maya1284,guah1252,play1240,Yamalero,False,dialect,,,,,,0,0,0,
 maya1285,misu1242,sumu1234,Mayangna,False,language,14.1259,-84.3439,yan,,,0,0,2,HN NI
 maya1286,book1242,book1242,"Maya, Chan Santa Cruz",True,language,,,yus,,,0,0,0,MX
@@ -13981,7 +13981,7 @@ mayo1272,pano1259,mayo1277,Mayoruna-Tabatinga,False,language,-4.289992,-69.87396
 mayo1277,pano1259,pano1256,Mayoruna Branch,False,family,,,,,,3,8,0,
 mayo1278,sepi1257,sepi1256,Mayo-Pasi,False,family,,,,,,1,4,2,
 mayo1279,atla1278,kara1478,Mayo Djarendi-Mandi,False,dialect,,,,,,0,0,0,
-mayr1237,aust1307,nort3427,Matu'uwal,False,dialect,,,,,,0,0,0,
+mayr1237,aust1307,nort3427,Matuꞌuwal,False,dialect,,,,,,0,0,0,
 mayu1240,bert1248,bert1248,Mayu,False,dialect,,,,,,0,0,0,
 mayy1239,aust1305,chut1247,May,False,dialect,17.98149,105.62218,,,,0,0,0,LA VN
 maza1291,indo1319,maza1305,Mazanderani,False,language,36.241,52.3009,mzn,,,0,0,11,IR
@@ -14051,7 +14051,7 @@ mbed1238,atla1278,vend1245,Mbedzi,False,dialect,,,,,,0,0,0,
 mbed1242,afro1255,bium1274,Mbedam,False,language,10.466,13.9322,xmd,,,0,0,0,CM
 mbee1248,atla1278,embu1241,Mbeere,False,dialect,,,,,,0,0,0,
 mbee1249,atla1278,ekoi1237,Mbe,False,language,6.57067,8.82998,mfo,,,0,0,3,NG
-mbee1250,atla1278,nkam1238,Mbe',False,language,6.25838,11.0906,mtk,,,0,0,0,CM
+mbee1250,atla1278,nkam1238,Mbeꞌ,False,language,6.25838,11.0906,mtk,,,0,0,0,CM
 mbej1238,atla1278,eloy1241,Riverside Ajiri,False,dialect,,,,,,0,0,0,
 mbel1240,atla1278,dita1239,Mbelime,False,language,10.4532,0.95645,mql,,,0,0,0,BJ TG
 mbel1241,atla1278,tuki1240,Mbele-Cenga-Bonjo,False,dialect,,,,,,0,0,3,
@@ -14155,8 +14155,8 @@ medu1238,atla1278,east2862,Medumba,False,language,5.10901,10.6118,byv,,,0,0,1,CM
 meee1238,nucl1709,ekar1243,Mee,False,dialect,,,,,,0,0,0,
 meek1238,atla1278,nort3407,Meeka,False,dialect,,,,,,0,0,0,
 meem1234,sign1238,deaf1237,Meemul-Tziij,False,family,,,,,,0,2,4,
-meem1235,sign1238,meem1234,Meemul Ch'aab'al,False,language,14.83462,-91.32557,,,,0,0,0,GT
-meen1242,surm1244,past1248,Me'en,False,language,6.63207,35.6255,mym,,,0,0,2,ET
+meem1235,sign1238,meem1234,Meemul Chꞌaabꞌal,False,language,14.83462,-91.32557,,,,0,0,0,GT
+meen1242,surm1244,past1248,Meꞌen,False,language,6.63207,35.6255,mym,,,0,0,2,ET
 meew1234,nucl1709,pani1259,Mee-Wodani,False,family,,,,,,0,2,4,
 mefe1242,afro1255,mefe1243,Mefele,False,language,10.677,13.8201,mfj,,,0,0,4,CM
 mefe1243,afro1255,mata1311,Mefele-Cuvok,False,family,,,,,,0,2,4,
@@ -14306,7 +14306,7 @@ mesq1240,afro1255,ttgr1237,Mesqan,False,language,8.10617,38.3386,mvz,,,0,0,0,ET
 mess1244,indo1319,uncl1527,Messapic,False,language,40.538334,17.860344,cms,,,0,0,0,IT
 mess1247,indo1319,sici1248,Messinese,False,dialect,,,,,,0,0,0,
 mess1248,aust1307,sawa1247,Messa-Dote,False,dialect,,,,,,0,0,0,
-meta1238,atla1278,widi1234,Meta',False,language,5.88942,9.87416,mgo,,,0,0,2,CM
+meta1238,atla1278,widi1234,Metaꞌ,False,language,5.88942,9.87416,mgo,,,0,0,2,CM
 meta1239,afro1255,sout3264,Metalsa,False,dialect,,,,,,0,0,0,
 mete1238,gumu1250,mand1426,Metemma,False,dialect,,,,,,0,0,0,
 metl1237,drav1251,sout1549,Metla-Kinwat,False,dialect,,,,,,0,0,0,
@@ -14327,7 +14327,7 @@ mexi1237,sign1238,lsfi1234,Mexican Sign Language,False,language,19.75,-98.5,mfs,
 mexi1248,indo1319,amer1254,Mexican Spanish,False,dialect,,,,,,0,0,9,
 meya1236,east1459,meax1236,Meyah,False,language,-1.18016,133.618,mej,,,0,0,5,ID
 meyi1234,sino1245,khob1235,Western Kho-Bwa,False,family,,,,,,2,4,6,
-meym1234,indo1319,soii1239,Meyma'i,False,dialect,35.34,53.24,,,,0,0,0,IR
+meym1234,indo1319,soii1239,Meymaꞌi,False,dialect,35.34,53.24,,,,0,0,0,IR
 mezi1238,afro1255,muku1242,Mezimko,False,dialect,,,,,,0,0,0,
 mezo1235,otom1299,tepe1282,Mezontla Popoloca,False,language,18.1442,-97.5879,pbe,,,0,0,0,MX
 mezq1235,otom1299,nort3201,Mezquital Otomi,False,language,20.2274,-99.5564,ote,,,0,0,0,MX US
@@ -14460,7 +14460,7 @@ mike1242,afro1255,dugw1239,Mikere,False,dialect,,,,,,0,0,0,
 mike1243,aust1307,masi1268,Mikea,False,dialect,,,,,,0,0,0,
 miki1243,nakh1245,tsak1249,Mikik,False,dialect,,,,,,0,0,0,
 miki1244,pama1250,wang1290,Mikiri-nganha,False,dialect,,,,,,0,0,0,
-mikm1235,algi1248,micm1234,Mi'kmaq,False,language,46.0,-64.0,mic,,,0,0,2,CA US
+mikm1235,algi1248,micm1234,Miꞌkmaq,False,language,46.0,-64.0,mic,,,0,0,2,CA US
 miko1239,sino1245,nung1282,Miko,False,dialect,,,,,,0,0,0,
 miku1234,sino1245,konm1234,Miku,False,dialect,,,,,,0,0,0,
 mila1243,indo1319,lomb1257,Milanese,False,dialect,,,,,,0,0,0,
@@ -14668,7 +14668,7 @@ moch1258,guah1252,cuib1242,Mochuelo-Casanare-Cuiba,False,dialect,,,,,,0,0,0,
 moch1259,,,Mochica,False,language,-8.01667,-79.0,omc,,,0,0,0,PE
 mock1234,indo1319,neda1234,Mockfjärd,False,dialect,,,,,,0,0,0,
 moco1246,guai1249,qomm1235,Mocoví,False,language,-28.097,-60.4145,moc,,,0,0,0,AR
-moda1242,cent2225,gber1234,Mo'da,False,language,6.1463,29.7355,gbn,,,0,0,0,SS
+moda1242,cent2225,gber1234,Moꞌda,False,language,6.1463,29.7355,gbn,,,0,0,0,SS
 moda1243,aust1307,kaya1335,Modang-Segai,False,family,,,,,,0,2,8,
 moda1244,aust1307,moda1243,Modang,False,language,0.80793,116.573,mxd,,,0,0,6,ID
 modd1238,afro1255,tuma1260,Mod,False,dialect,,,,,,0,0,0,
@@ -14691,7 +14691,7 @@ mode1270,afro1255,sayh1236,Modern Sayhadic,False,family,,,,,,0,2,0,
 modi1234,koma1264,bilu1246,Modin,False,dialect,,,,,,0,0,0,
 modo1248,cent2225,jurm1239,Modo,False,dialect,,,,,,0,0,0,
 modo1249,nort2923,kaor1242,Modole,False,language,1.40199,127.752,mqo,,,0,0,2,ID
-moee1234,afro1255,jina1244,Mo'e,False,dialect,,,,,,0,0,0,
+moee1234,afro1255,jina1244,Moꞌe,False,dialect,,,,,,0,0,0,
 moer1240,nucl1709,kumi1249,Moere,False,language,-4.62246,145.458,mvq,,,0,0,0,PG
 moes1234,indo1319,east2814,Moesian,False,dialect,,,,,,0,0,0,
 mofu1239,aust1307,biak1248,Mofu (Biak),False,dialect,,,,,,0,0,0,
@@ -14857,7 +14857,7 @@ moom1238,atla1278,yasa1242,Mooma,False,dialect,,,,,,0,0,0,
 moon1238,afro1255,toba1280,Moonde,False,dialect,,,,,,0,0,0,
 mooo1239,atla1278,bamb1263,Moo,False,language,9.44081,11.204,gwg,,,0,0,0,NG
 moor1245,indo1319,main1285,Bökingharde,False,dialect,,,,,,0,0,2,
-moor1246,aust1307,waro1242,Mo'or,False,dialect,,,,,,0,0,0,
+moor1246,aust1307,waro1242,Moꞌor,False,dialect,,,,,,0,0,0,
 moos1236,algi1248,cree1272,Moose Cree,False,language,51.0686,-80.6912,crm,,,0,0,0,CA
 mopa1243,maya1287,yuca1252,Mopan,False,language,16.3533,-89.0673,mop,,,0,0,0,BZ GT
 mopl1237,drav1251,mala1464,Moplah,False,dialect,,,,,,0,0,0,
@@ -14914,7 +14914,7 @@ mort1238,aust1307,east2764,Mortlockese-Trukese,False,family,,,,,,0,2,5,
 moru1251,atla1278,band1342,Moruba,False,dialect,,,,,,0,0,0,
 moru1252,cent2225,cent2225,Moru-Madi,False,family,,,,,,3,10,38,
 moru1253,cent2225,moru1252,Moru,False,language,5.1232,30.3287,mgd,,,0,0,7,SS
-moru1254,cent2225,moru1253,Moruwa'di,False,dialect,,,,,,0,0,0,
+moru1254,cent2225,moru1253,Moruwaꞌdi,False,dialect,,,,,,0,0,0,
 mosa1240,sino1245,lung1253,Muishaung,False,dialect,27.0964,95.9001,,,,0,0,0,
 mose1249,,,Mosetén-Chimané,False,language,-14.64448,-67.83756,cas,,,0,0,3,BO
 mosi1246,atla1278,teke1278,Mosieno,False,dialect,,,,,,0,0,0,
@@ -15369,11 +15369,11 @@ naka1259,taik1256,saek1240,Khamkeut-Na Kadok,False,dialect,,,,,,0,0,0,
 naka1260,mani1293,nakk1234,Nakara,False,language,-12.07653,134.32729,nck,,,0,0,0,AU
 naka1261,kres1240,gbay1292,Kpara-Naka,False,dialect,,,,,,0,0,0,
 naka1262,aust1307,naka1266,Nakanai,False,language,-5.59931,150.888,nak,,,0,0,5,PG
-naka1263,aust1307,ulat1237,Naka'ela,False,language,-2.85543,128.516,nae,,,0,0,0,ID
+naka1263,aust1307,ulat1237,Nakaꞌela,False,language,-2.85543,128.516,nae,,,0,0,0,ID
 naka1264,nucl1709,boan1245,Nakama,False,language,-6.41424,146.782,nib,,,0,0,2,PG
 naka1265,nucl1709,tang1376,Nakai,False,language,-5.19377,140.512,nkj,,,0,0,0,ID
 naka1266,aust1307,will1243,Nakanai-Meramera,False,family,,,,,,0,2,6,
-naka1267,atha1245,carr1249,Nak'azdli,False,dialect,,,,,,0,0,0,
+naka1267,atha1245,carr1249,Nakꞌazdli,False,dialect,,,,,,0,0,0,
 nakc1234,sino1245,west2413,Nakchu of Hor,False,dialect,,,,,,0,0,0,
 nake1240,nucl1709,uncl1506,Nake,False,language,-5.09087,145.655,nbk,,,0,0,0,PG
 nakh1244,turk1311,sout3306,Nakhchivan,False,dialect,,,,,,0,0,0,
@@ -15496,7 +15496,7 @@ napo1243,tuca1253,west2784,Napo Tucanoan,False,family,,,,,,2,4,5,
 napu1240,aust1307,tuam1242,Napuka,False,dialect,,,,,,0,0,0,
 napu1241,aust1307,bada1260,Napu,False,language,-1.43707,120.338,npy,,,0,0,0,ID
 naqi1236,sino1245,burm1265,Na-Qiangic,False,family,,,,,,15,29,78,
-naqr1234,kxaa1236,hoaa1235,N!aqriaxe,False,dialect,,,,,,0,0,0,
+naqr1234,kxaa1236,hoaa1235,Nǃaqriaxe,False,dialect,,,,,,0,0,0,
 nara1261,atla1278,jola1263,Narang,False,dialect,,,,,,0,0,0,
 nara1262,,,Nara,False,language,15.3251,37.499,nrb,,,0,0,6,ER
 nara1263,aust1307,sout3194,Narango,False,language,-15.5259,167.047,nrg,,,0,0,0,VU
@@ -15590,7 +15590,7 @@ ncan1246,atla1278,noon1245,Ncane-Cung,False,family,,,,,,1,3,2,
 ncha1238,atla1278,ndak1242,Ncha,False,dialect,,,,,,0,0,0,
 nchu1238,atla1278,nchu1239,Nchumbulu,False,language,7.6302,-1.30881,nlu,,,0,0,0,GH
 nchu1239,atla1278,rive1262,Nchumbulu-Dwang,False,family,,,,,,0,2,3,
-ndaa1238,mand1469,gagu1242,N'da,False,dialect,,,,,,0,0,0,
+ndaa1238,mand1469,gagu1242,Nꞌda,False,dialect,,,,,,0,0,0,
 ndai1238,atla1278,dama1266,Ndai,False,language,8.09039,14.2888,gke,,,0,0,0,CM
 ndak1241,atla1278,ndak1244,Ndaka,False,language,1.53341,27.9693,ndk,,,0,0,0,CD
 ndak1242,atla1278,kwaj1242,Ndaktup,False,dialect,6.7,11.03,ncp,,,0,0,2,CM NG
@@ -15603,7 +15603,7 @@ ndam1252,afro1255,ndam1251,Ndam Dik,False,dialect,,,,,,0,0,0,
 ndam1253,afro1255,ndam1251,Ndam-Ndam,False,dialect,,,,,,0,0,0,
 ndam1254,atla1278,sake1249,Ndambomo,False,language,-0.82,12.77,nxo,,,0,0,0,GA
 ndam1255,afro1255,east2643,Ndam-Tumak,False,family,,,,,,0,3,4,
-ndan1241,atla1278,east2862,Nda'nda',False,language,5.14715,10.3942,nnz,,,0,0,2,CM
+ndan1241,atla1278,east2862,Ndaꞌndaꞌ,False,language,5.14715,10.3942,nnz,,,0,0,2,CM
 ndan1242,heib1242,shwa1239,Ndano,False,dialect,,,,,,0,0,0,
 ndas1238,atla1278,ndas1240,Ndasa,False,language,-2.449015,13.369465,nda,,,0,0,0,CG GA
 ndas1239,atla1278,grea1288,Samayic,False,family,,,,,,1,4,0,
@@ -15658,8 +15658,8 @@ ndon1254,atla1278,kwam1257,Ndonga,False,language,-17.22,17.35,ndo,,,0,0,2,AO NA
 ndon1255,atla1278,ukwu1241,Ndoni,False,dialect,,,,,,0,0,0,
 ndoo1241,atla1278,mamb1309,Ndoola,False,language,7.2884,11.3096,ndr,,,0,0,0,CM NG
 ndoo1242,cent2225,memb1239,Ndo,False,language,2.68546,30.5652,ndp,,,0,0,3,CD UG
-ndra1238,ramu1234,raoo1244,Ndramini'o,False,dialect,,,,,,0,0,0,
-ndra1239,pama1250,tyan1235,Ndra'ngith,False,dialect,,,dgt,,,0,0,0,AU
+ndra1238,ramu1234,raoo1244,Ndraminiꞌo,False,dialect,,,,,,0,0,0,
+ndra1239,pama1250,tyan1235,Ndraꞌngith,False,dialect,,,dgt,,,0,0,0,AU
 ndre1238,sino1245,loth1237,Ndreng,False,dialect,,,,,,0,0,0,
 ndre1239,afro1255,vame1236,Ndreme,False,dialect,,,,,,0,0,0,
 ndru1234,cent2225,bale1255,Ndrulo,False,language,2.250128,30.870201,dno,,,0,0,2,CD
@@ -15794,7 +15794,7 @@ ngad1257,pama1250,unun9967,Ngadjuri,False,language,-32.930160660336,139.08123163
 ngad1258,pama1250,mirn1243,Ngadjunmaya,False,language,-32.02447,124.46601,nju,,,0,0,0,AU
 ngad1259,pama1250,wika1238,Ngadanja,False,dialect,,,,,,0,0,0,
 ngad1260,pama1250,dyir1250,Ngadjan,False,dialect,,,,,,0,0,0,
-ngad1261,aust1307,ngad1267,Ngad'a,False,language,-8.79508,120.976,nxg,,,0,0,4,ID
+ngad1261,aust1307,ngad1267,Ngadꞌa,False,language,-8.79508,120.976,nxg,,,0,0,4,ID
 ngad1265,aust1307,flor1241,Central Flores-Paluqe,False,family,,,,,,5,8,13,
 ngad1266,aust1307,ngad1265,Central Flores,False,family,,,,,,4,7,13,
 ngad1267,aust1307,ngad1266,Ngada,False,family,,,,,,0,3,6,
@@ -15841,7 +15841,7 @@ ngan1308,atla1278,ngan1302,Ngando (Democratic Republic of Congo),False,dialect,,
 ngan1309,pama1250,twee1234,Nganduwal,False,dialect,,,,,,0,0,0,
 ngao1243,atla1278,adam1253,Ngaondéré,False,dialect,,,,,,0,0,0,
 ngao1244,atla1278,band1345,Ngao,False,dialect,,,,,,0,0,0,
-ngao1245,aust1307,nage1237,Nga'o,False,dialect,,,,,,0,0,0,
+ngao1245,aust1307,nage1237,Ngaꞌo,False,dialect,,,,,,0,0,0,
 ngap1238,atla1278,band1344,Ngapo,False,dialect,,,,,,0,0,0,
 ngar1235,pama1250,ngum1257,Ngarinman,False,language,-15.4661,130.651,nbj,,,0,0,3,AU
 ngar1283,mirn1241,guda1245,Ngarnka,False,language,-17.42,134.73,nji,,,0,0,0,AU
@@ -15874,7 +15874,7 @@ ngaz1238,atla1278,como1260,Ngazidja Comorian,False,language,-11.6129,43.36,zdj,,
 ngaz1239,saha1256,cent2050,Ngazar,False,dialect,,,,,,0,0,0,
 ngba1279,atla1278,diii1241,Ngbang,False,dialect,,,,,,0,0,0,
 ngba1280,atla1278,ngba1290,Ngbandic,False,family,,,,,,2,8,0,
-ngba1284,atla1278,bwak1244,Ngbaka Ma'bo,False,language,4.0,18.12,nbm,,,0,0,0,CD CF CG
+ngba1284,atla1278,bwak1244,Ngbaka Maꞌbo,False,language,4.0,18.12,nbm,,,0,0,0,CD CF CG
 ngba1285,atla1278,manz1241,Ngbaka Minagende,False,language,2.98887,18.994,nga,,,0,0,0,CD CF CG
 ngba1286,atla1278,manz1242,Ngbaka-Manza-Ali,False,family,,,,,,0,2,0,
 ngba1287,atla1278,ngba1286,Ngbaka Manza,False,language,5.30167,18.4119,ngg,,,0,0,0,CF
@@ -15892,7 +15892,7 @@ ngee1239,atla1278,ibal1241,Ngee,False,dialect,,,,,,0,0,0,
 ngee1240,atla1278,tien1242,Ngee-Ntaana,False,dialect,,,,,,0,0,0,
 ngel1238,atla1278,late1250,Ngelima,False,language,1.81314,24.8754,agh,,,0,0,4,CD
 ngem1252,sino1245,hahc1234,Ngaimong,False,dialect,26.8584,95.7861,,,,0,0,0,IN MM
-ngem1253,atla1278,ghom1247,Ngemba (Ghomala'),False,dialect,,,,,,0,0,0,
+ngem1253,atla1278,ghom1247,Ngemba (Ghomalaꞌ),False,dialect,,,,,,0,0,0,
 ngem1254,atla1278,sout3350,Ngembaic,False,family,,,,,,2,8,18,
 ngem1255,atla1278,mank1258,Ngemba,False,language,5.97864,10.1469,nge,,,0,0,10,CM
 ngem1256,heib1242,koal1240,Ngemere,False,dialect,,,,,,0,0,0,
@@ -15939,7 +15939,7 @@ ngka1235,more1255,ngka1236,Ngkontar Ngkolmpu,False,language,-8.87044,140.818,kcd
 ngka1236,more1255,ngkr1234,Ngkantr,False,family,,,,,,0,2,0,
 ngka1237,more1255,smar1235,Ngkantia,False,dialect,,,,,,0,0,0,
 ngka1238,atla1278,lamn1239,Ngkat,False,dialect,,,,,,0,0,0,
-ngke1238,tuuu1241,nngg1234,||Ng!ke,False,dialect,,,,,,0,0,0,
+ngke1238,tuuu1241,nngg1234,||Ngǃke,False,dialect,,,,,,0,0,0,
 ngko1236,pama1250,nort2758,Ngkoth,False,language,-12.740575,141.886762,,,,0,0,0,AU
 ngkr1234,more1255,kanu1280,Ngkrn-Ngkantr,False,family,,,,,,1,3,0,
 ngkr1235,more1255,ngkr1237,Ngkrnc of Rawa Biru,False,dialect,,,,,,0,0,0,
@@ -15994,13 +15994,13 @@ ngul1246,atla1278,zigu1243,Ngulu,False,language,-5.79734,37.6823,ngp,,,0,0,0,TZ
 ngul1247,atla1278,west2968,Ngwii,False,language,-4.09816,19.5129,nlo,,,0,0,4,CD
 ngum1251,pama1250,dese1234,Ngumpin-Yapa,False,family,,,,,,5,8,21,
 ngum1253,nyul1248,unun9988,Ngumbarl,False,language,-17.491239,122.230025,xnm,,,0,0,0,AU
-ngum1254,atla1278,bemb1257,Ng'umbo,False,dialect,,,,,,0,0,0,
+ngum1254,atla1278,bemb1257,Ngꞌumbo,False,dialect,,,,,,0,0,0,
 ngum1255,atla1278,yasa1241,Ngumbi,False,language,1.72096,9.73613,nui,,,0,0,3,GQ
 ngum1256,pama1250,ngum1251,Ngumpin,False,family,,,,,,3,6,14,
 ngum1257,pama1250,guri1250,Ngumpit,False,family,,,,,,0,2,5,
 ngun1266,atla1278,ngun1281,Ngundu,False,language,4.88628,20.4218,nue,,,0,0,0,CF
 ngun1267,atla1278,nucl1827,Southern Ndebele-Lowland,False,family,,,,,,1,4,21,
-ngun1268,atla1278,mach1266,Ng'uni,False,dialect,,,,,,0,0,0,
+ngun1268,atla1278,mach1266,Ngꞌuni,False,dialect,,,,,,0,0,0,
 ngun1270,atla1278,bwam1249,Ngundi,False,language,3.02108,16.21457,ndn,,,0,0,0,CF CG CM
 ngun1271,atla1278,luse1252,Ngundi (DRC),False,dialect,,,,,,0,0,0,
 ngun1272,atla1278,ngun1278,Ngungwel,False,language,-1.82055,15.6218,ngz,,,0,0,2,CG
@@ -16142,7 +16142,7 @@ nira1238,atla1278,gbir1241,Niragu,False,dialect,,,,,,0,0,0,
 nirm1237,drav1251,utno1237,Nirmal,False,dialect,,,,,,0,0,0,
 nisa1239,geel1240,geel1240,Nisa-Anasi,False,language,-1.95386,137.6,njs,,,0,0,0,ID
 nise1244,maid1262,maid1262,Nisenan,False,language,38.047,-120.393,nsz,,,0,0,0,US
-nisg1240,tsim1258,nish1242,Nisga'a,False,language,55.199,-129.192,ncg,,,0,0,0,CA
+nisg1240,tsim1258,nish1242,Nisgaꞌa,False,language,55.199,-129.192,ncg,,,0,0,0,CA
 nish1241,sino1245,nyis1236,Nishang,False,dialect,,,,,,0,0,0,
 nish1242,tsim1258,tsim1258,Nishga-Gitxsan,False,family,,,,,,0,2,2,
 nisi1238,sino1245,unun9957,Nisi (China),False,language,23.418,104.85,yso,,,0,0,0,CN
@@ -16158,7 +16158,7 @@ niti1248,krua1234,nort2811,Nitiabo,False,dialect,,,,,,0,0,0,
 niti1249,aust1307,niti1250,Nitita,False,language,-16.2,167.46,,,,0,0,0,VU
 niti1250,aust1307,uncl1500,Nititi-Vivti,False,family,,,,,,0,2,0,
 nitu1238,sino1245,munc1235,Nitu,False,dialect,,,,,,0,0,0,
-niua1240,aust1307,east2758,Niuafo'ou,False,language,-15.6014,-175.64,num,,,0,0,0,TO
+niua1240,aust1307,east2758,Niuafoꞌou,False,language,-15.6014,-175.64,num,,,0,0,0,TO
 niua1241,aust1307,east2758,Niuatoputapu,False,language,-15.957686,-173.778333,nkp,,,0,0,0,TO
 niue1239,aust1307,tong1324,Niuean,False,language,-19.06,-169.86,niu,,,0,0,0,CK NU NZ TO
 niva1238,mata1289,mata1290,Nivaclé,False,language,-22.8557,-61.7606,cag,,,0,0,2,AR BO PY
@@ -16196,7 +16196,7 @@ njin1242,atla1278,teke1275,Lateghe-Nord,False,dialect,,,,,,0,0,0,
 njon1238,atla1278,ngem1255,Njong,False,dialect,,,,,,0,0,0,
 njum1237,aust1307,lawa1257,Njumit,False,dialect,,,,,,0,0,0,
 njye1238,atla1278,njem1234,Njyem,False,language,2.30483,14.1175,njy,,,0,0,0,CG CM
-nkaa1238,atla1278,cent2037,Nka',False,dialect,,,,,,0,0,0,
+nkaa1238,atla1278,cent2037,Nkaꞌ,False,dialect,,,,,,0,0,0,
 nkaf1238,afro1255,higi1241,Nkafa-Kirya-Bana,False,family,,,,,,1,3,2,
 nkam1238,atla1278,mbam1249,Nkambe,False,family,,,,,,2,7,22,
 nkam1239,atla1278,nkon1245,Nkami,False,language,7.0556,-0.0372,nkq,,,0,0,0,GH
@@ -16207,7 +16207,7 @@ nkem1243,atla1278,nkem1242,Nkem,False,dialect,,,,,,0,0,0,
 nket1234,atla1278,tien1242,Nkete,False,dialect,,,,,,0,0,0,
 nkhu1238,atla1278,nyan1320,Nkhumbi,False,language,-15.4126,13.9704,khu,,,0,0,7,AO NA
 nkim1238,atla1278,mbol1247,Nkimbe,False,dialect,,,,,,0,0,0,
-nkoa1234,arti1236,arti1236,N'Ko,False,language,,,nqo,,,0,0,0,BF CI GM GN GW LR ML SL SN
+nkoa1234,arti1236,arti1236,NꞌKo,False,language,,,nqo,,,0,0,0,BF CI GM GN GW LR ML SL SN
 nkoj1238,atla1278,mwan1247,Nkojo,False,dialect,,,,,,0,0,0,
 nkol1238,atla1278,ntom1248,Nkole,False,dialect,,,,,,0,0,0,
 nkom1238,atla1278,myen1241,Nkomi,False,dialect,,,,,,0,0,0,
@@ -16430,7 +16430,7 @@ nort2701,drav1251,nort3279,Kasaba,False,dialect,,,,,,0,0,0,
 nort2702,drav1251,nort3258,Northern Gondi,False,language,18.1632,81.3842,gno,,,0,0,8,IN
 nort2703,sino1245,kare1337,Northern Karen,False,family,,,,,,0,4,0,
 nort2704,sino1245,pwoo1239,Northern Pwo Karen,False,family,,,,,,0,2,3,
-nort2705,sino1245,paok1235,Northern Pa'o,False,dialect,,,,,,0,0,0,
+nort2705,sino1245,paok1235,Northern Paꞌo,False,dialect,,,,,,0,0,0,
 nort2706,sino1245,baim1244,Northern Baima,False,dialect,,,,,,0,0,0,
 nort2707,sino1245,kyeg1234,Nangchen Tibetan,False,dialect,,,,,,0,0,0,
 nort2708,sino1245,dzon1239,Northern Thimphu,False,dialect,,,,,,0,0,0,
@@ -16514,7 +16514,7 @@ nort2802,atla1278,bomi1238,Northern Bomitaba,False,dialect,,,,,,0,0,0,
 nort2803,atla1278,akoo1248,Northern Bakossi,False,dialect,,,,,,0,0,0,
 nort2804,atla1278,bube1242,North Bobe,False,dialect,,,,,,0,0,0,
 nort2805,atla1278,dugu1249,Northeast Duguri,False,dialect,,,,,,0,0,0,
-nort2806,atla1278,fefe1239,North Fe'Fe',False,dialect,,,,,,0,0,5,
+nort2806,atla1278,fefe1239,North FeꞌFeꞌ,False,dialect,,,,,,0,0,5,
 nort2807,atla1278,west2482,Northern Etung,False,dialect,,,,,,0,0,0,
 nort2808,atla1278,nugu1242,Northern Gunu,False,dialect,,,,,,0,0,0,
 nort2810,krua1234,nort3193,Northern Grebo,False,language,5.17103,-8.1409,gbo,,,0,0,14,CI LR
@@ -16626,7 +16626,7 @@ nort2933,,,North Bougainville,False,family,,,,,,1,4,3,
 nort2934,japo1237,toho1244,Northern Tōhoku,False,dialect,,,,,,0,0,5,
 nort2935,japo1237,oshi1235,Northern Amami-Oshima,False,language,28.20991,129.45346,ryn,,,0,0,2,JP
 nort2936,pauw1244,kark1258,North Central Yuri,False,dialect,,,,,,0,0,0,
-nort2937,yoku1255,vall1251,Northern Hill/Valley Yokuts,False,dialect,,,,,,0,0,0,
+nort2937,yoku1255,vall1251,Northern HillǀValley Yokuts,False,dialect,,,,,,0,0,0,
 nort2938,haid1248,haid1248,Northern Haida,False,language,54.004532,-132.079257,hdn,,,0,0,0,CA US
 nort2939,mixe1284,midl1241,North Central Mixe,False,language,17.17947,-95.70318,neq,,,0,0,7,MX
 nort2941,atha1245,tutc1236,Northern Tutchone,False,language,62.8235,-136.644,ttm,,,0,0,0,CA
@@ -16991,7 +16991,7 @@ nsit1238,atla1278,ibib1240,Nsit,False,dialect,,,,,,0,0,0,
 nson1238,atla1278,mbun1247,Nsongo,False,language,-10.5166,16.7348,nsx,,,0,0,0,AO
 nson1239,atla1278,klce1234,Nsong-Mpiin-Ngong,False,family,,,,,,0,2,2,
 nson1240,atla1278,song1299,Nsong,False,dialect,,,,,,0,0,0,
-nsoo1234,atla1278,lamn1239,Nso',False,dialect,,,,,,0,0,0,
+nsoo1234,atla1278,lamn1239,Nsoꞌ,False,dialect,,,,,,0,0,0,
 nsuk1238,atla1278,nucl1417,Nsuka,False,dialect,,,,,,0,0,0,
 nswa1234,atla1278,bass1260,Nswase,False,dialect,,,,,,0,0,0,
 ntaa1241,atla1278,ntch1242,Ntaapum,False,dialect,,,,,,0,0,0,
@@ -17010,7 +17010,7 @@ ntom1248,atla1278,boli1263,Ntomba,False,language,-1.99062,18.265,nto,,,0,0,7,CD
 ntom1249,atla1278,mong1338,Ntomba-Inongo,False,dialect,,,,,,0,0,0,
 ntom1250,atla1278,mong1338,Ntomba-Bikoro,False,dialect,,,,,,0,0,0,
 nton1238,atla1278,yamb1251,Ntong,False,dialect,,,,,,0,0,0,
-ntrw1234,pama1250,awng1245,Ndrwa'angathi,False,dialect,,,,,,0,0,0,
+ntrw1234,pama1250,awng1245,Ndrwaꞌangathi,False,dialect,,,,,,0,0,0,
 ntsa1234,atla1278,kwil1239,Ntsambaan,False,dialect,,,,,,0,0,0,
 ntsi1238,atla1278,mfin1238,Ntsiam,False,dialect,,,,,,0,0,0,
 ntsw1238,atla1278,mfin1238,Ntswar,False,dialect,,,,,,0,0,0,
@@ -17157,7 +17157,7 @@ nucl1407,atla1278,byep1241,Byep,False,dialect,,,,,,0,0,0,
 nucl1408,atla1278,ukhw1241,Nuclear Ukhwejo,False,dialect,,,,,,0,0,0,
 nucl1410,atla1278,befa1242,Befang,False,dialect,,,,,,0,0,0,
 nucl1411,atla1278,yemb1246,North Yemba,False,dialect,,,,,,0,0,6,
-nucl1412,atla1278,kwaa1265,Nuclear Kwa',False,dialect,,,,,,0,0,0,
+nucl1412,atla1278,kwaa1265,Nuclear Kwaꞌ,False,dialect,,,,,,0,0,0,
 nucl1413,atla1278,bafu1246,Central Bafut,False,dialect,,,,,,0,0,0,
 nucl1414,atla1278,ngwo1241,Nuclear Ngwo,False,dialect,,,,,,0,0,0,
 nucl1415,atla1278,ncan1245,Ncane,False,dialect,,,,,,0,0,0,
@@ -17206,7 +17206,7 @@ nucl1459,more1255,namb1293,Nuclear Nambo,False,dialect,,,,,,0,0,0,
 nucl1460,aust1307,madu1247,Madurese,False,language,-7.0,113.0,mad,,,0,0,6,ID
 nucl1461,aust1307,kend1254,Nuclear Kendayan,False,dialect,,,,,,0,0,0,
 nucl1464,aust1307,nias1242,Nias Utara,False,dialect,,,,,,0,0,0,
-nucl1465,aust1307,maya1282,Nuclear Ma'ya,False,dialect,,,,,,0,0,0,
+nucl1465,aust1307,maya1282,Nuclear Maꞌya,False,dialect,,,,,,0,0,0,
 nucl1466,aust1307,amba1265,Nuclear Ambai,False,dialect,,,,,,0,0,0,
 nucl1467,aust1307,sawa1247,Nuclear Sawai,False,dialect,,,,,,0,0,0,
 nucl1468,aust1307,east2440,Nuclear East Makian,False,dialect,,,,,,0,0,0,
@@ -17217,7 +17217,7 @@ nucl1472,aust1307,leng1259,Nuclear Lengo,False,dialect,,,,,,0,0,0,
 nucl1473,aust1307,aros1241,Nuclear Arosi,False,dialect,,,,,,0,0,0,
 nucl1474,aust1307,faga1239,Nuclear Fagani,False,dialect,,,,,,0,0,0,
 nucl1475,aust1307,baur1252,Nuclear Bauro,False,dialect,,,,,,0,0,0,
-nucl1476,aust1307,area1240,Nuclear 'Are'are,False,dialect,,,,,,0,0,0,
+nucl1476,aust1307,area1240,Nuclear ꞌAreꞌare,False,dialect,,,,,,0,0,0,
 nucl1477,aust1307,lauu1247,Nuclear Lau,False,dialect,,,,,,0,0,0,
 nucl1478,aust1307,pulu1242,Nuclear Puluwatese,False,dialect,,,,,,0,0,0,
 nucl1479,aust1307,wole1240,Nuclear Woleaian,False,dialect,,,,,,0,0,0,
@@ -17299,7 +17299,7 @@ nucl1560,aust1307,long1406,Nuclear Long Wat,False,dialect,,,,,,0,0,0,
 nucl1561,aust1307,lela1246,Nuclear Lelak,False,dialect,,,,,,0,0,0,
 nucl1562,aust1307,naro1251,Nuclear Narom,False,dialect,,,,,,0,0,0,
 nucl1563,aust1307,rung1259,Nuclear Rungus,False,dialect,,,,,,0,0,0,
-nucl1564,aust1307,idaa1241,Nuclear Ida'an,False,dialect,,,,,,0,0,0,
+nucl1564,aust1307,idaa1241,Nuclear Idaꞌan,False,dialect,,,,,,0,0,0,
 nucl1565,aust1307,cham1312,Nuclear Chamorro,False,dialect,,,,,,0,0,0,
 nucl1566,aust1307,camp1262,Nuclear Campalagian,False,dialect,,,,,,0,0,0,
 nucl1567,aust1307,mamu1255,Nuclear Mamuju,False,dialect,,,,,,0,0,0,
@@ -17406,7 +17406,7 @@ nucl1679,afro1255,mefe1242,Nuclear Mefele,False,dialect,,,,,,0,0,0,
 nucl1680,afro1255,glav1244,Nuclear Glavda,False,dialect,,,,,,0,0,0,
 nucl1682,afro1255,wand1278,Nuclear Wandala,False,dialect,,,,,,0,0,0,
 nucl1683,afro1255,daba1262,Daba,False,language,10.3521,13.6318,dbq,,,0,0,2,CM NG
-nucl1684,afro1255,gaan1243,Nuclear Ga'anda,False,dialect,,,,,,0,0,0,
+nucl1684,afro1255,gaan1243,Nuclear Gaꞌanda,False,dialect,,,,,,0,0,0,
 nucl1685,afro1255,psik1239,Nuclear Psikye,False,dialect,,,,,,0,0,0,
 nucl1686,afro1255,budu1265,Nuclear Buduma,False,dialect,,,,,,0,0,0,
 nucl1687,afro1255,maje1243,Nuclear Majera,False,dialect,,,,,,0,0,0,
@@ -17501,7 +17501,7 @@ nucl1796,nilo1247,bari1283,Nuclear Barian,False,family,,,,,,0,2,5,
 nucl1797,atla1278,band1341,Nuclear Bandaic,False,family,,,,,,7,16,50,
 nucl1798,sali1255,till1254,Nuclear Tillamook,False,dialect,,,,,,0,0,0,
 nucl1799,aust1307,sout3346,Nuclear South West-Central Malagasic,False,family,,,,,,3,5,5,
-nucl1800,chon1288,onaa1245,Nuclear Selk'nam,False,dialect,,,,,,0,0,3,
+nucl1800,chon1288,onaa1245,Nuclear Selkꞌnam,False,dialect,,,,,,0,0,3,
 nucl1801,atla1278,bend1256,Nuclear Bendic,False,family,,,,,,2,8,29,
 nucl1802,atla1278,mbam1252,Nuclear Mbam,False,family,,,,,,9,13,26,
 nucl1803,atla1278,kele1262,Nuclear Ngomic,False,family,,,,,,2,6,2,
@@ -17509,7 +17509,7 @@ nucl1804,atla1278,kiko1235,Nuclear KLC,False,family,,,,,,19,24,53,
 nucl1805,indo1319,bush1252,Nuclear Bushehri,False,dialect,,,,,,0,0,0,
 nucl1806,aust1307,mala1538,Nuclear Malayic,False,family,,,,,,21,47,124,
 nucl1809,atla1278,bero1242,Nuclear Berom,False,dialect,,,,,,0,0,6,
-nucl1810,aust1307,saba1265,Nuclear Sa'ban,False,dialect,,,,,,0,0,0,
+nucl1810,aust1307,saba1265,Nuclear Saꞌban,False,dialect,,,,,,0,0,0,
 nucl1811,sino1245,mran1234,Nuclear Mranmaic,False,family,,,,,,1,5,6,
 nucl1812,aust1307,uppe1480,Nuclear Musi,False,dialect,,,,,,0,0,3,
 nucl1813,aust1307,pane1234,Nuclear Penesak,False,dialect,,,,,,0,0,0,
@@ -17607,7 +17607,7 @@ nunl1238,chuk1271,chuk1273,Nunligranskij,False,dialect,,,,,,0,0,0,
 nunm1234,atla1278,mbam1253,Nun MCNB,False,family,,,,,,0,4,0,
 nunu1247,hmon1336,buna1273,Nunu,False,dialect,,,,,,0,0,0,
 nunu1249,atla1278,kase1253,Nunuma,False,dialect,,,,,,0,0,0,
-nunu1251,aust1307,saru1242,Nunu',False,dialect,,,,,,0,0,0,
+nunu1251,aust1307,saru1242,Nunuꞌ,False,dialect,,,,,,0,0,0,
 nunu1252,aust1307,mala1545,Nunusaku,False,family,,,,,,24,32,54,
 nuor1238,indo1319,logu1236,Nuorese,False,dialect,,,,,,0,0,0,
 nupa1238,aust1307,pile1238,Nupani,False,dialect,,,,,,0,0,0,
@@ -17636,7 +17636,7 @@ nuya1234,atla1278,elip1238,Nuyambassa,False,dialect,,,,,,0,0,0,
 nuyo1238,otom1299,sout3000,Nuyoo,False,dialect,17.0147,-97.76674,,,,0,0,0,
 nvha1237,aust1307,sout2869,Nvhal,False,dialect,,,,,,0,0,0,
 nwab1239,mand1469,sout3140,Nwa-Ben,False,family,,,,,,4,6,6,
-nwal1238,atla1278,tson1249,N'walungu,False,dialect,,,,,,0,0,0,
+nwal1238,atla1278,tson1249,Nꞌwalungu,False,dialect,,,,,,0,0,0,
 nwes1238,atla1278,bemb1257,Nwesi,False,dialect,,,,,,0,0,0,
 nyaa1241,atla1278,kpug1234,Nyaaja,False,dialect,,,,,,0,0,0,
 nyaa1242,atla1278,kuny1238,Nyaanga,False,dialect,,,,,,0,0,0,
@@ -17693,7 +17693,7 @@ nyan1309,atla1278,ndum1239,Nyani,False,dialect,,,,,,0,0,0,
 nyan1310,atla1278,kwan1276,Nyandung,False,dialect,,,,,,0,0,0,
 nyan1311,atla1278,kwan1276,Nyanjang,False,dialect,6.6346,11.67572,,,,0,0,0,CM
 nyan1312,krua1234,gbol1235,Nyanoun,False,dialect,,,,,,0,0,0,
-nyan1313,kuli1252,ngan1305,Nyang'i,False,language,3.4997,33.73651,nyp,,,0,0,0,UG
+nyan1313,kuli1252,ngan1305,Nyangꞌi,False,language,3.4997,33.73651,nyp,,,0,0,0,UG
 nyan1314,nilo1247,bari1284,Nyangbara,False,dialect,,,,,,0,0,0,
 nyan1315,nilo1247,turk1307,Nyangatom,False,language,5.39809,35.6232,nnj,,,0,0,0,ET SS
 nyan1316,atla1278,avat1243,Nyangbo-Tafi,False,family,,,,,,0,2,0,
@@ -17820,7 +17820,7 @@ occi1240,indo1319,sout3183,Occitanic,False,family,,,,,,0,3,30,
 occi1241,book1242,book1242,Occidental,True,language,,,occ,,,0,0,0,
 ocea1241,aust1307,east2712,Oceanic,False,family,,,,,,299,523,629,
 oche1235,indo1319,kols1241,West Ripuarian,False,dialect,,,,,,0,0,0,
-ochi1235,atla1278,obul1239,O'chi'chi',False,dialect,4.941269,7.138435,xoc,,,0,0,0,NG
+ochi1235,atla1278,obul1239,Oꞌchiꞌchiꞌ,False,dialect,4.941269,7.138435,xoc,,,0,0,0,NG
 ocot1241,mixe1284,juqu1238,Ocotepec Mixe,False,dialect,,,,,,0,0,0,
 ocot1242,mixe1284,rayo1235,Ocotepec-Tapalapa,False,dialect,,,,,,0,0,0,
 ocot1243,otom1299,west2824,Ocotepec Mixtec,False,language,17.144191,-97.763219,mie,,,0,0,1,MX
@@ -17834,7 +17834,7 @@ odio1237,aust1307,bant1288,Odionganon,False,dialect,,,,,,0,0,0,
 odoo1238,east2433,east2433,Odoodee,False,language,-6.59222,142.486,kkc,,,0,0,0,PG
 odua1238,atla1278,abua1243,Odual,False,language,4.83273,6.41493,odu,,,0,0,2,NG
 odut1238,book1242,book1242,Odut,True,language,5.20317,8.27253,oda,,,0,0,0,NG
-oduu1239,aust1305,pram1235,O'du,False,language,19.3497,104.106,tyh,,,0,0,0,LA VN
+oduu1239,aust1305,pram1235,Oꞌdu,False,language,19.3497,104.106,tyh,,,0,0,0,LA VN
 oena1237,aust1307,dela1251,Oenale,False,dialect,,,,,,0,0,0,
 oepa1237,aust1307,ring1244,Oe Pao,False,dialect,,,,,,0,0,0,
 ofag1238,atla1278,isok1239,Ofagbe,False,dialect,,,,,,0,0,0,
@@ -17899,7 +17899,7 @@ okan1243,sali1255,okan1244,Okanagan,False,language,49.2745,-119.294,oka,,,0,0,4,
 okan1244,sali1255,sout1559,Okanaganic,False,family,,,,,,1,3,6,
 okay1237,japo1237,chug1253,Okayama,False,dialect,,,,,,0,0,0,
 okba1239,nucl1709,kete1254,Okbap,False,dialect,,,,,,0,0,0,
-okeb1238,cent2225,ndoo1242,Oke'bu,False,dialect,,,,,,0,0,0,
+okeb1238,cent2225,ndoo1242,Okeꞌbu,False,dialect,,,,,,0,0,0,
 oken1238,atla1278,ebir1243,Okene,False,dialect,,,,,,0,0,0,
 okho1239,tung1282,east2811,Okhotsk,False,dialect,,,,,,0,0,0,
 okie1245,nilo1247,okie1247,Okiek,False,language,-2.78048,36.5977,oki,,,0,0,3,KE TZ
@@ -17951,7 +17951,7 @@ okwa1236,uncl1493,uncl1493,Okwa,False,language,,,,,,0,0,0,GH
 olaa1239,tung1282,east2811,Ola,False,dialect,,,,,,0,0,0,
 olal1237,aust1307,nort2839,Olal,False,dialect,,,,,,0,0,0,
 olam1240,surm1244,murl1244,Olam,False,dialect,,,,,,0,0,0,
-olda1245,afro1255,aram1259,Old Aramaic-Sam'alian,False,language,32.84,37.0,oar,,,0,0,2,SY
+olda1245,afro1255,aram1259,Old Aramaic-Samꞌalian,False,language,32.84,37.0,oar,,,0,0,2,SY
 olda1246,afro1255,olda1245,Old Aramaic (up to 700 BCE),False,dialect,,,,,,0,0,0,
 olda1247,afro1255,akka1240,Old Akkadian,False,dialect,,,,,,0,0,0,
 olda1248,afro1255,assy1242,Old Assyrian,False,dialect,,,,,,0,0,0,
@@ -18028,7 +18028,7 @@ oldw1241,indo1319,oldw1239,Old Welsh,False,dialect,,,,,,0,0,0,
 oldy1234,atha1245,chip1261,Old Yellowknife Chipewyan,False,dialect,,,,,,0,0,0,
 oldz1234,indo1319,lowe1388,Old Zipser,False,dialect,,,,,,0,0,0,
 olee1238,atla1278,isok1239,Ole,False,dialect,,,,,,0,0,0,
-olee1239,sino1245,olek1239,'Ole,False,dialect,,,,,,0,0,0,
+olee1239,sino1245,olek1239,ꞌOle,False,dialect,,,,,,0,0,0,
 olek1239,sino1245,sino1245,Olekha,False,language,27.2079,90.5546,ole,,,0,0,4,BT
 oler1234,atla1278,uppe1457,Oleran,False,family,,,,,,0,2,0,
 olib1234,atla1278,dual1244,Oli-Bidiman,False,language,4.33,9.8,,,,0,0,0,CM
@@ -18050,7 +18050,7 @@ oloo1241,nucl1708,oloe1234,Olo,False,language,-3.2929,142.131,ong,,,0,0,2,PG
 olot1240,mixe1284,nort2939,Olotepec,False,dialect,,,,,,0,0,0,
 olra1234,aust1307,koro1308,Olrat,False,dialect,-14.313,167.433,olr,,,0,0,0,VU
 olte1239,indo1319,less1244,Oltenia-Lesser Wallachia,False,dialect,,,,,,0,0,0,
-olub1238,cent2225,sout2827,Olu'bo,False,language,4.6242,31.9103,lul,,,0,0,0,SS
+olub1238,cent2225,sout2827,Oluꞌbo,False,language,4.6242,31.9103,lul,,,0,0,0,SS
 olul1245,atla1278,east2400,Olulumo-Ikom,False,language,5.97709,8.56546,iko,,,0,0,3,NG
 olul1246,atla1278,olul1245,Olulumo,False,dialect,,,,,,0,0,0,
 olul1247,atla1278,ipul1238,Olulu,False,dialect,,,,,,0,0,0,
@@ -18087,7 +18087,7 @@ omut1237,japo1237,chik1252,Ōmuta-ben,False,dialect,,,,,,0,0,0,
 omva1238,atla1278,ewon1239,Omvang,False,dialect,,,,,,0,0,0,
 omwu1238,nucl1709,sout2943,Omwunra-Toqura,False,dialect,,,,,,0,0,0,
 onaa1244,nucl1709,sian1257,Ona (Papua New Guinea),False,dialect,,,,,,0,0,0,
-onaa1245,chon1288,insu1253,Selk'nam,False,language,-54.0,-68.5,ona,,,0,0,5,AR
+onaa1245,chon1288,insu1253,Selkꞌnam,False,language,-54.0,-68.5,ona,,,0,0,5,AR
 ondo1239,atla1278,akon1238,Ondo,False,dialect,,,,,,0,0,0,
 onee1244,atla1278,yasa1242,One (Yasa),False,dialect,,,,,,0,0,0,
 onee1245,nucl1708,west2580,One,False,family,,,,,,1,6,3,
@@ -18097,7 +18097,7 @@ onga1238,nilo1247,lotu1248,Ongamo-Maa,False,family,,,,,,1,3,15,
 onge1236,jara1244,jara1244,Önge,False,language,10.6926,92.4707,oon,,,0,0,0,IN
 ongg1239,aust1305,ongt1234,Ong-Ir,False,language,15.1225,106.001,oog,,,0,0,0,LA
 ongk1234,tung1282,solo1263,Ongkor Solon,False,dialect,46.7774,83.0456,,,,0,0,0,CN KZ
-ongt1234,aust1305,taoi1247,Ong-Ta'oih,False,family,,,,,,0,3,7,
+ongt1234,aust1305,taoi1247,Ong-Taꞌoih,False,family,,,,,,0,3,7,
 onin1237,pidg1258,onin1246,Onin Pidgin,False,language,-2.83,132.083,onx,,,0,0,0,ID
 onin1244,aust1307,yamd1241,Oninic,False,family,,,,,,0,3,4,
 onin1245,aust1307,onin1244,Onin,False,language,-2.75976,132.062,oni,,,0,0,4,ID
@@ -18253,7 +18253,7 @@ osuu1238,atla1278,adan1247,Osu,False,dialect,,,,,,0,0,0,
 otal1238,iroq1247,cher1273,Otali,False,dialect,,,,,,0,0,0,
 otan1238,atla1278,tivi1234,Otank,False,language,6.54809,9.34019,uta,,,0,0,0,NG
 otap1238,atla1278,abua1244,Otapha,False,dialect,,,,,,0,0,0,
-otba1239,aust1307,otda1235,Ot Banu'u,False,dialect,,,,,,0,0,0,
+otba1239,aust1307,otda1235,Ot Banuꞌu,False,dialect,,,,,,0,0,0,
 otba1240,aust1307,otda1235,Ot Balawan,False,dialect,,,,,,0,0,0,
 otda1235,aust1307,nort2891,Ot Danum,False,language,-0.3955,113.469,otd,,,0,0,10,ID
 otii1244,,,Oti,False,language,-24.3153231,-50.5580261,oti,,,0,0,0,BR
@@ -18291,7 +18291,7 @@ ouji1238,sino1245,wuic1234,Wenzhou,False,language,27.94043,120.63338,,,,0,0,0,CN
 oule1238,maba1274,maba1277,Ouled Djemma,False,dialect,,,,,,0,0,0,
 ouma1237,aust1307,oumi1237,Ouma,False,language,-10.2288,149.101,oum,,,0,0,0,PG
 oumi1237,aust1307,cent2070,Oumic,False,family,,,,,,1,4,0,
-oung1238,book1242,book1242,!O!ung,True,language,-15.3,14.35,oun,,,0,0,0,AO NA
+oung1238,book1242,book1242,ǃOǃung,True,language,-15.3,14.35,oun,,,0,0,0,AO NA
 oung1239,sout2948,cent2394,Ounge,False,language,-6.36069,155.708,oue,,,0,0,0,PG
 oute1238,indo1319,indu1240,Outer Indus Kohistani,False,family,,,,,,1,4,0,
 oute1246,indo1319,uppe1403,Outer Siraji,False,dialect,,,,,,0,0,0,
@@ -18316,7 +18316,7 @@ owin1240,left1242,left1242,Owiniga,False,language,-4.47476,141.697,owi,,,0,0,0,P
 oxal1234,atla1278,bass1258,Oxalac,False,dialect,,,,,,0,0,0,
 oxyr1237,afro1255,midd1332,Oxyrhynchite,False,dialect,,,,,,0,0,0,
 oyan1240,nucl1709,gads1258,Oyana,False,dialect,,,,,,0,0,0,
-oyao1237,aust1307,suau1243,Oya'oya,False,language,-10.5392,150.658,oyy,,,0,0,0,PG
+oyao1237,aust1307,suau1243,Oyaꞌoya,False,language,-10.5392,150.658,oyy,,,0,0,0,PG
 oyda1235,gong1255,cent2046,Oyda,False,language,6.13322,36.8541,oyd,,,0,0,0,ET
 oyed1238,atla1278,isok1239,Oyede,False,dialect,,,,,,0,0,0,
 oyia1238,ijoi1239,izon1238,Oyiakiri,False,dialect,,,,,,0,0,0,
@@ -18332,12 +18332,12 @@ ozel1234,toto1251,high1243,Ozelonacaxtla,False,dialect,,,,,,0,0,0,
 ozol1235,otom1299,miah1237,Ozolotepec Zapotec,False,language,16.04,-96.3686,zao,,,0,0,2,MX
 ozor1238,atla1278,isok1239,Ozoro,False,dialect,,,,,,0,0,0,
 ozum1235,otom1299,chin1485,Ozumacín Chinantec,False,language,17.6976,-96.2249,chz,,,0,0,1,MX
-paaa1242,afro1255,west2998,Pa'a,False,language,11.0175,9.30091,pqa,,,0,0,0,NG
+paaa1242,afro1255,west2998,Paꞌa,False,language,11.0175,9.30091,pqa,,,0,0,0,NG
 paac1238,indo1319,juml1238,Paachsai,False,dialect,,,,,,0,0,0,
 paaf1237,aust1307,muri1261,Pááfang,False,language,8.610194,152.240167,pfa,,,0,0,0,FM
 paam1238,aust1307,cent2269,Paama,False,language,-16.47548,168.23693,pma,,,0,0,2,VU
 paam1239,eski1264,kala1399,Paamiut,False,dialect,,,,,,0,0,0,
-paan1239,sino1245,pwoe1235,Pa'an,False,dialect,,,,,,0,0,0,
+paan1239,sino1245,pwoe1235,Paꞌan,False,dialect,,,,,,0,0,0,
 paas1238,atla1278,sisa1248,Paasaal,False,language,10.2004,-1.8048,sig,,,0,0,2,GH
 pabi1240,afro1255,bura1292,Pabir,False,dialect,,,,,,0,0,0,
 paca1243,uncl1493,uncl1493,Pacahuaras-Castillo,False,language,,,,,,0,0,0,BO
@@ -18353,14 +18353,14 @@ pada1255,indo1319,bhad1241,Padar,False,dialect,,,,,,0,0,0,
 pada1256,indo1319,bhad1241,Padari,False,dialect,,,,,,0,0,0,
 pada1257,sino1245,misi1242,Padam,False,dialect,28.2463,95.3668,,,,0,0,0,IN
 pada1258,aust1307,tali1262,Padang (Taliabu),False,dialect,,,,,,0,0,0,
-pada1259,aust1307,term1237,Pa'da,False,dialect,,,,,,0,0,0,
-pada1260,aust1307,term1237,Pa'da Kona,False,dialect,,,,,,0,0,2,
+pada1259,aust1307,term1237,Paꞌda,False,dialect,,,,,,0,0,0,
+pada1260,aust1307,term1237,Paꞌda Kona,False,dialect,,,,,,0,0,2,
 pada1261,aust1307,lund1271,Padas,False,dialect,,,,,,0,0,0,
 pada1262,aust1307,mamu1255,Padang,False,dialect,,,,,,0,0,0,
-pada1263,aust1307,saba1265,Pa' Dalan,False,dialect,,,,,,0,0,0,
+pada1263,aust1307,saba1265,Paꞌ Dalan,False,dialect,,,,,,0,0,0,
 pade1238,atla1278,noon1242,Padee,False,dialect,,,,,,0,0,0,
 padi1241,taik1256,whit1265,Pa Di,False,language,26.3112,103.486,pdi,,,0,0,0,CN VN
-padi1242,nort2923,sahu1245,Pa'disua,False,dialect,,,,,,0,0,0,
+padi1242,nort2923,sahu1245,Paꞌdisua,False,dialect,,,,,,0,0,0,
 padm1234,sino1245,rong1262,Padma,False,dialect,,,,,,0,0,0,
 pado1241,aust1307,biak1248,Padoa,False,dialect,,,,,,0,0,0,
 pado1242,aust1307,inte1258,Padoe,False,language,-2.60642,121.236,pdo,,,0,0,0,ID
@@ -18393,7 +18393,7 @@ pahl1241,indo1319,midd1352,Pahlavi,False,language,30.06,52.7,pal,,,0,0,0,IR
 pahn1237,hmon1336,pahe1240,Pa-Hng,False,language,22.8049,105.165,pha,,,0,0,0,CN VN
 paho1240,,,Pahoturi,False,family,,,,,,0,2,5,
 pahu1239,aust1307,tunj1244,Pahu,False,dialect,,,,,,0,0,0,
-pahu1240,aust1307,cent2100,Pahu',False,dialect,,,,,,0,0,0,
+pahu1240,aust1307,cent2100,Pahuꞌ,False,dialect,,,,,,0,0,0,
 paic1239,aust1307,cemp1235,Paicî,False,language,-21.096,165.15,pri,,,0,0,0,NC
 paic1240,araw1281,baur1253,Paiconeca,False,dialect,-15.0,-60.5,,,,0,0,0,BO
 paie1238,nucl1709,ipil1240,Paiela,False,dialect,,,,,,0,0,0,
@@ -18450,7 +18450,7 @@ pala1354,aust1307,pala1357,Palawanic,False,family,,,,,,6,8,1,
 pala1355,indo1319,rhin1244,Palatinate,False,family,,,,,,0,2,9,
 pala1356,arti1236,arti1236,Palawa Kani,False,language,,,,,,0,0,0,AU
 pala1357,aust1307,grea1284,Palawanic-Kalamian,False,family,,,,,,8,10,2,
-pale1251,aust1305,uppe1406,Palee'n,False,dialect,,,,,,0,0,0,
+pale1251,aust1305,uppe1406,Paleeꞌn,False,dialect,,,,,,0,0,0,
 pale1252,sino1245,daai1236,Paletwa Daai,False,dialect,,,,,,0,0,0,
 pale1254,yoku1255,yoku1255,Palewyami Yokuts,False,language,35.556742,-119.073757,,,,0,0,0,US
 pale1260,indo1319,sout3200,Palenquero,False,language,10.3881,-75.2949,pln,,,0,0,0,CO
@@ -18483,7 +18483,7 @@ palo1244,atla1278,cang1245,Palor-Ndut,False,family,,,,,,0,2,0,
 palp1242,book1242,book1242,Palpa,True,language,27.8741,83.3928,plp,,,0,0,0,NP
 palu1237,unat1236,unat1236,Palumata,False,language,-3.024,128.762,pmc,,,0,0,0,ID
 palu1250,indo1319,moch1255,Palù,False,dialect,46.1297,11.35221,,,,0,0,0,IT
-palu1252,aust1307,ngad1265,Palu'e,False,language,-8.32877,121.718,ple,,,0,0,0,ID
+palu1252,aust1307,ngad1265,Paluꞌe,False,language,-8.32877,121.718,ple,,,0,0,0,ID
 palu1253,aust1307,nort3186,Paluan,False,language,5.02715,116.346,plz,,,0,0,6,MY
 palu1254,book1242,book1242,Palu,True,language,18.5,97.1666,pbz,,,0,0,0,MM
 palu1255,indo1319,west2860,Dangari,False,family,,,,,,0,2,5,
@@ -18596,7 +18596,7 @@ pany1242,atla1278,makn1235,Panya,False,dialect,,,,,,0,0,0,
 pany1246,afro1255,mwag1236,Panyam,False,dialect,,,,,,0,0,0,
 pany1247,pama1250,cent2248,Panytyima-Yinhawangka,False,family,,,,,,0,2,2,
 panz1235,uncl1493,uncl1493,Panzaleo,False,language,,,,,,0,0,0,BR
-paok1235,sino1245,peri1254,Pa'o Karen,False,language,20.211,97.5969,blk,,,0,0,2,MM TH
+paok1235,sino1245,peri1254,Paꞌo Karen,False,language,20.211,97.5969,blk,,,0,0,2,MM TH
 paok1236,atla1278,kuoo1238,Pao Koh,False,dialect,,,,,,0,0,0,
 paom1238,sino1245,maon1238,Paomata,False,dialect,,,,,,0,0,0,
 paoo1245,book1242,book1242,Pao,True,language,24.0622,80.9619,ppa,,,0,0,0,IN
@@ -18735,7 +18735,7 @@ pats1234,sino1245,sout3408,Patsho,False,dialect,26.1139,94.936,,,,0,0,0,
 patt1247,drav1251,yeru1242,Pattapu,False,language,15.37,80.11,ptq,,,0,0,0,IN
 patt1248,sino1245,laha1249,Pattani,False,language,32.6963,76.5966,lae,,,0,0,3,IN
 patt1249,aust1307,keda1253,Kelantan-Pattani Malay,False,language,6.38148,101.41,mfa,,,0,0,6,MY TH
-patt1250,aust1307,mama1276,Pattae',False,dialect,,,,,,0,0,0,
+patt1250,aust1307,mama1276,Pattaeꞌ,False,dialect,,,,,,0,0,0,
 patt1251,aust1307,enre1239,Pattinjo,False,dialect,,,,,,0,0,0,
 patt1253,aust1307,patt1249,Pattani-Nonthaburi Malay,False,dialect,,,,,,0,0,2,
 patt1254,aust1307,patt1253,Pattani Malay,False,dialect,,,,,,0,0,0,
@@ -18912,7 +18912,7 @@ phal1257,sino1245,samp1249,Phali,False,dialect,,,,,,0,0,0,
 phal1258,atla1278,pedi1238,Phalaborwa,False,dialect,,,,,,0,0,0,
 phal1259,atla1278,kgal1244,Phaleng,False,dialect,,,,,,0,0,0,
 phan1252,aust1305,blan1242,Phang,False,dialect,,,,,,0,0,0,
-phan1254,sino1245,biso1244,Phana',False,language,21.9387,101.978,phq,,,0,0,0,CN LA
+phan1254,sino1245,biso1244,Phanaꞌ,False,language,21.9387,101.978,phq,,,0,0,0,CN LA
 phan1255,atla1278,vend1245,Phani,False,dialect,,,,,,0,0,0,
 phan1256,book1242,book1242,Phangduwali,True,language,27.15945,87.35371,phw,,,0,0,0,NP
 phan1257,sino1245,tibe1272,Phänpo,False,dialect,,,,,,0,0,0,
@@ -19054,7 +19054,7 @@ pipi1249,nort2933,roto1249,Pipipaia,False,dialect,,,,,,0,0,0,
 pipi1250,utoa1244,isth1246,Pipil,False,language,13.8931,-89.443,ppl,,,0,0,0,SV
 pira1252,nucl1709,cita1245,Pirabanak,False,dialect,,,,,,0,0,0,
 pira1253,,,Pirahã,False,language,-6.77713,-61.8167,myp,,,0,0,1,BR
-pira1254,tuca1253,pira1255,Wa'ikhana,False,language,0.50714,-69.5032,pir,,,0,0,0,BR CO
+pira1254,tuca1253,pira1255,Waꞌikhana,False,language,0.50714,-69.5032,pir,,,0,0,0,BR CO
 pira1255,tuca1253,wana1272,Piratapuyic,False,family,,,,,,1,3,0,
 piri1234,indo1319,west2888,Pirin-Malashevo,False,dialect,,,,,,0,0,0,
 pirl1238,pama1250,pirl1239,Pirlatapa,False,language,-29.524,139.77,bxi,,,0,0,0,AU
@@ -19098,7 +19098,7 @@ piya1245,afro1255,pero1242,Piya-Kwonci,False,language,9.31975,10.8379,piy,,,0,0,
 piya1246,afro1255,piya1245,Piya,False,dialect,,,,,,0,0,0,
 pizh1238,indo1319,sora1257,Pizhdar,False,dialect,,,,,,0,0,0,
 plai1235,sign1238,auxi1235,Plains Indian Sign Language,False,language,38.3941,-99.2499,psd,,,0,0,0,CA US
-plai1256,aust1305,gata1239,Plains Geta',False,dialect,,,,,,0,0,0,
+plai1256,aust1305,gata1239,Plains Getaꞌ,False,dialect,,,,,,0,0,0,
 plai1257,dogo1299,dogo1299,Plains Dogon,False,family,,,,,,1,4,10,
 plai1258,algi1248,plai1264,Plains Cree,False,language,51.2437,-110.463,crk,,,0,0,3,CA US
 plai1259,miwo1274,east2546,Plains Miwok,False,language,38.39772,-121.653344,pmw,,,0,0,0,US
@@ -19121,7 +19121,7 @@ plna1234,aust1307,sout3404,Plnagawan,False,dialect,,,,,,0,0,0,
 ploo1238,krua1234,west2488,Plo,False,dialect,,,,,,0,0,0,
 plos1238,nakh1245,chec1245,Ploskost,False,dialect,,,,,,0,0,0,
 plus1242,aust1305,kens1248,Plus,False,dialect,,,,,,0,0,0,
-pmas1239,anga1289,hamt1247,Pmasa'a,False,dialect,,,,,,0,0,0,
+pmas1239,anga1289,hamt1247,Pmasaꞌa,False,dialect,,,,,,0,0,0,
 pnar1238,aust1305,khas1275,Pnar,False,language,24.8237,92.2628,pbv,,,0,0,14,BD IN
 poav1237,aust1307,babu1240,Poavosa,False,dialect,,,,,,0,0,0,
 poch1242,sino1245,anga1286,Pochuri-Northern Rengma,False,family,,,,,,0,2,0,
@@ -19204,11 +19204,11 @@ popo1291,cent2225,mang1394,Popoi,False,dialect,,,,,,0,0,0,
 popo1292,otom1299,east2557,Popoloca-Zapotecan,False,family,,,,,,42,82,44,
 popo1293,otom1299,popo1292,Popolocan-Mazatecan,False,family,,,,,,11,18,17,
 popo1294,otom1299,choc1278,Popolocan,False,family,,,,,,2,7,6,
-popt1235,maya1287,kanj1263,Popti',False,language,15.6609,-91.6633,jac,,,0,0,0,GT MX
+popt1235,maya1287,kanj1263,Poptiꞌ,False,language,15.6609,-91.6633,jac,,,0,0,0,GT MX
 poqo1253,maya1287,poco1241,Poqomam,False,language,14.73252,-89.73796,poc,,,0,0,0,GT SV
-poqo1254,maya1287,poco1241,Poqomchi',False,language,15.3586,-90.5813,poh,,,0,0,0,GT
+poqo1254,maya1287,poco1241,Poqomchiꞌ,False,language,15.3586,-90.5813,poh,,,0,0,0,GT
 poqo1255,book1242,book1242,"Poqomam, Southern",True,language,,,pou,,,0,0,0,GT
-poqo1256,book1242,book1242,"Poqomchi', Western",True,language,15.36,-90.58,pob,,,0,0,0,GT
+poqo1256,book1242,book1242,"Poqomchiꞌ, Western",True,language,15.36,-90.58,pob,,,0,0,0,GT
 poqo1257,book1242,book1242,"Poqomam, Eastern",True,language,,,poa,,,0,0,0,GT
 porg1241,atla1278,bial1238,Porga,False,dialect,,,,,,0,0,0,
 porg1242,nucl1709,ipil1240,Porgera,False,dialect,,,,,,0,0,0,
@@ -19297,7 +19297,7 @@ prus1238,indo1319,balt1263,Old Prussian,False,language,52.394,14.757,prg,,,0,0,3
 pruu1239,aust1305,koho1244,Pru,False,dialect,,,,,,0,0,0,
 psha1238,kart1248,nort3382,Pshav,False,dialect,,,,,,0,0,0,
 psik1239,afro1255,higi1241,Psikye,False,language,10.677,13.569,kvj,,,0,0,3,CM NG
-puaa1234,aust1307,muri1259,Pua',False,dialect,,,,,,0,0,0,
+puaa1234,aust1307,muri1259,Puaꞌ,False,dialect,,,,,,0,0,0,
 puan1237,aust1307,jara1266,Puan,False,dialect,,,,,,0,0,0,
 puar1240,skoo1245,serr1253,Puare,False,language,-2.90121,141.715,pux,,,0,0,0,PG
 pubi1237,aust1307,lamp1243,Pubian,False,dialect,,,pun,,,0,0,0,
@@ -19399,7 +19399,7 @@ puto1237,book1242,book1242,Putoh,True,language,3.42467,116.443,put,,,0,0,0,ID
 putr1238,atla1278,rong1268,Putru,False,dialect,,,,,,0,0,0,
 putu1241,atla1278,nucl1801,Utugwang-Irungene-Afrike,False,language,6.65923,8.96041,afe,,,0,0,6,NG
 putu1242,krua1234,sapo1251,Putu,False,dialect,,,,,,0,0,0,
-puum1234,aust1307,pamo1252,Pu'u Mboto,False,dialect,,,,,,0,0,0,
+puum1234,aust1307,pamo1252,Puꞌu Mboto,False,dialect,,,,,,0,0,0,
 puwa1234,book1242,book1242,Puwa Yi,True,language,,,ypw,,,0,0,0,
 puxi1242,sino1245,shan1274,Puxi,False,dialect,,,,,,0,0,0,
 puxi1243,sino1245,sout3421,Pu-Xian Chinese,False,language,25.37,118.68,cpx,,,0,0,2,CN
@@ -19417,20 +19417,20 @@ pyap1239,afro1255,piap1250,Pyapun,False,language,9.09539,9.43733,pcw,,,0,0,0,NG
 pyas1236,ural1272,avam1236,Pyasina Avam,False,dialect,,,,,,0,0,0,
 pyek1235,krua1234,ivor1240,Pye Krumen,False,language,5.00716,-7.01481,pye,,,0,0,8,CI LR
 pyen1239,sino1245,bisu1246,Pyen,False,language,20.759,100.029,pyy,,,0,0,0,MM
-pyon1239,kore1284,hamg1239,P'yong'ando,False,dialect,39.44,126.16,,,,0,0,0,
+pyon1239,kore1284,hamg1239,Pꞌyongꞌando,False,dialect,39.44,126.16,,,,0,0,0,
 pyuu1245,,,Pyu,False,language,-4.45003,141.018,pby,,,0,0,0,ID PG
 qaba1238,turk1311,nort3322,Qabala,False,dialect,,,,,,0,0,0,
-qabe1238,khoe1240,naro1249,/=Haba,False,dialect,,,,,,0,0,0,
+qabe1238,khoe1240,naro1249,ǂHaba,False,dialect,,,,,,0,0,0,
 qabi1235,taik1256,east2365,Pubiao-Qabiao,False,language,23.2384,104.812,laq,,,0,0,0,CN VN
 qahv1234,sign1238,deaf1237,Qahvehkhaneh Sign Language,False,language,35.667731,51.3668463,,,,0,0,0,IR
 qaja1238,turk1311,sout2697,Qajar,False,dialect,,,,,,0,0,0,
 qala1238,afro1255,sout3076,Qaladze,False,dialect,,,,,,0,0,0,
 qama1234,afro1255,uzbe1248,Qamashi,False,dialect,,,,,,0,0,0,
-qanj1241,maya1287,kanj1263,Q'anjob'al,False,language,15.6846,-91.3043,kjb,,,0,0,0,GT
+qanj1241,maya1287,kanj1263,Qꞌanjobꞌal,False,language,15.6846,-91.3043,kjb,,,0,0,0,GT
 qaqe1238,bain1263,bain1263,Qaqet,False,language,-4.45258,151.702,byx,,,0,0,0,PG
 qara1243,turk1311,sout2697,Qaragozlu,False,dialect,,,,,,0,0,0,
 qara1244,turk1311,oldu1238,Qarakhanid,False,dialect,,,,,,0,0,0,
-qash1240,turk1311,nucl1769,Qashqa'i,False,language,28.25931,52.83349,qxq,,,0,0,4,IR
+qash1240,turk1311,nucl1769,Qashqaꞌi,False,language,28.25931,52.83349,qxq,,,0,0,4,IR
 qash1241,afro1255,uzbe1248,Djeinau,False,dialect,,,,,,0,0,0,
 qasi1234,afro1255,najd1235,Qasim-Dhafir,False,dialect,,,,,,0,0,0,
 qata1238,afro1255,sayh1236,Qatabanian,False,language,14.8,45.733333,xqt,,,0,0,0,YE
@@ -19628,8 +19628,8 @@ rapa1246,aust1307,pamo1252,Rapangkaka,False,dialect,,,,,,0,0,0,
 rapi1237,aust1307,raba1253,Rapitok,False,dialect,,,,,,0,0,0,
 rapo1238,nort2933,nort2933,Rapoisi,False,language,-5.78724,154.834,kyx,,,0,0,0,PG
 rapt1240,nucl1709,uncl1506,Rapting,False,language,-4.99351,145.671,rpt,,,0,0,0,PG
-rara1235,aust1307,rara1236,Rara Bakati',False,language,1.27026,109.539,lra,,,0,0,0,ID MY
-rara1236,aust1307,baka1275,Rara-Sara Bakati',False,family,,,,,,0,2,0,
+rara1235,aust1307,rara1236,Rara Bakatiꞌ,False,language,1.27026,109.539,lra,,,0,0,0,ID MY
+rara1236,aust1307,baka1275,Rara-Sara Bakatiꞌ,False,family,,,,,,0,2,0,
 rard1238,indo1319,wadi1248,Rardro Bhil,False,dialect,,,,,,0,0,0,
 raro1241,aust1307,sout3383,Southern Cook Island Maori,False,language,-21.23,-159.78,rar,,,0,0,5,AU CK NZ PF
 raro1242,aust1307,raro1241,Rarotonga,False,dialect,,,,,,0,0,0,
@@ -19764,7 +19764,7 @@ rier1234,atla1278,suba1252,Rieri,False,dialect,,,,,,0,0,0,
 riff1234,afro1255,tari1263,Riffian,False,dialect,,,,,,0,0,16,
 rigb1238,cent2225,sout2828,Rigbo,False,dialect,,,,,,0,0,0,
 rigo1234,eski1264,nuna1235,Rigolet Inuktitut,False,dialect,,,,,,0,0,0,
-rihu1237,aust1307,faga1239,Rihu'a,False,dialect,,,,,,0,0,0,
+rihu1237,aust1307,faga1239,Rihuꞌa,False,dialect,,,,,,0,0,0,
 rija1234,atla1278,mada1282,Rija,False,dialect,,,,,,0,0,0,
 rikb1245,nucl1710,nucl1710,Rikbaktsa,False,language,-11.1887,-58.1942,rkb,,,0,0,0,BR
 rikv1238,nakh1245,uppe1485,Rikvani,False,dialect,,,,,,0,0,0,
@@ -19825,9 +19825,9 @@ rogu1236,atha1245,oreg1242,Rogue River,False,family,,,,,,0,3,0,
 rohi1238,indo1319,gaud1238,Rohingya,False,language,20.833082,92.393968,rhg,,,0,0,0,BD MM TH
 roho1238,aust1307,haru1244,Rohomoni,False,dialect,,,,,,0,0,0,
 rohr1238,indo1319,uppe1403,Rohruri,False,dialect,,,,,,0,0,0,
-rois1241,aust1307,amar1273,Ro'is,False,dialect,,,,,,0,0,0,
-rois1242,aust1307,amar1273,Ro'is Tais Nonof,False,dialect,,,,,,0,0,0,
-rois1243,aust1307,amar1273,Ro'is Hero,False,dialect,,,,,,0,0,0,
+rois1241,aust1307,amar1273,Roꞌis,False,dialect,,,,,,0,0,0,
+rois1242,aust1307,amar1273,Roꞌis Tais Nonof,False,dialect,,,,,,0,0,0,
+rois1243,aust1307,amar1273,Roꞌis Hero,False,dialect,,,,,,0,0,0,
 rokh1238,sino1245,bahi1252,Rokhung,False,dialect,,,,,,0,0,0,
 rokk1238,aust1305,khmu1256,Rok,False,dialect,,,,,,0,0,0,
 rolo1241,atla1278,tswa1253,Rolong,False,dialect,,,,,,0,0,0,
@@ -19989,7 +19989,7 @@ rwan1246,sign1238,unun9986,Rwandan Sign Language,False,language,-1.38553,30.2342
 rymb1238,aust1305,jain1238,Rymbai,False,dialect,,,,,,0,0,0,
 ryuk1243,japo1237,japo1237,Ryukyuan,False,family,,,,,,8,11,28,
 ryuk1244,japo1237,ryuk1243,Southern Ryukyu,False,family,,,,,,1,3,17,
-saaa1240,aust1307,mala1540,Sa'a,False,language,-9.60258,161.467,apb,,,0,0,2,SB
+saaa1240,aust1307,mala1540,Saꞌa,False,language,-9.60258,161.467,apb,,,0,0,2,SB
 saaa1241,aust1307,sout3188,Sa,False,language,-15.9534,168.228,sax,,,0,0,3,VU
 saaf1238,atla1278,saaf1239,Saafi-Saafi,False,language,14.625,-17.0568,sav,,,0,0,5,SN
 saaf1239,atla1278,cang1245,Saafi-Noon-Lehar,False,family,,,,,,1,3,8,
@@ -20012,7 +20012,7 @@ saba1261,atla1278,band1342,Sabanga,False,dialect,,,,,,0,0,0,
 saba1262,nilo1247,elgo1240,Sabaot,False,language,1.01297,34.6664,spy,,,0,0,3,KE UG
 saba1263,aust1307,brun1252,Sabah Malay,False,language,4.64808,117.024,msi,,,0,0,0,MY
 saba1264,aust1307,nimo1246,Sabari,False,dialect,,,,,,0,0,0,
-saba1265,aust1307,kela1257,Sa'ban,False,language,3.58723,115.664,snv,,,0,0,3,ID MY
+saba1265,aust1307,kela1257,Saꞌban,False,language,3.58723,115.664,snv,,,0,0,3,ID MY
 saba1267,aust1307,bisa1270,Sabah Bisaya,False,language,5.30433,115.512,bsy,,,0,0,0,MY
 saba1268,namb1299,namb1299,Sabanê,False,language,-12.9857,-60.335,sae,,,0,0,0,BR
 saba1272,chib1249,bugl1243,Sabanero,False,dialect,,,,,,0,0,0,
@@ -20190,7 +20190,7 @@ sama1313,afro1255,hebr1246,Samaritan,False,language,32.0817,35.4487,smp,,,0,0,0,
 sama1314,afro1255,sama1316,Samaritan Aramaic,False,dialect,32.3107,35.258,sam,,,0,0,0,IL PS
 sama1315,aust1307,wara1304,Samar-Waray,False,family,,,,,,0,3,3,
 sama1316,afro1255,late1255,Samaritan-Galilean Aramaic,False,dialect,,,,,,0,0,2,
-sama1317,afro1255,olda1245,Sam'alian,False,dialect,,,,,,0,0,0,
+sama1317,afro1255,olda1245,Samꞌalian,False,dialect,,,,,,0,0,0,
 sama1318,tung1282,gari1257,Samar,False,dialect,,,,,,0,0,0,
 samb1303,aust1305,sout2689,Sambelong,False,dialect,,,,,,0,0,0,
 samb1304,sino1245,saam1282,Sambya,False,dialect,,,,,,0,0,0,
@@ -20217,7 +20217,7 @@ samb1324,atla1278,leko1246,Samba-Leko-Perema-Mumbake,False,family,,,,,,1,3,6,
 samb1325,indo1319,macr1269,Sambalpuri,False,language,21.2233,83.9315,spv,,,0,0,0,IN
 samb1326,aust1307,mala1479,Sambas Malay,False,dialect,,,,,,0,0,0,
 same1240,sino1245,nasu1237,Samei,False,language,25.0756,103.0133,smh,,,0,0,0,CN
-same1241,aust1307,indo1317,Same',False,dialect,,,,,,0,0,0,
+same1241,aust1307,indo1317,Sameꞌ,False,dialect,,,,,,0,0,0,
 sami1248,aust1307,maan1238,Samihim,False,dialect,,,,,,0,0,0,
 sami1249,sali1255,stra1244,Samish,False,dialect,,,,,,0,0,0,
 samm1243,indo1319,roma1328,Sammarinese,False,dialect,,,,,,0,0,0,
@@ -20260,7 +20260,7 @@ sana1286,otom1299,miah1237,San Agustín Mixtepec Zapotec,False,language,16.2202,
 sana1287,otom1299,sanj1286,San Antonio Eloxochitlán Mazatec,False,dialect,,,,,,0,0,0,
 sana1291,afro1255,hula1244,Jewish Sanandaj,False,dialect,,,,,,0,0,0,
 sana1295,afro1255,jude1277,Sanaani Arabic,False,language,15.6552,44.8412,ayn,,,0,0,0,SA YE
-sana1296,afro1255,jude1267,San'a,False,dialect,,,,,,0,0,0,
+sana1296,afro1255,jude1267,Sanꞌa,False,dialect,,,,,,0,0,0,
 sana1297,indo1319,misk1243,San Andres Creole English,False,language,12.55352,-81.70425,icr,,,0,0,0,CO
 sana1298,leng1261,east2852,Sanapaná,False,language,-22.49,-58.38,spn,,,0,0,0,PY
 sana1299,atla1278,nucl1802,Sanaga-West Mbam (A.40),False,family,,,,,,3,7,21,
@@ -20476,7 +20476,7 @@ sanz1244,atla1278,bang1350,Sanzi,False,dialect,,,,,,0,0,0,
 sanz1246,atla1278,konz1239,Sanza,False,dialect,,,,,,0,0,0,
 sanz1247,nakh1245,sout3261,Sanzhi-Icari,False,dialect,,,,,,0,0,2,
 sanz1248,nakh1245,sanz1247,Sanzhi,False,dialect,41.97796,47.5667,,,,0,0,0,RU
-saoc1239,aust1305,sout2684,Sa'och,False,language,10.8739,103.835,scq,,,0,0,0,KH TH
+saoc1239,aust1305,sout2684,Saꞌoch,False,language,10.8739,103.835,scq,,,0,0,0,KH TH
 saof1235,aust1307,thao1240,Sao (Formosan),False,dialect,,,,,,0,0,0,
 saoo1238,afro1255,masl1241,Sao,False,dialect,,,,,,0,0,0,
 saop1235,nucl1710,kain1271,São Paulo Kaingáng,False,language,-21.771882,-50.429849,zkp,,,0,0,0,BR
@@ -20520,7 +20520,7 @@ sara1325,aust1307,sang1337,Sarangani,False,dialect,,,,,,0,0,0,
 sara1326,aust1307,blaa1241,Sarangani Blaan,False,language,6.03691,125.354,bps,,,0,0,0,PH
 sara1327,aust1307,sara1347,Sarangani Manobo,False,language,5.84903,125.499,mbs,,,0,0,1,PH
 sara1328,aust1307,otda1235,Sarawai,False,dialect,,,,,,0,0,0,
-sara1329,aust1307,rara1236,Sara Bakati',False,language,1.20403,109.6155,sre,,,0,0,0,ID
+sara1329,aust1307,rara1236,Sara Bakatiꞌ,False,language,1.20403,109.6155,sre,,,0,0,0,ID
 sara1330,namb1299,sout2994,Sarare,False,dialect,,,,,,0,0,0,
 sara1331,araw1281,pare1273,Saraveca,False,language,-16.07,-57.8,sar,,,0,0,0,BO BR
 sara1339,indo1319,sara1340,Nuclear Saramaccan,False,dialect,,,,,,0,0,0,
@@ -20843,7 +20843,7 @@ serr1254,utoa1244,taki1254,Serran,False,family,,,,,,0,2,3,
 serr1255,utoa1244,serr1254,Serrano,False,language,33.9479,-116.772,ser,,,0,0,3,US
 serr1256,namb1299,sout2994,Serra Azul,False,dialect,,,,,,0,0,0,
 serr1257,indo1319,balk1252,Serres-Saint Athanasios,False,dialect,,,,,,0,0,0,
-sert1234,sino1245,nort3305,Sertha/Golok,False,dialect,,,,,,0,0,0,
+sert1234,sino1245,nort3305,SerthaǀGolok,False,dialect,,,,,,0,0,0,
 seru1244,aust1307,seru1248,Serui-Laut,False,language,-1.87766,136.252,seu,,,0,0,0,ID
 seru1245,aust1307,nila1243,Serua,False,language,-6.31107,130.017294,srw,,,0,0,0,ID
 seru1246,aust1307,pait1248,Serudung Murut,False,language,4.39954,117.279,srk,,,0,0,0,ID MY
@@ -20884,7 +20884,7 @@ seze1235,maoo1243,hozo1235,Seze,False,language,9.50764,34.6449,sze,,,0,0,0,ET
 sfar1238,west1493,tehi1237,Sfa Riere,False,dialect,,,,,,0,0,0,
 sfax1238,afro1255,tuni1259,Sfax,False,dialect,,,,,,0,0,0,
 sgaw1244,sino1245,sout1554,Sgaw,False,family,,,,,,0,2,2,
-sgaw1245,sino1245,sgaw1244,S'gaw Karen,False,language,17.9872,97.7126,ksw,,,0,0,2,MM TH
+sgaw1245,sino1245,sgaw1244,Sꞌgaw Karen,False,language,17.9872,97.7126,ksw,,,0,0,2,MM TH
 shaa1242,sino1245,dung1253,Shaanxi,False,dialect,,,,,,0,0,0,
 shaa1243,atla1278,monk1234,Shaari,False,dialect,,,,,,0,0,0,
 shaa1247,afro1255,roni1235,Sya,False,language,9.23281,8.77569,scw,,,0,0,0,NG
@@ -21005,7 +21005,7 @@ shid1239,sino1245,kach1280,Shidan,False,dialect,,,,,,0,0,0,
 shif1234,indo1319,west2813,Shifted Western Romance,False,family,,,,,,31,62,251,
 shig1237,japo1237,kink1238,Shiga,False,dialect,,,,,,0,0,0,
 shig1238,sino1245,gtsa1238,Shigatse,False,dialect,,,,,,0,0,0,
-shih1239,afro1255,dhof1236,Ru'us al-Jibal,False,language,25.939,56.1711,ssh,,,0,0,0,AE OM
+shih1239,afro1255,dhof1236,Ruꞌus al-Jibal,False,language,25.939,56.1711,ssh,,,0,0,0,AE OM
 shii1238,atla1278,fore1272,Shi,False,language,-2.55777,28.6122,shr,,,0,0,4,BI CD RW
 shik1242,atla1278,jaku1245,Shiki,False,language,10.5238,9.72769,gua,,,0,0,2,NG
 shik1243,japo1237,west2607,Shikoku,False,dialect,,,,,,0,0,4,
@@ -21132,7 +21132,7 @@ sibu1251,aust1307,romb1245,Sibuyan,False,dialect,,,,,,0,0,0,
 sibu1252,aust1307,magu1243,Sibugay,False,dialect,,,,,,0,0,0,
 sibu1253,aust1307,bala1311,Sibuguey,False,dialect,,,,,,0,0,0,
 sibu1254,aust1307,bala1311,Sibuco-Vitali,False,dialect,,,,,,0,0,0,
-sibu1255,aust1307,sout2918,Sibutu',False,dialect,,,,,,0,0,0,
+sibu1255,aust1307,sout2918,Sibutuꞌ,False,dialect,,,,,,0,0,0,
 sibu1256,aust1307,biat1246,Siburan,False,dialect,,,,,,0,0,0,
 sibu1258,aust1307,sibu1259,Sibu Melanau,False,language,2.26758,111.763,sdx,,,0,0,2,MY
 sibu1259,aust1307,mela1255,Sibu-Kanowit-Tanjong,False,family,,,,,,0,2,2,
@@ -21215,8 +21215,8 @@ silo1240,nucl1709,silo1241,Silopi,False,language,-5.12302,145.586,xsp,,,0,0,0,PG
 silo1241,nucl1709,silo1242,Silopi-Utu,False,family,,,,,,0,2,0,
 silo1242,nucl1709,hans1243,Silopic,False,family,,,,,,1,5,0,
 silt1239,afro1255,hara1270,Silte-Wolane,False,family,,,,,,0,2,0,
-silt1240,afro1255,silt1239,Silt'e,False,language,7.77004,38.1449,stv,,,0,0,0,ET
-silt1241,book1242,book1242,Silt'e (Retired),True,language,,,xst,,,0,0,0,
+silt1240,afro1255,silt1239,Siltꞌe,False,language,7.77004,38.1449,stv,,,0,0,0,ET
+silt1241,book1242,book1242,Siltꞌe (Retired),True,language,,,xst,,,0,0,0,
 sima1257,sino1245,kony1248,Sima,False,dialect,,,,,,0,0,0,
 sima1258,atla1278,sima1262,Simaa,False,language,-15.7434,22.6455,sie,,,0,0,7,ZM
 sima1259,aust1307,ment1249,Simalegi,False,dialect,,,,,,0,0,0,
@@ -21244,7 +21244,7 @@ simu1237,aust1307,sout2918,Simunul,False,dialect,,,,,,0,0,0,
 sina1264,aust1307,suau1242,Sinaki,False,dialect,,,,,,0,0,0,
 sina1266,aust1307,sina1272,Sinaugoro,False,language,-9.79791,147.861,snc,,,0,0,17,PG
 sina1267,aust1307,kili1267,Sinaketa,False,dialect,,,,,,0,0,0,
-sina1268,aust1307,uppe1427,Sinabu',False,dialect,,,,,,0,0,0,
+sina1268,aust1307,uppe1427,Sinabuꞌ,False,dialect,,,,,,0,0,0,
 sina1269,nucl1708,galu1240,Galu,False,language,-3.42446,142.367,siu,,,0,0,0,PG
 sina1270,nucl1709,ndug1245,Sinak Nduga,False,dialect,,,,,,0,0,0,
 sina1271,nucl1709,goli1246,Sinasina,False,language,-6.08728,145.032,sst,,,0,0,7,PG
@@ -21265,7 +21265,7 @@ sind1281,arti1236,arti1236,Sindarin,False,language,,,sjn,,,0,0,0,GB
 sind1282,indo1319,sind1279,Sindhi-Kachchi,False,family,,,,,,0,2,10,
 sind1284,otom1299,teoz1234,Sindihuic,False,family,,,,,,0,2,0,
 sine1238,atla1278,sere1260,Siin,False,dialect,,,,,,0,0,0,
-sine1239,indo1319,cent1972,Sine'i,False,dialect,,,,,,0,0,3,
+sine1239,indo1319,cent1972,Sineꞌi,False,dialect,,,,,,0,0,3,
 sing1237,book1242,book1242,Singapore Sign Language,True,language,1.33069,103.864,sls,,,0,0,0,SG
 sing1240,aust1307,bata1293,Singkil,False,dialect,,,,,,0,0,0,
 sing1263,sino1245,thad1238,Singson,False,dialect,,,,,,0,0,0,
@@ -21668,7 +21668,7 @@ sout2705,mong1349,mong1329,Southern Periphery Mongolic,False,family,,,,,,3,6,5,
 sout2708,drav1251,mala1464,South Kerala,False,dialect,,,,,,0,0,0,
 sout2709,drav1251,tami1289,South Africa Tamil,False,dialect,,,,,,0,0,0,
 sout2711,drav1251,sout3367,Southern Gondi,False,family,20.10446,80.27811,,,,1,3,5,IN
-sout2712,sino1245,paok1235,Southern Pa'o,False,dialect,,,,,,0,0,0,
+sout2712,sino1245,paok1235,Southern Paꞌo,False,dialect,,,,,,0,0,0,
 sout2713,sino1245,baim1244,Southern Baima,False,dialect,,,,,,0,0,0,
 sout2714,sino1245,kham1282,Sems-kyi-nyila Tibetan,False,dialect,,,,,,0,0,5,
 sout2715,sino1245,nucl1818,Southern Ghale,False,language,28.106,84.8511,ghe,,,0,0,3,NP
@@ -21760,7 +21760,7 @@ sout2824,atla1278,west2482,Southern Etung,False,dialect,,,,,,0,0,0,
 sout2825,atla1278,nugu1242,Southern Gunu,False,dialect,,,,,,0,0,0,
 sout2826,krua1234,greb1256,Southern Grebo,False,language,4.47607,-7.56872,grj,,,0,0,4,CI LR
 sout2827,cent2225,moru1252,Southern Moru-Madi,False,family,,,,,,0,3,8,
-sout2828,cent2225,sout2827,Southern Ma'di,False,language,2.8735,31.25,snm,,,0,0,3,UG
+sout2828,cent2225,sout2827,Southern Maꞌdi,False,language,2.8735,31.25,snm,,,0,0,3,UG
 sout2829,nilo1247,turk1308,Southern Turkana,False,dialect,,,,,,0,0,0,
 sout2830,nilo1247,nilo1247,Southern Nilotic,False,family,,,,,,10,16,29,
 sout2831,nilo1247,lwoo1234,Southern Lwoo,False,family,,,,,,3,6,7,
@@ -22300,7 +22300,7 @@ stra1244,sali1255,stra1246,Northern Straits Salish,False,language,48.51614,-123.
 stra1246,sali1255,cent2129,Straits Salish,False,family,,,,,,0,2,11,
 stra1247,tuuu1241,xamm1241,Strandberg-Katkop,False,dialect,,,,,,0,0,0,
 stre1234,indo1319,meck1238,Strelitzsch,False,dialect,,,,,,0,0,0,
-stzu1234,sali1255,isla1280,Stz'uminus,False,dialect,,,,,,0,0,0,
+stzu1234,sali1255,isla1280,Stzꞌuminus,False,dialect,,,,,,0,0,0,
 suaa1241,nucl1709,nucl1615,Sua,False,dialect,,,,,,0,0,0,
 suab1238,sout3418,inan1242,Suabo,False,language,-2.07971,132.157,szp,,,0,0,0,ID
 suaf1237,aust1307,lauu1247,Suafa,False,dialect,,,,,,0,0,0,
@@ -22535,7 +22535,7 @@ taaa1242,tuuu1241,huaa1247,Taa,False,family,,,,,,0,2,1,
 taaa1243,aust1307,ledo1238,Taa (Indonesia),False,dialect,,,,,,0,0,0,
 taab1238,atla1278,malu1252,Taabwa,False,language,-7.91416,29.5238,tap,,,0,0,1,CD ZM
 taai1237,aust1307,sais1237,Taai,False,dialect,,,,,,0,0,0,
-taam1237,aust1307,keii1239,Ta'am,False,dialect,,,,,,0,0,0,
+taam1237,aust1307,keii1239,Taꞌam,False,dialect,,,,,,0,0,0,
 taan1239,mand1469,yaou1238,Taan,False,dialect,,,,,,0,0,0,
 taba1259,nakh1245,east2367,Tabasaran,False,language,42.0198,47.8379,tab,,,0,0,2,AZ KZ RU
 taba1261,aust1307,mand1440,Big Tabar,False,dialect,,,,,,0,0,0,
@@ -22576,7 +22576,7 @@ tado1245,atla1278,ajab1235,Tado (Benin),False,dialect,,,,,,0,0,0,
 tado1246,aust1307,lind1248,Tado,False,dialect,,,,,,0,0,0,
 tado1247,aust1307,ledo1238,Tado (Ledo Kaili),False,dialect,,,,,,0,0,0,
 tady1237,aust1307,nort2873,Tadyawan,False,language,13.0211,121.305,tdy,,,0,0,0,PH
-taee1237,aust1307,tora1260,Tae',False,language,-2.58205,120.139,rob,,,0,0,4,ID
+taee1237,aust1307,tora1260,Taeꞌ,False,language,-2.58205,120.139,rob,,,0,0,4,ID
 taem1237,aust1307,tami1290,Taemi,False,dialect,,,,,,0,0,0,
 taen1234,book1242,book1242,Taensa,True,language,,,,,,0,0,0,US
 tafi1243,atla1278,nyan1316,Tafi,False,language,6.79522,0.39875,tcd,,,0,0,0,GH
@@ -22677,8 +22677,8 @@ taiy1241,sino1245,guan1266,Taiyanghe,False,dialect,,,,,,0,0,0,
 taiy1242,taik1256,wudi1241,Tai Ya,False,language,23.569,101.899,cuu,,,0,0,0,CN
 taiy1243,sino1245,jiny1235,Taiyuan,False,dialect,37.8632119,112.4024883,,,,0,0,0,
 taiz1238,sino1245,wuch1236,Taizhou,False,dialect,,,,,,0,0,0,
-taiz1242,afro1255,arab1393,Ta'izzi-Adeni Arabic,False,language,13.6555,45.6411,acq,,,0,0,2,ER SA YE
-taiz1243,afro1255,taiz1242,Ta'izzi,False,dialect,,,,,,0,0,0,
+taiz1242,afro1255,arab1393,Taꞌizzi-Adeni Arabic,False,language,13.6555,45.6411,acq,,,0,0,2,ER SA YE
+taiz1243,afro1255,taiz1242,Taꞌizzi,False,dialect,,,,,,0,0,0,
 taje1237,aust1307,sout2925,Taje,False,language,-0.72583,120.078,pee,,,0,0,0,ID
 taji1245,indo1319,taji1250,Tajik,False,language,38.8213,68.5549,tgk,,,0,0,10,AF CN KG TJ UZ
 taji1246,aust1307,sout2925,Tajio,False,language,-0.31553,120.01,tdj,,,0,0,0,ID
@@ -22721,11 +22721,11 @@ tala1278,aust1305,koho1244,Tala (Vietnam),False,dialect,,,,,,0,0,0,
 tala1279,turk1311,sout2694,Telengit (Kosh-Agach and Ulagan),False,dialect,,,,,,0,0,0,
 tala1281,atla1278,kala1384,Talahundra,False,dialect,,,,,,0,0,0,
 tala1282,kadu1256,tumt1243,Talassa,False,dialect,,,,,,0,0,0,
-tala1284,aust1307,moli1248,Tala'ai,False,dialect,,,,,,0,0,0,
+tala1284,aust1307,moli1248,Talaꞌai,False,dialect,,,,,,0,0,0,
 tala1285,aust1307,nort3174,Talaud,False,language,4.11846,126.795,tld,,,0,0,9,ID
 tala1286,aust1307,mati1250,Tala Ingod,False,dialect,,,,,,0,0,0,
 tala1287,aust1307,sugu1243,Talantang,False,dialect,,,,,,0,0,0,
-tala1288,nort2923,sahu1245,Tala'i,False,dialect,,,,,,0,0,0,
+tala1288,nort2923,sahu1245,Talaꞌi,False,dialect,,,,,,0,0,0,
 tala1295,afro1255,tala1298,Tala,False,language,10.233,9.85457,tak,,,0,0,0,NG
 tala1296,afro1255,guru1272,Tala-Sho-Zangwal,False,family,,,,,,1,3,0,
 tala1297,aust1307,pada1260,Talae,False,dialect,,,,,,0,0,0,
@@ -22750,7 +22750,7 @@ tall1254,afro1255,west2765,Tal (Aramaic),False,dialect,,,,,,0,0,0,
 tall1255,sali1255,bell1243,Tallio,False,dialect,,,,,,0,0,0,
 taln1239,atla1278,fare1241,Talni,False,dialect,,,,,,0,0,0,
 talo1250,narr1279,ndin1246,Tasomi-Tata,False,language,10.6453,30.4815,tlo,,,0,0,0,SD
-talo1251,aust1307,kalu1250,Talondo',False,language,-2.4525,119.35,tln,,,0,0,0,ID
+talo1251,aust1307,kalu1250,Talondoꞌ,False,language,-2.4525,119.35,tln,,,0,0,0,ID
 talo1252,aust1307,east2490,Taloki,False,language,-4.6478,122.872,tlk,,,0,0,0,ID
 talo1253,arti1236,arti1236,Talossan,False,language,,,tzl,,,0,0,0,US
 talu1238,sino1245,lalu1234,Lavu-Yongsheng-Talu,False,language,26.4,101.0,yta,,,0,0,0,CN
@@ -22779,7 +22779,7 @@ tama1368,tama1329,tama1330,Tama-Sungor,False,family,,,,,,0,2,10,
 tamb1252,atla1278,nyam1275,Tambo,False,dialect,,,,,,0,0,0,
 tamb1253,aust1307,sout3220,Tambotalo,False,language,-15.5004,167.139,tls,,,0,0,0,VU
 tamb1254,aust1307,cent2100,Tambunan Dusun,False,dialect,5.68284,116.373,kzt,,,0,0,0,MY
-tamb1255,aust1307,mori1268,Tambe'e,False,dialect,,,,,,0,0,0,
+tamb1255,aust1307,mori1268,Tambeꞌe,False,dialect,,,,,,0,0,0,
 tamb1256,aust1307,tola1247,Tamboki,False,dialect,,,,,,0,0,0,
 tamb1257,,,Tambora,False,language,-8.25,118.0,xxt,,,0,0,0,ID
 tamb1258,tupi1275,mbya1239,Tambéopé,False,dialect,,,,,,0,0,0,
@@ -22827,7 +22827,7 @@ tana1285,aust1307,plat1254,Tañala,False,dialect,,,,,,0,0,0,
 tana1286,aust1307,coas1295,Tana Toa,False,dialect,,,,,,0,0,0,
 tana1287,aust1307,ruka1240,Tanan,False,dialect,,,,,,0,0,0,
 tana1288,,,Tanahmerah,False,language,-2.5523,133.18,tcm,,,0,0,0,ID
-tana1289,atha1245,sout3337,Dena'ina,False,language,60.4712,-150.759,tfn,,,0,0,2,US
+tana1289,atha1245,sout3337,Denaꞌina,False,language,60.4712,-150.759,tfn,,,0,0,2,US
 tana1290,atha1245,uppe1472,Tanacross,False,language,63.4046,-143.338,tcb,,,0,0,0,US
 tana1291,quec1387,sout3375,Tana-Lincha,False,dialect,,,,,,0,0,0,PE
 tana1297,afro1255,taya1257,Tanassfarwat,False,dialect,,,,,,0,0,0,
@@ -22863,7 +22863,7 @@ tang1346,mand1469,lele1266,Tangalto Lele,False,dialect,,,,,,0,0,0,
 tang1347,aust1307,arak1257,Movono,False,language,-15.5643,166.958,tgp,,,0,0,0,VU
 tang1348,aust1307,stge1234,Tangga,False,language,-4.08824,153.611,tgg,,,0,0,4,PG
 tang1350,aust1307,dupa1235,Tanglagan,False,dialect,,,,,,0,0,0,
-tang1351,timo1261,kabo1247,Tang'ala,False,dialect,,,,,,0,0,0,
+tang1351,timo1261,kabo1247,Tangꞌala,False,dialect,,,,,,0,0,0,
 tang1353,nucl1709,tang1376,Tangko,False,language,-5.13343,140.269,tkx,,,0,0,0,ID
 tang1354,ramu1234,goam1234,Ataitan,False,family,,,,,,1,4,0,
 tang1355,ramu1234,tang1375,Tanggu,False,language,-4.4621,144.916,tgu,,,0,0,0,PG
@@ -22914,7 +22914,7 @@ tanz1240,indo1319,stan1293,Tanzanian English,False,dialect,,,,,,0,0,0,
 tanz1241,atla1278,ngon1269,Tanzanian Ngoni,False,language,-11.779,35.459,xnj,,,0,0,0,TZ
 taob1238,sino1245,nort2723,Taoba,False,dialect,,,,,,0,0,0,
 taob1239,sino1245,nort2723,Táobā,False,dialect,,,,,,0,0,0,
-taoi1247,aust1305,katu1271,Ta'oihic,False,family,,,,,,1,4,10,
+taoi1247,aust1305,katu1271,Taꞌoihic,False,family,,,,,,1,4,10,
 taok1237,aust1307,babu1240,Taokas,False,dialect,,,,,,0,0,0,
 taol1236,atla1278,moss1236,Taolendé,False,dialect,,,,,,0,0,0,
 taoo1239,krua1234,weno1238,Tao,False,dialect,,,,,,0,0,0,
@@ -23152,7 +23152,7 @@ telz1238,sino1245,pait1244,Telzang,False,dialect,,,,,,0,0,0,
 tema1239,utoa1244,west2814,Temascaltepec Nahuatl,False,language,19.3282,-99.7968,nhv,,,0,0,0,MX
 tema1243,afro1255,ouar1239,Oued Righ,False,language,33.3489,6.06562,tjo,,,0,0,0,DZ
 tema1244,afro1255,taga1278,Temacin,False,dialect,,,,,,0,0,0,
-temb1269,aust1305,temi1246,Tembe',False,dialect,,,,,,0,0,0,
+temb1269,aust1305,temi1246,Tembeꞌ,False,dialect,,,,,,0,0,0,
 temb1270,atla1278,fore1272,Tembo (Kitembo),False,language,-1.91863,28.5778,tbt,,,0,0,2,CD
 temb1271,atla1278,temb1270,Tembo,False,dialect,,,,,,0,0,0,
 temb1272,atla1278,mote1237,Motembo-Kunda,False,language,2.0246,20.36849,tmv,,,0,0,0,CD
@@ -23279,9 +23279,9 @@ tets1235,afro1255,west2724,Tetserret,False,language,14.973333,5.699722,tez,,,0,0
 tetu1244,aust1307,cent2079,Tetunic,False,family,,,,,,0,2,3,
 tetu1245,aust1307,tetu1244,Tetum,False,language,-9.11217,125.528,tet,,,0,0,3,ID TL
 tetu1246,aust1307,tetu1244,Tetun Dili,False,language,-8.58405,125.583,tdt,,,0,0,0,TL
-teud1237,aust1307,taro1264,Te'uda,False,dialect,,,,,,0,0,0,
+teud1237,aust1307,taro1264,Teꞌuda,False,dialect,,,,,,0,0,0,
 teui1238,tupi1275,kaiw1246,Teüi,False,dialect,,,,,,0,0,0,
-teun1241,aust1307,teun1242,Te'un,False,language,-6.97086,129.143718,tve,,,0,0,0,ID
+teun1241,aust1307,teun1242,Teꞌun,False,language,-6.97086,129.143718,tve,,,0,0,0,ID
 teun1242,aust1307,sout3382,Teun-Nila-Serua,False,family,,,,,,1,3,0,
 teun1243,taik1256,kham1289,Teung,False,dialect,,,,,,0,0,0,
 teus1236,chon1288,cont1245,Teushen,False,language,-43.187556,-70.187989,,,,0,0,2,AR CL
@@ -23567,7 +23567,7 @@ tjwa1234,khoe1240,tsoa1238,Tjwao,False,dialect,,,,,,0,0,0,
 tkhu1238,sino1245,mara1379,T. Khullen,False,dialect,,,,,,0,0,0,
 tkhu1242,afro1255,west2765,Tkhuma,False,dialect,,,,,,0,0,0,
 tlac1235,toto1251,tepe1243,Tlachichilco Tepehua,False,language,20.704,-98.1947,tpt,,,0,0,0,MX
-tlac1237,otom1299,west2948,Tlacoapa Me'phaa,False,language,17.3262,-98.8013,tpl,,,0,0,0,MX
+tlac1237,otom1299,west2948,Tlacoapa Meꞌphaa,False,language,17.3262,-98.8013,tpl,,,0,0,0,MX
 tlac1238,otom1299,chin1486,Tlacoatzintepec-Chiltepec,False,family,,,,,,0,2,0,
 tlac1239,otom1299,tlac1238,Tlacoatzintepec Chinantec,False,language,17.8646,-96.5176,ctl,,,0,0,0,MX
 tlac1240,otom1299,amat1239,Tlacolulita Zapotec,False,language,16.2971,-95.7414,zpk,,,0,0,0,MX
@@ -23581,7 +23581,7 @@ tlax1234,utoa1244,cent2258,Tlaxcala-Southeastern Puebla Nahuatl,False,family,,,,
 tlax1236,otom1299,west2824,Tlaxiacic,False,family,,,,,,1,4,7,
 tlax1237,utoa1244,tlax1234,Tlaxcala-Puebla-Pastoral Nahuatl,False,family,,,,,,0,2,0,
 tlaz1235,otom1299,tlaz1238,Tlazoyaltepec Mixtec,False,language,17.02704,-96.97827,mqh,,,0,0,0,MX
-tlaz1236,atha1245,carr1249,Tl'azt'en,False,dialect,,,,,,0,0,0,
+tlaz1236,atha1245,carr1249,Tlꞌaztꞌen,False,dialect,,,,,,0,0,0,
 tlaz1238,otom1299,sout3400,Tlazoyal-Penoles,False,family,,,,,,0,2,3,
 tlha1241,atla1278,tswa1253,Tlhaping,False,dialect,,,,,,0,0,0,
 tlha1242,atla1278,tswa1253,Tlharo,False,dialect,,,,,,0,0,0,
@@ -23594,9 +23594,9 @@ tlon1242,nakh1245,bagv1239,Tlondada-Xushtada,False,dialect,,,,,,0,0,0,
 tlya1238,nakh1245,bezh1248,Tlyadaly,False,dialect,,,,,,0,0,0,
 tmag1238,afro1255,sene1271,Tmagourt,False,dialect,,,,,,0,0,0,
 toaa1239,araw1281,para1316,Toa,False,dialect,,,,,,0,0,0,
-toab1237,aust1307,nort3284,To'abaita,False,language,-8.39233,160.619,mlu,,,0,0,0,SB
+toab1237,aust1307,nort3284,Toꞌabaita,False,language,-8.39233,160.619,mlu,,,0,0,0,SB
 toak1237,aust1307,aset1235,Toak,False,dialect,,,,,,0,0,0,
-toal1234,book1242,book1242,Toala',True,language,,,tlz,,,0,0,0,ID
+toal1234,book1242,book1242,Toalaꞌ,True,language,,,tlz,,,0,0,0,ID
 toar1246,nucl1580,east2494,Toaripi,False,language,-8.07231,146.206,tqo,,,0,0,3,PG
 toba1264,gong1255,yems1235,Toba (Ethiopia),False,dialect,,,,,,0,0,0,
 toba1265,aust1307,suma1277,Batakic,False,family,,,,,,4,7,2,
@@ -23640,8 +23640,8 @@ togo1252,atla1278,indr1246,Togoyo,False,language,8.6629,25.9756,tgy,,,0,0,0,SS
 togo1253,atla1278,dwem1238,Togo,False,dialect,,,,,,0,0,0,
 togo1254,dogo1299,tene1248,Togo Kan,False,dialect,,,,,,0,0,0,
 toho1244,japo1237,east2526,Tōhoku,False,dialect,,,,,,0,0,14,
-toho1245,utoa1244,pima1249,Tohono O'odham,False,language,31.7973,-111.995,ood,,,0,0,2,MX US
-toho1246,utoa1244,toho1245,Tohono O'odam,False,dialect,,,,,,0,0,0,
+toho1245,utoa1244,pima1249,Tohono Oꞌodham,False,language,31.7973,-111.995,ood,,,0,0,2,MX US
+toho1246,utoa1244,toho1245,Tohono Oꞌodam,False,dialect,,,,,,0,0,0,
 tois1237,sino1245,siyi1236,Toishanese,False,dialect,,,,,,0,0,0,
 tojo1241,maya1287,chuj1249,Tojolabal,False,language,16.2572,-91.7825,toj,,,0,0,0,MX
 toka1243,atla1278,domb1246,Toka,False,dialect,,,,,,0,0,2,
@@ -23668,7 +23668,7 @@ tola1246,sino1245,kony1248,Tolamleinyua,False,dialect,,,,,,0,0,0,
 tola1247,aust1307,west2567,Tolaki,False,language,-4.03577,121.888,lbw,,,0,0,8,ID
 tolc1238,sino1245,rong1264,Tolchha,False,dialect,,,,,,0,0,0,
 told1238,atla1278,gola1255,Toldil,False,dialect,,,,,,0,0,0,
-tole1238,aust1307,umaa1242,Tolee',False,dialect,,,,,,0,0,0,
+tole1238,aust1307,umaa1242,Toleeꞌ,False,dialect,,,,,,0,0,0,
 toli1243,atla1278,tofi1235,Toli,False,dialect,,,,,,0,0,0,
 toli1244,aust1307,mala1545,Tolitoli,False,family,,,,,,0,2,0,
 toli1245,nort2923,pagu1249,Toliwiku,False,dialect,,,,,,0,0,0,
@@ -23751,7 +23751,7 @@ topu1237,aust1307,weda1241,Topura,False,dialect,,,,,,0,0,0,
 tora1258,atla1278,bang1345,Tora (Bangba),False,dialect,,,,,,0,0,0,
 tora1259,aust1307,mono1280,Torau,False,language,-6.19922,155.496,ttu,,,0,0,0,PG
 tora1260,aust1307,tora1269,Torajic,False,family,,,,,,1,5,14,
-tora1261,aust1307,tora1260,Toraja-Sa'dan,False,language,-2.97144,119.829,sda,,,0,0,3,ID
+tora1261,aust1307,tora1260,Toraja-Saꞌdan,False,language,-2.97144,119.829,sda,,,0,0,3,ID
 tora1262,aust1307,tora1261,Toraja Barat,False,dialect,,,,,,0,0,0,
 tora1263,chap1271,more1264,Torá,False,language,-6.19532,-61.7416,trz,,,0,0,0,BR
 tora1267,afro1255,birg1240,Toram,False,language,11.2027,19.5254,trj,,,0,0,0,TD
@@ -23781,7 +23781,7 @@ torr1263,indo1319,torr1261,Torres Strait Creole,False,dialect,,,,,,0,0,0,
 tort1234,indo1319,cata1291,Tortosì,False,dialect,,,,,,0,0,0,
 torw1241,indo1319,dirs1236,Torwali,False,language,35.3101,72.5316,trw,,,0,0,2,PK
 tosh1237,japo1237,naga1408,Tōshin,False,dialect,,,,,,0,0,0,
-tosi1237,aust1307,moli1248,Tosila'ai,False,dialect,,,,,,0,0,0,
+tosi1237,aust1307,moli1248,Tosilaꞌai,False,dialect,,,,,,0,0,0,
 tosk1239,indo1319,alba1268,Northern Tosk Albanian,False,language,41.0,20.0,als,,,0,0,4,AL GR MK
 tosu1234,sino1245,ersu1242,Tosu,False,language,28.533333,102.083333,,,,0,0,2,CN
 tota1238,sino1245,dola1240,Tauthali,False,dialect,,,,,,0,0,0,
@@ -23884,7 +23884,7 @@ tsak1250,nucl1709,tsak1251,Tsaukambo,False,language,-5.39076,140.186,kvz,,,0,0,0
 tsak1251,nucl1709,beck1235,Tsakwambo-Komyandaret,False,family,,,,,,0,2,0,
 tsam1241,sali1255,coas1325,Tsamosan,False,family,,,,,,2,4,4,
 tsam1247,afro1255,dull1239,Tsamai,False,language,5.3097,36.9139,tsb,,,0,0,0,ET
-tsao1238,khoe1240,naro1249,Ts'aokhoe,False,dialect,,,,,,0,0,0,
+tsao1238,khoe1240,naro1249,Tsꞌaokhoe,False,dialect,,,,,,0,0,0,
 tsat1238,aust1307,nort3219,Tsat,False,language,18.3192,109.336,huq,,,0,0,0,CN
 tsaw1234,sali1255,down1241,Tsawwassen,False,dialect,,,,,,0,0,0,
 tsch1248,atla1278,ifee1241,Tschetti,False,dialect,,,,,,0,0,0,
@@ -23902,17 +23902,17 @@ tsho1241,sino1245,mnga1238,Tshochen,False,dialect,,,,,,0,0,0,
 tshw1238,atla1278,tswa1255,Tshwa,False,dialect,,,,,,0,0,0,
 tshw1239,khoe1240,ostk1235,Tshwa Khoe,False,family,,,,,,0,2,6,
 tsik1238,atla1278,west2828,Tsikimba,False,language,9.60496,4.88739,kdl,,,0,0,2,NG
-tsil1234,atha1245,chil1280,Tsilhqut'in,False,dialect,,,,,,0,0,0,
+tsil1234,atha1245,chil1280,Tsilhqutꞌin,False,dialect,,,,,,0,0,0,
 tsim1256,nilo1247,isim1234,Isimjeega,False,dialect,,,,,,0,0,0,
 tsim1257,aust1307,tsim1259,Tsimihety Malagasy,False,language,-15.4294,48.8102,xmw,,,0,0,0,MG
 tsim1258,,,Tsimshian,False,family,,,,,,1,3,4,
 tsim1259,aust1307,nort3207,Tsimihety-Betsimisaraka,False,family,,,,,,0,2,0,
-tsim1260,uruc1242,uruu1244,Ts'imu,False,dialect,-15.813,-69.994,,,,0,0,0,
+tsim1260,uruc1242,uruu1244,Tsꞌimu,False,dialect,-15.813,-69.994,,,,0,0,0,
 tsin1239,atla1278,tuki1240,Tutsingo,False,dialect,,,,,,0,0,0,
 tsir1238,zamu1243,ayor1240,Tsiracua,False,dialect,,,,,,0,0,0,
 tsis1238,atla1278,east2739,Salka-Tsishingini,False,language,10.2882,5.11073,tsw,,,0,0,1,NG
 tsit1235,atla1278,mber1262,Tsitsekeic,False,family,,,,,,1,4,14,
-tsix1234,khoe1240,nonk1236,Ts'ixa,False,language,-19.180953,23.998153,,,,0,0,0,BW
+tsix1234,khoe1240,nonk1236,Tsꞌixa,False,language,-19.180953,23.998153,,,,0,0,0,BW
 tsle1234,sali1255,down1241,Tsleil-Waututh,False,dialect,,,,,,0,0,0,
 tsoa1238,khoe1240,tshw1239,Northern Tshwa,False,language,-19.7974,26.9638,hio,,,0,0,3,BW ZW
 tsog1242,atla1278,b10b1234,Okani (B.30),False,family,,,,,,3,6,0,
@@ -23931,7 +23931,7 @@ tsou1250,aust1307,aust1307,Tsouic,False,family,,,,,,1,3,5,
 tsua1234,khoe1240,kuaa1238,Tsua,False,dialect,,,,,,0,0,0,
 tsug1237,japo1237,japa1256,Tsugaru,False,language,40.7435,140.6873,,,,0,0,0,JP
 tsum1240,sino1245,kyir1235,Tsum,False,language,28.4719,85.0817,ttz,,,0,0,0,CN NP
-tsun1242,taik1256,wenm1239,Ts'ün-Lao,False,language,21.3616,102.926,tsl,,,0,0,0,LA VN
+tsun1242,taik1256,wenm1239,Tsꞌün-Lao,False,language,21.3616,102.926,tsl,,,0,0,0,LA VN
 tsun1243,atla1278,zezu1238,Tsunga,False,dialect,,,,,,0,0,0,
 tsus1237,japo1237,hich1237,Tsushima-ben,False,dialect,,,,,,0,0,0,
 tsuv1239,atla1278,east2739,Tsuvadi,False,language,10.8421,5.22095,tvd,,,0,0,0,NG
@@ -24033,7 +24033,7 @@ tung1282,,,Tungusic,False,family,,,,,,10,15,83,
 tung1284,atla1278,nort2765,Tung,False,dialect,,,,,,0,0,0,
 tung1285,atla1278,dadi1249,Tunga,False,dialect,,,,,,0,0,0,
 tung1286,atla1278,ngel1238,Tungu,False,dialect,,,,,,0,0,0,
-tung1287,atla1278,nort2806,Tungi',False,dialect,,,,,,0,0,0,
+tung1287,atla1278,nort2806,Tungiꞌ,False,dialect,,,,,,0,0,0,
 tung1288,aust1307,east2877,Tungkal Ulu,False,dialect,,,,,,0,0,0,
 tung1289,aust1307,east2877,Tungkal Ilir,False,dialect,,,,,,0,0,0,
 tung1290,aust1307,tung1294,Tungag,False,language,-2.52188,150.198,lcm,,,0,0,0,PG
@@ -24183,8 +24183,8 @@ tzot1261,book1242,book1242,"Tzotzil, Huixtán",True,language,16.64,-92.74,tzu,,,
 tzot1262,book1242,book1242,"Tzotzil, Chamula",True,language,16.64,-92.74,tzc,,,0,0,0,MX
 tzot1263,book1242,book1242,"Tzotzil, Chenalhó",True,language,16.64,-92.74,tze,,,0,0,0,MX
 tzot1264,book1242,book1242,"Tzotzil, Zinacantán",True,language,16.64,-92.74,tzz,,,0,0,0,MX
-tzut1248,maya1287,cakc1244,Tz'utujil,False,language,14.6351,-91.2012,tzj,,,0,0,0,GT
-tzut1249,book1242,book1242,"Tz'utujil, Western",True,language,,,tzt,,,0,0,0,GT
+tzut1248,maya1287,cakc1244,Tzꞌutujil,False,language,14.6351,-91.2012,tzj,,,0,0,0,GT
+tzut1249,book1242,book1242,"Tzꞌutujil, Western",True,language,,,tzt,,,0,0,0,GT
 uabm1237,aust1307,nort3357,Uab Meto,False,language,-9.77284,124.144,aoz,,,0,0,9,ID TL
 uabm1238,aust1307,deng1254,Meto,False,family,,,,,,1,3,17,
 uahu1237,aust1307,nort2845,Ua Huka,False,dialect,,,,,,0,0,0,
@@ -24299,7 +24299,7 @@ ulst1239,indo1319,mids1245,Ulster,False,dialect,,,,,,0,0,0,
 ulst1241,indo1319,iris1255,Ulster English,False,dialect,,,,,,0,0,0,
 ulte1235,mixe1284,oaxa1241,Ulterior-Mixe,False,language,17.36,-96.05,,,,0,0,0,MX
 ulua1242,aust1307,iban1264,Ulu Ai,False,dialect,,,,,,0,0,0,
-ulua1243,aust1307,otda1235,Ulu Ai',False,dialect,,,,,,0,0,0,
+ulua1243,aust1307,otda1235,Ulu Aiꞌ,False,dialect,,,,,,0,0,0,
 ulub1244,atla1278,masa1299,Manjiya,False,dialect,,,,,,0,0,0,
 uluc1240,aust1305,jahh1242,Ulu Ceres,False,dialect,,,,,,0,0,0,
 ulud1238,atla1278,masa1299,Luhugu,False,dialect,,,,,,0,0,0,
@@ -24309,7 +24309,7 @@ uluk1256,aust1305,sema1266,Ulu Kampar,False,dialect,,,,,,0,0,0,
 uluk1257,atla1278,nucl1747,Ulukwumi,False,language,6.4974,6.59202,ulb,,,0,0,0,NG
 ulul1240,aust1305,besi1244,Ulu Langat Orang Bukit,False,dialect,,,,,,0,0,0,
 ulul1241,aust1307,noma1261,Dusun Tuo,False,dialect,,,,,,0,0,0,
-ulum1237,aust1307,mata1312,Ulumanda',False,language,-3.00933,118.994,ulm,,,0,0,3,ID
+ulum1237,aust1307,mata1312,Ulumandaꞌ,False,language,-3.00933,118.994,ulm,,,0,0,3,ID
 ulus1242,aust1305,kens1248,Ulu Selama,False,dialect,,,,,,0,0,0,
 ulut1240,aust1305,jahh1242,Ulu Tembeling,False,dialect,,,,,,0,0,0,
 uluu1244,aust1307,mina1268,Ulu (Minangkabau),False,dialect,,,,,,0,0,0,
@@ -24324,8 +24324,8 @@ umad1240,indo1319,malv1243,Umadwadi,False,dialect,,,,,,0,0,0,
 umad1241,aust1307,reja1241,Uma Daro,False,dialect,,,,,,0,0,0,
 umaj1239,aust1307,main1275,Uma Jalam,False,dialect,,,,,,0,0,0,
 umaj1240,aust1307,reja1241,Uma Juman,False,dialect,,,,,,0,0,0,
-umal1238,aust1307,uppe1425,Uma' Lung,False,language,3.25,116.5,ulu,,,0,0,0,ID
-umal1239,aust1307,uppe1425,Uma' Lasan,False,language,2.14141,114.205,xky,,,0,0,5,ID MY
+umal1238,aust1307,uppe1425,Umaꞌ Lung,False,language,3.25,116.5,ulu,,,0,0,0,ID
+umal1239,aust1307,uppe1425,Umaꞌ Lasan,False,language,2.14141,114.205,xky,,,0,0,5,ID MY
 umal1240,aust1307,kaya1325,Uma Lakan,False,dialect,,,,,,0,0,0,
 uman1240,daga1274,daga1274,Umanakaina,False,language,-9.89671,149.658,gdn,,,0,0,2,PG
 umar1237,aust1307,kamb1299,Umbu Ratu Nggai,False,dialect,,,,,,0,0,0,
@@ -24539,7 +24539,7 @@ uppe1402,indo1319,pras1239,Upper Prasun,False,dialect,,,,,,0,0,0,
 uppe1403,indo1319,maha1287,Upper Mahasu Pahari,False,dialect,,,,,,0,0,5,
 uppe1404,aust1305,lame1256,Upper Lamet,False,dialect,,,,,,0,0,0,
 uppe1405,aust1305,bond1245,Upper Bondo,False,dialect,,,,,,0,0,0,
-uppe1406,aust1305,ongt1234,Upper Ta'oih,False,language,16.186515,107.056135,tth,,,0,0,5,LA VN
+uppe1406,aust1305,ongt1234,Upper Taꞌoih,False,language,16.186515,107.056135,tth,,,0,0,5,LA VN
 uppe1407,kart1248,svan1243,Upper Bal,False,dialect,,,,,,0,0,0,
 uppe1408,sino1245,lowa1242,Upper Mustang,False,dialect,,,,,,0,0,0,
 uppe1409,sino1245,grom1238,Upper Groma,False,dialect,,,,,,0,0,0,
@@ -24581,7 +24581,7 @@ uppe1456,pama1250,sout3141,Upper Southwest Paman,False,family,,,,,,0,2,0,
 uppe1457,atla1278,kain1276,Upper Niger Kainji,False,family,,,,,,1,3,0,
 uppe1458,indo1319,macr1272,Upper Guinea Portuguese,False,family,,,,,,0,3,6,
 uppe1459,book1242,book1242,Upper Baram Kenyah,True,language,,,ubm,,,0,0,0,
-uppe1461,ural1272,mans1258,Upper Loz'va Mansi,False,dialect,,,,,,0,0,0,
+uppe1461,ural1272,mans1258,Upper Lozꞌva Mansi,False,dialect,,,,,,0,0,0,
 uppe1462,nakh1245,nucl1774,Upper Mulebki,False,dialect,,,,,,0,0,0,
 uppe1463,nakh1245,sout3261,Upper-Vurqri,False,dialect,,,,,,0,0,3,
 uppe1464,indo1319,mode1258,Upper Franconian,False,family,,,,,,2,4,18,
@@ -24615,7 +24615,7 @@ upst1234,sino1245,qian1264,Upstream-Nu Qiang,False,family,,,,,,0,2,11,
 uraa1244,sino1245,bumt1240,Ura,False,dialect,27.466667,90.9,,,,0,0,0,
 urad1238,pama1250,nort3278,Uradhic,False,family,,,,,,1,3,0,
 urad1239,book1242,book1242,Uradhi,True,language,-12.0679,142.135,urf,,,0,0,0,AU
-urak1238,aust1307,keda1253,Urak Lawoi',False,language,7.5258,99.0768,urk,,,0,0,0,MY TH
+urak1238,aust1307,keda1253,Urak Lawoiꞌ,False,language,7.5258,99.0768,urk,,,0,0,0,MY TH
 ural1272,,,Uralic,False,family,,,,,,31,49,156,
 ural1273,turk1311,tata1255,Ural Tatar,False,dialect,,,,,,0,0,0,
 ural1274,drav1251,tami1297,Urali of Idukki,False,language,10.8519,76.8007,url,,,0,0,0,IN
@@ -24746,8 +24746,8 @@ vada1239,drav1251,telu1262,Vadari,False,dialect,,,,,,0,0,0,
 vada1240,drav1251,telu1262,Vadaga,False,dialect,,,,,,0,0,0,
 vado1243,atla1278,mako1251,Vadonde,False,dialect,,,,,,0,0,0,
 vado1244,aust1307,tinp1237,Vado,False,dialect,,,,,,0,0,0,
-vado1245,aust1307,tinp1237,Vado-Vaene',False,dialect,,,,,,0,0,0,
-vaen1237,aust1307,tinp1237,Vaene',False,dialect,,,,,,0,0,0,
+vado1245,aust1307,tinp1237,Vado-Vaeneꞌ,False,dialect,,,,,,0,0,0,
+vaen1237,aust1307,tinp1237,Vaeneꞌ,False,dialect,,,,,,0,0,0,
 vafs1240,indo1319,vafs1241,Vafsi,False,language,34.5309,50.0013,vaf,,,0,0,0,IR
 vafs1241,indo1319,sout3177,Vafsic,False,family,,,,,,0,2,4,
 vagh1246,indo1319,west2830,Vaghri,False,language,26.1404,68.6051,vgr,,,0,0,0,PK
@@ -24815,8 +24815,8 @@ vanu1245,aust1307,nucl1485,Vanuatu-Loyalty Outliers,False,family,,,,,,1,4,4,
 vanu1247,atla1278,nyal1255,Vanuma-Nyali,False,family,,,,,,0,2,0,
 vany1234,utoa1244,serr1255,Vanyume,False,dialect,,,,,,0,0,0,
 vaoo1237,aust1307,boto1250,Vao-Vovo,False,language,-15.898299,167.309973,vao,,,0,0,0,VU
-vapo1239,aust1307,tinp1237,Vapopeo',False,dialect,,,,,,0,0,0,
-vapo1240,aust1307,tinp1237,Vapopeo'-Rausaura,False,dialect,,,,,,0,0,0,
+vapo1239,aust1307,tinp1237,Vapopeoꞌ,False,dialect,,,,,,0,0,0,
+vapo1240,aust1307,tinp1237,Vapopeoꞌ-Rausaura,False,dialect,,,,,,0,0,0,
 vaqt1234,aust1307,kuan1248,Vaqtuna,False,dialect,,,,,,0,0,5,
 vara1239,atla1278,togb1241,Vara,False,dialect,,,,,,0,0,0,
 varh1239,indo1319,mode1268,Varhadi-Nagpuri,False,language,20.7139,79.7516,vah,,,0,0,11,IN
@@ -24836,7 +24836,7 @@ vata1239,krua1234,lako1244,Vata,False,dialect,,,,,,0,0,0,
 vatr1237,book1242,book1242,Vatrata,True,language,-13.83,167.42,vlr,,,0,0,0,VU
 vaud1238,indo1319,fran1260,Vaudois,False,dialect,,,,,,0,0,0,
 vaup1239,kaku1242,cacu1241,Vaupés Cacua,False,dialect,,,,,,0,0,0,
-vavo1237,aust1307,tinp1237,Vavoehpoa',False,dialect,,,,,,0,0,0,
+vavo1237,aust1307,tinp1237,Vavoehpoaꞌ,False,dialect,,,,,,0,0,0,
 vaxi1234,indo1319,taji1245,Vaxio-Bolo,False,dialect,,,,,,0,0,0,
 vazi1234,uncl1493,uncl1493,Vazimba,False,language,,,,,,0,0,0,MG
 vedd1240,indo1319,sinh1247,Veddah,False,language,6.97396,81.2618,ved,,,0,0,0,LK
@@ -24867,7 +24867,7 @@ veng1239,aust1307,natu1246,Venga,False,dialect,,,,,,0,0,0,
 vent1242,chum1262,cent2139,Ventureño,False,language,34.1761,-119.035,veo,,,0,0,0,US
 veps1250,ural1272,east2796,Veps,False,language,60.3353,34.7865,vep,,,0,0,3,RU
 veqa1238,nucl1709,sout2943,Veqaura,False,dialect,,,,,,0,0,0,
-vera1241,aust1307,leme1240,Vera'a,False,language,-13.892528,167.428701,vra,,,0,0,3,VU
+vera1241,aust1307,leme1240,Veraꞌa,False,language,-13.892528,167.428701,vra,,,0,0,3,VU
 vere1249,atla1278,nort3259,Vere-Gimme,False,family,,,,,,2,6,26,
 vere1250,atla1278,vere1249,Vere,False,family,,,,,,0,4,20,
 vere1251,aust1307,naka1262,Vere (Papua New Guinea),False,dialect,,,,,,0,0,0,
@@ -24911,7 +24911,7 @@ vina1238,nucl1709,sout2943,Vinaata-Konkompira,False,dialect,,,,,,0,0,0,
 vinc1241,araw1281,isla1278,Vincentian,False,dialect,,,,,,0,0,0,
 vinc1243,indo1319,vinc1244,Vincentian Creole English,False,language,13.2436,-61.1963,svc,,,0,0,0,VC
 vinc1244,indo1319,east2759,Vincent-Grenadian Creole,False,family,,,,,,1,3,0,
-vinm1237,aust1307,cent2316,Neve'ei,False,language,-16.2253,167.427,vnm,,,0,0,1,VU
+vinm1237,aust1307,cent2316,Neveꞌei,False,language,-16.2253,167.427,vnm,,,0,0,1,VU
 vinz1238,atla1278,rwan1241,Vinza,False,language,-4.99312,30.5699,vin,,,0,0,0,TZ
 virg1240,indo1319,barb1266,Virgin Islands Creole English,False,language,18.04715,-63.07851,vic,,,0,0,0,BQ MF PR SX VG VI
 viry1239,turk1311,chuv1255,Viryal,False,dialect,,,,,,0,0,0,
@@ -24981,7 +24981,7 @@ vute1246,atla1278,vuti1235,Vute-Wawa,False,family,,,,,,0,2,9,
 vuti1235,atla1278,mamb1310,Vutic,False,family,,,,,,1,4,9,
 vwan1235,atla1278,wanj1243,Vwanji,False,language,-9.00683,34.0757,wbi,,,0,0,0,TZ
 vwez1238,atla1278,gbag1258,Vwezhi,False,dialect,,,,,,0,0,0,
-vymm1234,ural1272,nort3401,Vym',False,dialect,,,,,,0,0,0,
+vymm1234,ural1272,nort3401,Vymꞌ,False,dialect,,,,,,0,0,0,
 vyne1238,indo1319,powa1246,Vyneganga Powari,False,dialect,,,,,,0,0,0,
 waaa1245,aust1305,wala1271,Nuclear Waic,False,family,,,,,,0,4,9,
 waad1238,mand1469,tour1242,Wáádú,False,dialect,,,,,,0,0,0,
@@ -25021,7 +25021,7 @@ wadj1254,,,Wadjiginy,False,language,-12.8596,130.737,wdj,,,0,0,1,AU
 wadj1255,pama1250,sout2765,Wadjigu,False,language,-23.8029,147.421,wdu,,,0,0,3,AU
 wadj1256,pama1250,wadj1255,Wadja,False,dialect,,,,,,0,0,0,
 wadu1238,afro1255,baca1246,Wa-Duku,False,dialect,,,,,,0,0,0,
-waem1237,aust1307,taup1244,Wa'ema,False,language,-10.2897,150.398,wag,,,0,0,0,PG
+waem1237,aust1307,taup1244,Waꞌema,False,language,-10.2897,150.398,wag,,,0,0,0,PG
 waer1237,aust1307,waer1238,Kolor,False,language,-8.78645,120.70299,wrx,,,0,0,0,ID
 waer1238,aust1307,mang1430,Waerana-Razong,False,family,,,,,,0,2,0,
 waes1237,aust1307,buru1303,Wae Sama,False,dialect,,,,,,0,0,0,
@@ -25068,7 +25068,7 @@ wail1244,atha1245,cali1245,Eel River Athabaskan,False,language,39.1513,-123.284,
 wail1245,atha1245,wail1244,Wailaki,False,dialect,,,,,,0,0,0,
 wail1246,aust1307,made1253,Wailil,False,dialect,,,,,,0,0,0,
 waim1251,aust1307,nucl1506,Waima,False,language,-8.67145,146.544,rro,,,0,0,3,PG
-waim1252,aust1307,kawa1289,Waima'a,False,language,-8.53416,126.317,wmh,,,0,0,0,TL
+waim1252,aust1307,kawa1289,Waimaꞌa,False,language,-8.53416,126.317,wmh,,,0,0,0,TL
 waim1253,cari1283,yawa1262,Waimiri-Atroari,False,language,-0.61832,-60.4259,atr,,,0,0,3,BR
 waim1254,cari1283,waim1253,Waimiri,False,dialect,,,,,,0,0,0,
 waim1255,tuca1253,bara1401,Waimaha,False,language,0.30416,-70.1644,bao,,,0,0,4,BR CO
@@ -25270,7 +25270,7 @@ wari1264,lake1255,dout1239,Waritai,False,language,-3.23021,138.456,wbe,,,0,0,0,I
 wari1265,bord1247,bord1247,Warisic,False,family,,,,,,3,9,2,
 wari1266,bord1247,nucl1773,Waris,False,language,-3.139,140.931,wrs,,,0,0,0,ID PG
 wari1267,chap1271,wanh1234,Wari-Oro Win,False,family,,,,,,0,2,0,
-wari1268,chap1271,wari1267,Wari',False,language,-10.69948,-64.56152,pav,,,0,0,0,BR
+wari1268,chap1271,wari1267,Wariꞌ,False,language,-10.69948,-64.56152,pav,,,0,0,0,BR
 wari1269,chap1271,more1263,Waric,False,family,,,,,,3,5,0,
 wari1270,pama1250,mant1266,Wariyangga-Dhargari,False,family,,,,,,0,2,0,
 wari1272,nucl1709,mand1444,Wariktop,False,dialect,,,,,,0,0,0,
@@ -25849,7 +25849,7 @@ west2921,indo1319,nort3316,Western New England English,False,dialect,,,,,,0,0,0,
 west2922,indo1319,olde1238,West Saxon,False,dialect,,,,,,0,0,0,
 west2923,indo1319,mids1245,Western Mid Scots,False,dialect,,,,,,0,0,0,
 west2924,turk1311,nort2697,Western Azerbaijani,False,dialect,,,,,,0,0,6,
-west2925,aust1307,lioo1240,Western Li'o,False,dialect,,,,,,0,0,0,
+west2925,aust1307,lioo1240,Western Liꞌo,False,dialect,,,,,,0,0,0,
 west2926,sino1245,sout2729,Western Pumi,False,dialect,,,,,,0,0,2,
 west2927,indo1319,vend1247,Western Hungarian Vend,False,dialect,,,,,,0,0,0,
 west2928,indo1319,gads1256,Western Gadschkene,False,dialect,,,,,,0,0,2,
@@ -25969,7 +25969,7 @@ wikc1234,yoku1255,tule1245,Wikchamni,False,dialect,,,,,,0,0,0,
 wike1239,pama1250,epme1234,Wik-Epa,False,language,-13.846,141.858,wie,,,0,0,0,AU
 wiki1239,pama1250,mung1277,Wik-Iiyanh,False,language,-14.1273,142.781,wij,,,0,0,0,AU
 wikk1239,unat1236,pama1255,Wik-Keyangan,False,language,-14.2649,142.005,wif,,,0,0,0,AU
-wikm1246,pama1250,epme1234,Wik-Me'anha,False,language,-14.058,141.925,wih,,,0,0,0,AU
+wikm1246,pama1250,epme1234,Wik-Meꞌanha,False,language,-14.058,141.925,wih,,,0,0,0,AU
 wikm1247,pama1250,mung1277,Wik-Mungkan,False,language,-13.98051,141.81611,wim,,,0,0,0,AU
 wikn1244,pama1250,wika1238,Wik-Ngandjara,False,dialect,,,,,,0,0,0,
 wikn1245,pama1250,ngat1246,Wik-Ngathana,False,language,-13.8691,141.532,wig,,,0,0,0,AU
@@ -26010,7 +26010,7 @@ wiru1244,,,Wiru,False,language,-6.35863,144.214,wiu,,,0,0,0,PG
 wisc1238,siou1252,hoch1243,Wisconsin,False,dialect,,,,,,0,0,0,
 wita1237,aust1307,moro1287,Wita Ea,False,dialect,,,,,,0,0,2,
 wite1234,indo1319,west2928,Witembergaria,False,dialect,,,,,,0,0,0,
-wits1234,atha1245,babi1235,Witsuwit'en,False,dialect,,,,,,0,0,0,
+wits1234,atha1245,babi1235,Witsuwitꞌen,False,dialect,,,,,,0,0,0,
 witt1234,indo1319,west3007,Wittichenau,False,dialect,,,,,,0,0,0,
 wiwi1237,aust1307,tola1247,Wiwirano,False,dialect,,,,,,0,0,0,
 wiya1238,anga1289,anka1246,Wiyagwa,False,dialect,,,,,,0,0,0,
@@ -26167,7 +26167,7 @@ xaka1234,turk1311,khak1248,Xakass Shor,False,dialect,,,,,,0,0,0,
 xakr1238,nucl1710,jece1235,Xakriabá,False,language,-19.0,-47.0,xkr,,,0,0,0,BR
 xaku1238,abkh1242,adyg1241,Xakuchi,False,dialect,,,,,,0,0,0,
 xamb1234,nucl1710,kara1500,Xambioá,False,dialect,,,,,,0,0,0,
-xamm1241,tuuu1241,kwii1241,/Xam,False,language,-31.7612,20.1733,xam,,,0,0,7,ZA
+xamm1241,tuuu1241,kwii1241,ǀXam,False,language,-31.7612,20.1733,xam,,,0,0,7,ZA
 xamt1239,afro1255,nort3163,Xamtanga,False,language,12.4479,38.8352,xan,,,0,0,4,ET
 xana1235,otom1299,sout3003,Xanaguía Zapotec,False,language,15.9748,-96.1927,ztg,,,0,0,0,MX
 xapu1238,nakh1245,hapu1234,Xaput,False,dialect,,,,,,0,0,0,
@@ -26180,7 +26180,7 @@ xaty1241,chuk1271,kere1280,Xatyrka (southern Kerek),False,dialect,,,,,,0,0,0,
 xaty1242,chuk1271,chuk1273,Xatyrskij,False,dialect,,,,,,0,0,0,
 xava1240,nucl1710,jece1235,Xavánte,False,language,-14.3017,-52.4367,xav,,,0,0,0,BR
 xazo1234,afro1255,sout3314,Xazo,False,dialect,,,,,,0,0,0,
-xegw1238,tuuu1241,east2867,//Xegwi,False,language,-26.3407,30.4028,xeg,,,0,0,0,ZA
+xegw1238,tuuu1241,east2867,ǁXegwi,False,language,-26.3407,30.4028,xeg,,,0,0,0,ZA
 xenq1238,mand1469,soni1259,Xenqenna,False,dialect,,,,,,0,0,0,
 xere1240,nucl1710,jece1235,Xerénte,False,language,-9.59426,-48.2629,xer,,,0,0,0,BR
 xere1241,cari1283,hixk1239,Xerew,False,dialect,,,,,,0,0,0,
@@ -26194,7 +26194,7 @@ xian1249,sino1245,acha1249,Xiandao,False,dialect,24.5458,97.9052,xia,,,0,0,0,CN
 xian1250,sino1245,sout2730,Xiangyun,False,dialect,25.5313657,100.4478932,,,,0,0,0,
 xian1251,sino1245,midd1354,Xiang Chinese,False,language,27.66847,111.47112,hsn,,,0,0,22,CN
 xian1252,sino1245,puxi1243,Xianyou,False,dialect,,,,,,0,0,0,
-xian1253,sino1245,huab1238,Xi'an Mandarin,False,dialect,34.228154,108.960571,,,,0,0,0,
+xian1253,sino1245,huab1238,Xiꞌan Mandarin,False,dialect,34.228154,108.960571,,,,0,0,0,
 xian1254,sino1245,luos1238,Xiangtan,False,dialect,27.8482649,112.7688127,,,,0,0,0,
 xian1255,sino1245,cant1236,Hong Kong,False,dialect,22.422645,114.098396,,,,0,0,0,HK MO
 xiao1244,sino1245,situ1238,Xiaojin,False,dialect,,,,,,0,0,0,
@@ -26239,7 +26239,7 @@ xokl1240,nucl1710,kain1270,Xokleng,False,language,-26.9217,-49.5886,xok,,,0,0,0,
 xokx1238,khoe1240,kxoe1243,||Xo-Kxoe,False,dialect,,,,,,0,0,0,
 xomk1238,khoe1240,kxoe1243,||Xom-Kxoe,False,dialect,,,,,,0,0,0,
 xong1238,atla1278,tson1249,Xonga,False,dialect,,,,,,0,0,0,
-xooo1239,tuuu1241,taaa1242,West !Xoon,False,language,-23.59,19.15,,,,0,0,1,BW NA ZA
+xooo1239,tuuu1241,taaa1242,West ǃXoon,False,language,-23.59,19.15,,,,0,0,1,BW NA ZA
 xopa1238,kart1248,sena1260,Xopa,False,dialect,,,,,,0,0,0,
 xora1234,afro1255,cent2410,Xorasan-Qashqa-Darya Arabic,False,family,,,,,,0,2,6,
 xuan1238,sino1245,wuch1236,Xuanzhou,False,dialect,,,,,,0,0,3,
@@ -26390,7 +26390,7 @@ yand1258,nucl1709,sian1257,Yandime,False,dialect,,,,,,0,0,0,
 yand1259,nucl1709,enga1252,Yandapo,False,dialect,,,,,,0,0,0,
 yand1260,atla1278,mumu1249,Yandangic,False,family,,,,,,3,6,3,
 yand1261,pama1250,bidy1245,Yandjibara,False,language,-24.746981,145.647382,xyb,,,0,0,0,AU
-yane1238,araw1281,kamp1244,Yanesha',False,language,-10.5454,-75.315,ame,,,0,0,0,PE
+yane1238,araw1281,kamp1244,Yaneshaꞌ,False,language,-10.5454,-75.315,ame,,,0,0,0,PE
 yang1286,taik1256,deba1238,Yang Zhuang,False,language,23.091864,106.393188,zyg,,,0,0,0,CN VN
 yang1287,,,Yangmanic,False,family,,,,,,0,3,0,
 yang1288,yang1287,yang1287,Yangman,False,language,-14.4964,132.52,jng,,,0,0,0,AU
@@ -26434,7 +26434,7 @@ yans1241,atla1278,yans1239,Yans Nkara,False,dialect,,,,,,0,0,0,
 yant1237,aust1307,gora1262,Yanta,False,dialect,,,,,,0,0,0,
 yany1243,pama1250,ngar1290,Yanyuwa,False,language,-15.7621,136.055,jao,,,0,0,0,AU
 yanz1241,sino1245,huiz1242,Yanzhou,False,dialect,,,,,,0,0,0,
-yaoa1238,sino1245,lolo1259,Yao'an Lolopho,False,dialect,,,,,,0,0,0,
+yaoa1238,sino1245,lolo1259,Yaoꞌan Lolopho,False,dialect,,,,,,0,0,0,
 yaoa1239,cari1283,uncl1520,Yaio,False,language,10.125673,-61.810199,,,,0,0,0,TT VE
 yaoi1234,atla1278,ruvu1234,Yaoic,False,family,,,,,,0,2,5,
 yaoo1241,atla1278,yaoi1234,Yao,False,language,-13.6119,35.2387,yao,,,0,0,5,MW MZ TZ ZM
@@ -26901,7 +26901,7 @@ zeem1242,afro1255,nucl1831,Zeem,False,language,10.1464,9.2826,zem,,,0,0,0,NG
 zeem1243,afro1255,sout3170,Zeemic,False,family,,,,,,1,4,0,
 zeeu1238,indo1319,zeeu1239,Zeeuws,False,language,51.4981,3.85428,zea,,,0,0,9,NL
 zeeu1239,indo1319,sout3292,Zeeuwic,False,family,,,,,,0,4,9,
-zefr1234,indo1319,gazi1243,Zefra'i,False,dialect,32.80592,52.11667,,,,0,0,0,IR
+zefr1234,indo1319,gazi1243,Zefraꞌi,False,dialect,32.80592,52.11667,,,,0,0,0,IR
 zemb1238,atla1278,here1252,Zemba,False,language,-17.2958,13.4424,dhm,,,0,0,0,AO NA
 zeme1240,sino1245,mzie1236,Zeme Naga,False,language,25.3499,93.6463,nzm,,,0,0,2,IN
 zeme1241,sino1245,kuki1245,Zemeic,False,family,,,,,,2,7,7,
@@ -26979,7 +26979,7 @@ zizi1238,afro1255,gude1248,Zizilivakan,False,language,10.4689,13.5233,ziz,,,0,0,
 zlar1234,sino1245,cham1336,Zlarong,False,language,29.783701,98.135713,,,,0,0,0,CN
 zlen1238,afro1255,psik1239,Zlenge,False,dialect,,,,,,0,0,0,
 zodi1234,afro1255,dass1243,Zodi,False,dialect,,,,,,0,0,0,
-zoee1240,tupi1275,zoee1241,Zo'é,False,language,-1.77208,-55.50746,pto,,,0,0,0,BR
+zoee1240,tupi1275,zoee1241,Zoꞌé,False,language,-1.77208,-55.50746,pto,,,0,0,0,BR
 zoee1241,tupi1275,waya1271,Zoe-Emerillon,False,family,,,,,,0,2,0,
 zohr1238,indo1319,aima1241,Zohri,False,dialect,,,,,,0,0,0,
 zokh1238,sino1245,khlu1235,Zokhuo,False,language,23.8,104.8,yzk,,,0,0,0,CN

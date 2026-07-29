@@ -18,7 +18,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,11 +36,12 @@ class LanguageServiceTest {
     @Test
     void listLanguages_sanitizesPagingBounds() {
         Page<Language> page = new PageImpl<>(List.of(new Language()));
-        when(languageRepository.search(isNull(), any(Pageable.class))).thenReturn(page);
+        when(languageRepository.search(eq(false), anyString(), any(Pageable.class))).thenReturn(page);
 
         Page<Language> result = languageService.listLanguages("", -4, 500);
 
         assertEquals(1, result.getTotalElements());
+        verify(languageRepository).search(eq(false), eq("%"), any(Pageable.class));
     }
 
     @Test
@@ -75,10 +79,11 @@ class LanguageServiceTest {
     @Test
     void searchOptions_sanitizesPagingAndDelegatesToRepository() {
         Page<LanguageOptionDto> options = new PageImpl<>(List.of(new LanguageOptionDto("fra", "French")));
-        when(languageRepository.listOptions(any(), any(Pageable.class))).thenReturn(options);
+        when(languageRepository.listOptions(anyBoolean(), anyString(), any(Pageable.class))).thenReturn(options);
 
         Page<LanguageOptionDto> result = languageService.searchOptions("fr", -1, 999);
 
         assertEquals(1, result.getTotalElements());
+        verify(languageRepository).listOptions(eq(true), eq("%fr%"), any(Pageable.class));
     }
 }

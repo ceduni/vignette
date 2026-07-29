@@ -202,6 +202,37 @@ onMounted(loadCountryLanguageData);
               :viewBox="`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`"
               xmlns="http://www.w3.org/2000/svg"
           >
+            <defs>
+              <radialGradient id="wl-continent-fill" cx="32%" cy="28%" r="78%">
+                <stop offset="0%" stop-color="#f3e6e1"/>
+                <stop offset="42%" stop-color="#e4d2ca"/>
+                <stop offset="100%" stop-color="#d4bfb5"/>
+              </radialGradient>
+              <linearGradient id="wl-continent-hover" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f0d4ce"/>
+                <stop offset="55%" stop-color="#e2b8b0"/>
+                <stop offset="100%" stop-color="#d09c94"/>
+              </linearGradient>
+              <linearGradient id="wl-continent-data" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#d4e5ca"/>
+                <stop offset="55%" stop-color="#b8d0a8"/>
+                <stop offset="100%" stop-color="#94b882"/>
+              </linearGradient>
+              <linearGradient id="wl-continent-selected" x1="15%" y1="10%" x2="90%" y2="95%">
+                <stop offset="0%" stop-color="#d98994"/>
+                <stop offset="55%" stop-color="#8f3c4e"/>
+                <stop offset="100%" stop-color="#5f2432"/>
+              </linearGradient>
+              <filter id="wl-continent-glow" x="-35%" y="-35%" width="170%" height="170%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="1.4" result="blur"/>
+                <feFlood flood-color="#5B1928" flood-opacity="0.14" result="rose"/>
+                <feComposite in="rose" in2="blur" operator="in" result="glow"/>
+                <feMerge>
+                  <feMergeNode in="glow"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
             <path
                 v-for="country in countryFeatures"
                 :key="country.id"
@@ -336,14 +367,14 @@ onMounted(loadCountryLanguageData);
 
 <style scoped>
 .world-language-explorer {
-  --explorer-ink: #102a43;
-  --explorer-soft-ink: #4c5d73;
-  --explorer-line: #d4e2f3;
-  --explorer-water: #e6f2ff;
-  --explorer-sea: #c8e3ff;
-  --explorer-land:rgb(239, 235, 215);
-  --explorer-land-data: #8bc7a2;
-  --explorer-land-selected:rgb(255, 50, 252);
+  --explorer-ink: var(--text, #2F1722);
+  --explorer-soft-ink: var(--text-soft, rgba(47, 23, 34, 0.65));
+  --explorer-line: rgba(109, 31, 52, 0.14);
+  --explorer-water: #f5e7e4;
+  --explorer-sea: #ecc8c0;
+  --explorer-land: #efe2d2;
+  --explorer-land-data: #A8C498;
+  --explorer-land-selected: #5B1928;
 
   display: grid;
   gap: 1.35rem;
@@ -355,12 +386,12 @@ onMounted(loadCountryLanguageData);
   justify-content: space-between;
   gap: 1rem;
   padding: 1.2rem;
-  border: 1px solid rgba(212, 226, 243, 0.75);
+  border: 1px solid var(--explorer-line);
   border-radius: 20px;
   background:
-      radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.18), rgba(56, 189, 248, 0) 40%),
-      radial-gradient(circle at 82% 14%, rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0) 36%),
-      linear-gradient(165deg, #f8fcff, #f2f8ff 55%, #edf6ff);
+    radial-gradient(circle at 12% 8%, #f9e8e4 0%, rgba(249, 232, 228, 0) 36%),
+    radial-gradient(circle at 92% 10%, #f5ede8 0%, rgba(245, 237, 232, 0) 30%),
+    linear-gradient(180deg, #f6f1e7 0%, #f3ebe3 100%);
 }
 
 .hero-copy h1 {
@@ -384,7 +415,7 @@ onMounted(loadCountryLanguageData);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #1656a2;
+  color: var(--primary, #5B1928);
   font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
 }
 
@@ -434,7 +465,7 @@ onMounted(loadCountryLanguageData);
 .active-country-name {
   margin: 0;
   min-height: 1.4rem;
-  color: #1a4a80;
+  color: var(--primary, #5B1928);
   font-weight: 700;
   letter-spacing: 0.01em;
 }
@@ -444,53 +475,75 @@ onMounted(loadCountryLanguageData);
   overflow: hidden;
   min-height: 500px;
   border-radius: 20px;
-  border: 1px solid rgba(196, 218, 244, 0.8);
+  border: 1px solid var(--explorer-line);
   background:
-      radial-gradient(circle at 16% 20%, var(--explorer-water) 0%, rgba(230, 242, 255, 0) 35%),
-      radial-gradient(circle at 88% 15%, rgba(255, 228, 181, 0.45) 0%, rgba(255, 228, 181, 0) 34%),
-      linear-gradient(180deg, #fbfdff 0%, #eef6ff 100%);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.09);
+    radial-gradient(ellipse 60% 50% at 20% 18%, rgba(255, 255, 255, 0.9) 0%, transparent 58%),
+    radial-gradient(ellipse 48% 42% at 78% 22%, rgba(223, 232, 218, 0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 48% at 48% 82%, rgba(245, 212, 206, 0.4) 0%, transparent 60%),
+    linear-gradient(160deg, #f7f4f1 0%, #f0ebe6 42%, #ebe4df 100%);
+  box-shadow: 0 18px 40px rgba(91, 25, 40, 0.08);
+}
+
+.map-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.38;
+  background-image:
+    linear-gradient(rgba(72, 91, 56, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(72, 91, 56, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 72% 66% at 50% 48%, black 18%, transparent 76%);
+  z-index: 0;
 }
 
 .world-svg {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: auto;
   display: block;
+  filter: url(#wl-continent-glow);
 }
 
 .country-shape {
-  fill: var(--explorer-land);
-  stroke: #89a6c4;
-  stroke-width: 0.55;
+  fill: url(#wl-continent-fill);
+  stroke: rgba(91, 25, 40, 0.22);
+  stroke-width: 0.65;
+  paint-order: stroke fill;
   vector-effect: non-scaling-stroke;
-  transition: fill 200ms ease, stroke 200ms ease, filter 180ms ease;
+  transition: fill 240ms ease, stroke 240ms ease, filter 180ms ease, opacity 240ms ease;
   cursor: pointer;
   outline: none;
+  opacity: 1;
 }
 
 .country-shape:hover,
 .country-shape.is-hovered,
 .country-shape:focus-visible {
-  fill: var(--explorer-sea);
-  stroke: #2a66c9;
-  filter: drop-shadow(0 0 3px rgba(42, 102, 201, 0.28));
+  fill: url(#wl-continent-hover);
+  stroke: rgba(91, 25, 40, 0.4);
+  filter: drop-shadow(0 0 4px rgba(91, 25, 40, 0.16));
+  opacity: 1;
 }
 
 .country-shape.has-data {
-  fill: var(--explorer-land-data);
-  stroke: #2a7b49;
+  fill: url(#wl-continent-data);
+  stroke: rgba(52, 66, 40, 0.4);
 }
 
 .country-shape.has-data:hover,
 .country-shape.has-data.is-hovered,
 .country-shape.has-data:focus-visible {
-  fill: #5fb585;
-  stroke: #195531;
+  fill: url(#wl-continent-data);
+  stroke: rgba(52, 66, 40, 0.55);
+  filter: drop-shadow(0 0 4px rgba(72, 91, 56, 0.22));
 }
 
 .country-shape.is-selected {
-  fill: var(--explorer-land-selected);
-  stroke: #8f3d06;
+  fill: url(#wl-continent-selected);
+  stroke: rgba(60, 16, 24, 0.65);
 }
 
 .map-overlay {
@@ -507,8 +560,8 @@ onMounted(loadCountryLanguageData);
   min-height: 500px;
   border-radius: 18px;
   border: 1px solid var(--explorer-line);
-  background: linear-gradient(180deg, #ffffff, #f8fbff 70%);
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #ffffff, #fff0ee 70%);
+  box-shadow: 0 14px 32px rgba(91, 25, 40, 0.08);
 }
 
 .details-header {
@@ -518,7 +571,7 @@ onMounted(loadCountryLanguageData);
   gap: 0.75rem;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e4edf8;
+  border-bottom: 1px solid var(--explorer-line);
 }
 
 .details-label {
@@ -526,7 +579,7 @@ onMounted(loadCountryLanguageData);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #55708f;
+  color: var(--explorer-soft-ink);
 }
 
 .details-header h2 {
@@ -540,9 +593,9 @@ onMounted(loadCountryLanguageData);
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
-  background: #edf4ff;
-  color: #17479e;
-  border: 1px solid #c7daff;
+  background: rgba(109, 31, 52, 0.08);
+  color: var(--primary, #5B1928);
+  border: 1px solid rgba(109, 31, 52, 0.18);
 }
 
 .panel-block {
@@ -561,16 +614,16 @@ onMounted(loadCountryLanguageData);
 }
 
 .language-item {
-  border: 1px solid #e2eaf6;
+  border: 1px solid var(--explorer-line);
   border-radius: 12px;
   padding: 0.65rem;
-  background: #fbfdff;
+  background: #fffdfb;
   transition: transform 160ms ease, box-shadow 180ms ease;
 }
 
 .language-item:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 18px rgba(91, 25, 40, 0.08);
 }
 
 .language-item h4,
@@ -581,7 +634,7 @@ onMounted(loadCountryLanguageData);
 
 .language-item p {
   margin: 0.17rem 0;
-  color: #415973;
+  color: var(--explorer-soft-ink);
   font-size: 0.86rem;
 }
 
@@ -592,16 +645,16 @@ onMounted(loadCountryLanguageData);
 .learning-card {
   padding: 0.72rem;
   border-radius: 12px;
-  border: 1px solid #e3ecf8;
+  border: 1px solid var(--explorer-line);
   background:
       radial-gradient(circle at 20% 12%, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0) 52%),
-      linear-gradient(180deg, #ffffff, #f7fbff);
+      linear-gradient(180deg, #ffffff, #fff0ee);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .learning-card:hover {
   transform: translateY(-2px);
-  border-color: #b8cff0;
+  border-color: rgba(91, 25, 40, 0.28);
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
 
@@ -609,14 +662,14 @@ onMounted(loadCountryLanguageData);
   margin: 0;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #0f4fa3;
+  color: var(--primary, #5B1928);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .card-language {
   margin: 0;
-  color: #1f4d87;
+  color: var(--primary, #5B1928);
 }
 
 .card-meta {
@@ -625,7 +678,7 @@ onMounted(loadCountryLanguageData);
   justify-content: space-between;
   gap: 0.4rem;
   font-size: 0.78rem;
-  color: #5d728b;
+  color: var(--explorer-soft-ink);
 }
 
 .exploration-sections {
@@ -639,7 +692,7 @@ onMounted(loadCountryLanguageData);
   border: 1px solid #dbe7f6;
   background:
       radial-gradient(circle at 88% 10%, rgba(250, 204, 21, 0.14), rgba(250, 204, 21, 0) 38%),
-      linear-gradient(180deg, #ffffff, #f8fbff 78%);
+      linear-gradient(180deg, #ffffff, #fff0ee 78%);
 }
 
 .discovery-block header h3 {
@@ -649,7 +702,7 @@ onMounted(loadCountryLanguageData);
 
 .discovery-block header p {
   margin: 0.2rem 0 0.7rem;
-  color: #5f738c;
+  color: var(--explorer-soft-ink);
   font-size: 0.88rem;
 }
 
@@ -668,7 +721,7 @@ onMounted(loadCountryLanguageData);
   gap: 0.5rem;
   padding: 0.5rem 0.55rem;
   border-radius: 10px;
-  border: 1px solid #e5edf8;
+  border: 1px solid var(--explorer-line);
   background: rgba(255, 255, 255, 0.8);
 }
 
@@ -677,7 +730,7 @@ onMounted(loadCountryLanguageData);
 }
 
 .compact-list li small {
-  color: #5b728d;
+  color: var(--explorer-soft-ink);
 }
 
 .hint,

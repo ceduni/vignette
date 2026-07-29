@@ -8,6 +8,7 @@ import worldAtlas110m from "world-atlas/countries-110m.json";
 import worldCountries from "world-countries";
 
 import {useLanguageStore} from "@/composables/useLanguageStore";
+import mapBgUrl from "@/assets/language_bg.png";
 
 const MAP_WIDTH = 1200;
 const MAP_HEIGHT = 640;
@@ -104,9 +105,9 @@ const activeLanguagePinPoint = computed(() => {
   };
 });
 
-const showLanguageCountryNames = computed(() => {
-  return store.highlightedCountryIds.value.length > 0 || !!store.activeCountryId.value;
-});
+const COUNTRY_NAMES_BANNER_MS = 7000;
+const countryNamesBannerVisible = ref(false);
+let countryNamesBannerTimer: number | null = null;
 
 const highlightedCountryNames = computed(() => {
   const fromHighlighted = store.highlightedCountryIds.value
@@ -121,9 +122,30 @@ const highlightedCountryNames = computed(() => {
 });
 
 const countryNamesText = computed(() => {
-  if (!highlightedCountryNames.value.length) return "Aucun pays detecte";
+  if (!highlightedCountryNames.value.length) return "No countries detected";
   return highlightedCountryNames.value.join(" • ");
 });
+
+const showLanguageCountryNames = computed(() => {
+  return countryNamesBannerVisible.value && highlightedCountryNames.value.length > 0;
+});
+
+function clearCountryNamesBannerTimer() {
+  if (countryNamesBannerTimer != null) {
+    window.clearTimeout(countryNamesBannerTimer);
+    countryNamesBannerTimer = null;
+  }
+}
+
+function revealCountryNamesBanner() {
+  if (!highlightedCountryNames.value.length) return;
+  countryNamesBannerVisible.value = true;
+  clearCountryNamesBannerTimer();
+  countryNamesBannerTimer = window.setTimeout(() => {
+    countryNamesBannerVisible.value = false;
+    countryNamesBannerTimer = null;
+  }, COUNTRY_NAMES_BANNER_MS);
+}
 
 const normalizedCountrySearch = computed(() => String(countrySearch.value ?? "").trim().toLowerCase());
 
@@ -527,6 +549,20 @@ watch(
     }
 );
 
+watch(
+    () => ({
+      languageId: store.activeLanguageId.value,
+      focusMode: store.focusMode.value,
+      countries: store.highlightedCountryIds.value.join(","),
+      pinId: store.activeLanguagePin.value?.id || "",
+    }),
+    (next) => {
+      if (next.focusMode !== "language" || !next.languageId) return;
+      if (!next.countries && !next.pinId) return;
+      revealCountryNamesBanner();
+    }
+);
+
 watch(countrySearch, (value) => {
   if (!String(value ?? "").trim()) {
     hideSearchSuggestions.value = false;
@@ -544,12 +580,20 @@ onBeforeUnmount(() => {
   if (interactionEndTimer.value != null) {
     clearTimeout(interactionEndTimer.value);
   }
+  clearCountryNamesBannerTimer();
 });
 </script>
 
 <template>
   <section class="world-map">
-    <div class="map-ocean"></div>
+    <img
+        class="map-ocean-img"
+        :src="mapBgUrl"
+        alt=""
+        aria-hidden="true"
+        decoding="async"
+    />
+    <div class="map-ocean" aria-hidden="true"></div>
     <div class="map-search-overlay">
       <div class="map-search">
         <Search :size="15" aria-hidden="true"/>
@@ -558,7 +602,7 @@ onBeforeUnmount(() => {
             type="text"
             placeholder="Search for a country..."
             autocomplete="off"
-            aria-label="Rechercher un pays sur la carte"
+            aria-label="Search for a country on the map"
             @input="onSearchInput"
             @keydown.enter.prevent="onSearchEnter"
         />
@@ -597,8 +641,29 @@ onBeforeUnmount(() => {
         @pointerleave="onPointerUp"
     >
       <defs>
-        <filter id="continent-shadow" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2.2" flood-color="#5a3a2b" flood-opacity="0.22"/>
+        <radialGradient id="continent-fill" cx="32%" cy="28%" r="78%">
+          <stop offset="0%" stop-color="#f3e6e1"/>
+          <stop offset="42%" stop-color="#e4d2ca"/>
+          <stop offset="100%" stop-color="#d4bfb5"/>
+        </radialGradient>
+        <linearGradient id="continent-fill-hover" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f0d4ce"/>
+          <stop offset="55%" stop-color="#e2b8b0"/>
+          <stop offset="100%" stop-color="#d09c94"/>
+        </linearGradient>
+        <linearGradient id="continent-fill-active" x1="15%" y1="10%" x2="90%" y2="95%">
+          <stop offset="0%" stop-color="#d98994"/>
+          <stop offset="55%" stop-color="#8f3c4e"/>
+          <stop offset="100%" stop-color="#5f2432"/>
+        </linearGradient>
+        <filter id="continent-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/>
+          <feFlood flood-color="#5B1928" flood-opacity="0.14" result="rose"/>
+          <feComposite in="rose" in2="blur" operator="in" result="roseGlow"/>
+          <feMerge>
+            <feMergeNode in="roseGlow"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
         </filter>
       </defs>
 
@@ -634,7 +699,6 @@ onBeforeUnmount(() => {
     </svg>
 
     <div v-if="showLanguageCountryNames" class="language-country-strip" aria-live="polite">
-      <p class="strip-label">Pays ou cette langue est parlee</p>
       <p class="strip-values">{{ countryNamesText }}</p>
     </div>
 
@@ -648,10 +712,19 @@ onBeforeUnmount(() => {
   height: 100%;
   min-height: 100vh;
   overflow: hidden;
-  --map-country-highlight: rgba(127, 48, 66, 0.52);
-  --map-country-highlight-hover: rgba(127, 48, 66, 0.64);
-  --map-country-highlight-stroke: rgba(91, 25, 40, 0.72);
-  --map-country-hover: rgba(91, 25, 40, 0.3);
+  background: #c56a3a;
+}
+
+.map-ocean-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
 }
 
 .map-search-overlay {
@@ -751,9 +824,11 @@ onBeforeUnmount(() => {
 .map-ocean {
   position: absolute;
   inset: 0;
+  z-index: 1;
+  pointer-events: none;
   background:
-      linear-gradient(rgba(245, 231, 228, 0.24), rgba(245, 231, 228, 0.24)),
-      url("/fond3.avif") center / cover no-repeat;
+    radial-gradient(circle at 50% 40%, rgba(255, 236, 210, 0.12), transparent 46%),
+    linear-gradient(180deg, rgba(90, 40, 24, 0.12) 0%, transparent 35%, rgba(70, 30, 18, 0.2) 100%);
 }
 
 .map-ocean::before {
@@ -761,21 +836,16 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.08;
+  opacity: 0.14;
   background-image:
-    linear-gradient(rgba(192, 74, 8, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(192, 74, 8, 0.04) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: radial-gradient(circle at center, black, transparent 72%);
+    linear-gradient(rgba(91, 25, 40, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 25, 40, 0.12) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: radial-gradient(ellipse 72% 66% at 50% 48%, black 18%, transparent 76%);
 }
 
 .map-ocean::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(192, 74, 8, 0.05), transparent 60%);
+  display: none;
 }
 
 .world-svg {
@@ -784,26 +854,28 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: block;
-  transform: perspective(1500px) rotateX(2.6deg);
+  transform: perspective(1600px) rotateX(2deg);
   transform-origin: center 58%;
   touch-action: none;
 }
 
-
 .map-group {
   transition: filter 220ms ease;
+  filter: url(#continent-glow);
 }
 
 .country-shape {
-  fill: #e8caa8;
+  fill: url(#continent-fill);
   stroke: rgba(91, 25, 40, 0.22);
-  stroke-width: 0.98;
+  stroke-width: 0.75;
+  paint-order: stroke fill;
   vector-effect: non-scaling-stroke;
   filter: none;
-  transition: fill 220ms ease, stroke 220ms ease;
+  transition: fill 260ms ease, stroke 260ms ease, stroke-width 260ms ease, opacity 260ms ease;
   cursor: pointer;
   outline: none;
   -webkit-tap-highlight-color: transparent;
+  opacity: 1;
 }
 
 .country-shape.no-shadow {
@@ -815,30 +887,33 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-
-.country-shape:hover
-{
-  fill: var(--map-country-hover);
+.country-shape:hover {
+  fill: url(#continent-fill-hover);
+  stroke: rgba(91, 25, 40, 0.38);
+  stroke-width: 0.95;
+  opacity: 1;
 }
 
 .country-shape.is-highlighted {
-  fill: var(--map-country-highlight);
-  stroke: var(--map-country-highlight-stroke);
-  stroke-width: 0.96;
+  fill: url(#continent-fill-active);
+  stroke: rgba(60, 16, 24, 0.55);
+  stroke-width: 0.95;
+  opacity: 1;
 }
 
 .country-shape.is-highlighted:hover,
 .country-shape.is-highlighted:focus-visible {
-  fill: var(--map-country-highlight-hover);
-  stroke: var(--map-country-highlight-stroke);
+  fill: url(#continent-fill-active);
+  stroke: rgba(60, 16, 24, 0.65);
+  stroke-width: 1.05;
 }
-
 
 .country-shape.is-selected,
 .country-shape.is-selected.is-highlighted {
-  fill: var(--map-country-highlight);
-  stroke: var(--map-country-highlight-stroke);
-  stroke-width: 1.1;
+  fill: url(#continent-fill-active);
+  stroke: rgba(60, 16, 24, 0.7);
+  stroke-width: 1.15;
+  opacity: 1;
 }
 
 
@@ -865,36 +940,38 @@ onBeforeUnmount(() => {
 .language-country-strip {
   position: absolute;
   left: 50%;
-  bottom: 1rem;
+  bottom: 1.35rem;
   transform: translateX(-50%);
   z-index: 3;
-  width: min(920px, calc(100vw - 2rem));
-  border-radius: 14px;
-  border: 1px solid rgba(212, 168, 174, 0.55);
-  background: rgba(245, 224, 227, 0.92);
-  backdrop-filter: blur(10px);
-  padding: 0.58rem 0.72rem;
-  color: var(--text);
-  box-shadow: 0 10px 24px rgba(155, 110, 118, 0.1);
-}
-
-.strip-label {
-  margin: 0;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(127, 48, 66, 0.72);
-  font-weight: 700;
+  width: min(720px, calc(100vw - 2rem));
+  pointer-events: none;
+  text-align: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  animation: country-names-in 320ms ease;
 }
 
 .strip-values {
-  margin: 0.24rem 0 0;
-  font-size: 0.88rem;
-  font-weight: 700;
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   line-height: 1.35;
-  color: #5B1928;
-  max-height: 3.2rem;
-  overflow: auto;
+  color: rgba(255, 248, 242, 0.94);
+  text-shadow: 0 2px 16px rgba(40, 16, 10, 0.5);
+}
+
+@keyframes country-names-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 @media (max-width: 920px) {
@@ -908,7 +985,7 @@ onBeforeUnmount(() => {
 
   .language-country-strip {
     width: calc(100vw - 1.6rem);
-    bottom: 0.8rem;
+    bottom: 1rem;
   }
 }
 
