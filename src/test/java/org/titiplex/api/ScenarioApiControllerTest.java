@@ -10,8 +10,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.*;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioHistoryAction;
+import org.titiplex.persistence.model.ScenarioHistoryEntry;
 import org.titiplex.persistence.model.User;
 import org.titiplex.service.LanguageService;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
 
@@ -37,6 +40,9 @@ class ScenarioApiControllerTest {
 
     @Mock
     private LanguageService languageService;
+
+    @Mock
+    private ScenarioHistoryService scenarioHistoryService;
 
     @InjectMocks
     private ScenarioApiController controller;
@@ -92,11 +98,11 @@ class ScenarioApiControllerTest {
                 "NONE",
                 null,
                 null,
-                null
+                null, false
         );
 
         when(scenarioService.getVisibleScenario(9L, auth)).thenReturn(scenario);
-        when(scenarioService.toDto(scenario)).thenReturn(dto);
+        when(scenarioService.toDto(scenario, "alice")).thenReturn(dto);
 
         ScenarioDto result = controller.getOne(9L, auth);
 
@@ -106,21 +112,49 @@ class ScenarioApiControllerTest {
     }
 
     @Test
+    void history_checksVisibilityAndMapsEntriesMostRecentFirst() {
+        Authentication auth = auth("alice", "ROLE_USER");
+
+        Scenario scenario = new Scenario();
+        scenario.setId(9L);
+
+        ScenarioHistoryEntry newer = new ScenarioHistoryEntry();
+        newer.setId(2L);
+        newer.setActorUsername("bob");
+        newer.setAction(ScenarioHistoryAction.THUMBNAIL_ADDED);
+        newer.setSummary("Added thumbnail \"Intro\"");
+        newer.setCreatedAt(Instant.parse("2026-03-21T10:00:00Z"));
+
+        ScenarioHistoryEntry older = new ScenarioHistoryEntry();
+        older.setId(1L);
+        older.setActorUsername("alice");
+        older.setAction(ScenarioHistoryAction.SCENARIO_CREATED);
+        older.setSummary("Created the scenario");
+        older.setCreatedAt(Instant.parse("2026-03-20T10:00:00Z"));
+
+        when(scenarioService.getVisibleScenario(9L, auth)).thenReturn(scenario);
+        when(scenarioHistoryService.list(9L)).thenReturn(List.of(newer, older));
+
+        List<ScenarioHistoryEntryDto> result = controller.history(9L, auth);
+
+        assertEquals(2, result.size());
+        assertEquals("bob", result.get(0).actorUsername());
+        assertEquals("THUMBNAIL_ADDED", result.get(0).action());
+        assertEquals("Added thumbnail \"Intro\"", result.get(0).summary());
+        assertEquals("alice", result.get(1).actorUsername());
+        assertEquals("SCENARIO_CREATED", result.get(1).action());
+    }
+
+    @Test
     void listAll_mapsVisibleScenariosToDtos() {
         Authentication auth = auth("bob", "ROLE_USER");
-
-        Scenario s1 = new Scenario();
-        s1.setId(1L);
-
-        Scenario s2 = new Scenario();
-        s2.setId(2L);
 
         ScenarioDto dto1 = new ScenarioDto(
                 1L, "First", "D1", "chuj", "bob",
                 Instant.parse("2026-03-20T10:15:30Z"),
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(), null,
-                "NONE", null, null, null
+                "NONE", null, null, null, false
         );
         ScenarioDto dto2 = new ScenarioDto(
                 2L, "Second", "D2", "kiche", "bob",
@@ -129,12 +163,10 @@ class ScenarioApiControllerTest {
                 "CUSTOM", "MANGA", 4,
                 List.of(),
                 null,
-                "NONE", null, null, null
+                "NONE", null, null, null, false
         );
 
-        when(scenarioService.listVisibleScenarios(auth)).thenReturn(List.of(s1, s2));
-        when(scenarioService.toDto(s1)).thenReturn(dto1);
-        when(scenarioService.toDto(s2)).thenReturn(dto2);
+        when(scenarioService.listVisibleScenarioDtos(auth)).thenReturn(List.of(dto1, dto2));
 
         List<ScenarioDto> result = controller.listAll(auth);
 
@@ -156,7 +188,7 @@ class ScenarioApiControllerTest {
                 "DRAFT", null, "CUSTOM", "MANGA", 4,
                 List.of(),
                 null,
-                "NONE", null, null, null
+                "NONE", null, null, null, false
         );
 
         UpdateScenarioStoryboardRequest request = new UpdateScenarioStoryboardRequest("CUSTOM", "MANGA", 4);
@@ -186,7 +218,7 @@ class ScenarioApiControllerTest {
                 "PRESET", "GRID_3", 3,
                 List.of(),
                 null,
-                "NONE", null, null, null
+                "NONE", null, null, null, false
         );
 
         when(scenarioService.publishScenario(21L, auth)).thenReturn(published);
@@ -211,7 +243,7 @@ class ScenarioApiControllerTest {
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(),
                 21L,
-                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null
+                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null, false
         );
 
         when(scenarioService.reviewFork(eq(30L), eq(true), eq((String) null), eq(auth))).thenReturn(approved);
@@ -237,7 +269,7 @@ class ScenarioApiControllerTest {
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(),
                 21L,
-                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough"
+                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough", false
         );
 
         ScenarioApiController.ReviewRequest body = new ScenarioApiController.ReviewRequest("Not accurate enough");
@@ -267,7 +299,6 @@ class ScenarioApiControllerTest {
                         .toList()
         );
     }
-
     @Test
     void listMine_returnsCurrentUserScenarios() {
         Authentication auth = new UsernamePasswordAuthenticationToken(
@@ -276,20 +307,55 @@ class ScenarioApiControllerTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        Scenario scenario = new Scenario();
-        scenario.setId(1L);
-        scenario.setTitle("Mine");
-
-        when(scenarioService.listMyScenarios(auth)).thenReturn(List.of(scenario));
-        when(scenarioService.toDto(scenario)).thenReturn(new ScenarioDto(
+        ScenarioDto dto = new ScenarioDto(
                 1L, "Mine", null, "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null,
-                "NONE", null, null, null
-        ));
+                "NONE", null, null, null, false
+        );
+
+        when(scenarioService.listMyScenarioDtos(auth)).thenReturn(List.of(dto));
 
         List<ScenarioDto> result = controller.listMine(auth);
 
         assertEquals(1, result.size());
         assertEquals("Mine", result.get(0).title());
+    }
+
+    @Test
+    void listSharedWithMe_returnsCollaboratedScenarios() {
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                "bob",
+                "password",
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+        ScenarioDto dto = new ScenarioDto(
+                5L, "Shared", null, "fra", "alice", null, "PUBLISHED", null, "PRESET", "GRID_3", 3, List.of(), null,
+                "NONE", null, null, null, true
+        );
+
+        when(scenarioService.listSharedWithMeScenarioDtos(auth)).thenReturn(List.of(dto));
+
+        List<ScenarioDto> result = controller.listSharedWithMe(auth);
+
+        assertEquals(1, result.size());
+        assertEquals("Shared", result.get(0).title());
+        assertEquals("alice", result.get(0).authorUsername());
+        assertEquals(true, result.get(0).canEdit());
+    }
+
+    @Test
+    void listPublishedScenariosWorkedOnByUsername_delegatesToService() {
+        ScenarioDto dto = new ScenarioDto(
+                6L, "Worked on", null, "fra", "alice", null, "PUBLISHED", null, "PRESET", "GRID_3", 3, List.of(), null,
+                "NONE", null, null, null, false
+        );
+
+        when(scenarioService.listPublishedScenariosWorkedOnByUsername("alice")).thenReturn(List.of(dto));
+
+        List<ScenarioDto> result = controller.listPublishedScenariosWorkedOnByUsername("alice");
+
+        assertEquals(1, result.size());
+        assertEquals("Worked on", result.get(0).title());
     }
 
     @Test
@@ -309,7 +375,7 @@ class ScenarioApiControllerTest {
         when(scenarioService.updateScenarioMetadata(5L, req, auth)).thenReturn(updated);
         when(scenarioService.toDto(updated)).thenReturn(new ScenarioDto(
                 5L, "New title", "New description", "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null,
-                "NONE", null, null, null
+                "NONE", null, null, null, false
         ));
 
         ScenarioDto result = controller.updateMetadata(5L, req, auth);
@@ -321,7 +387,12 @@ class ScenarioApiControllerTest {
     @Test
     void listByFamily_delegatesToService() {
         when(scenarioService.listPublishedScenariosByFamilyId("indo1319", 10)).thenReturn(List.of(
-                new ScenarioDto(1L, "Family story", null, "fra", "alice", null, "PUBLISHED", null, "PRESET", "GRID_3", 3, List.of(), null)
+                new ScenarioDto(
+                        1L, "Family story", null, "fra", "alice", null,
+                        "PUBLISHED", null, "PRESET", "GRID_3", 3,
+                        List.of(), null,
+                        "NONE", null, null, null, false
+                )
         ));
 
         List<ScenarioDto> result = controller.listByFamily("indo1319", 10);

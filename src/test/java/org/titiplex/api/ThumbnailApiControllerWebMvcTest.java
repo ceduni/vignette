@@ -48,6 +48,9 @@ class ThumbnailApiControllerWebMvcTest {
     private ScenarioService scenarioService;
 
     @MockitoBean
+    private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @TestConfiguration

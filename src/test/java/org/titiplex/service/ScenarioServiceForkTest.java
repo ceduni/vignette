@@ -131,7 +131,7 @@ class ScenarioServiceForkTest {
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        when(scenarioRepository.existsByTitle(anyString())).thenReturn(false);
+        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
         mockSaveAssignsId(99L);
 
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of(originalThumb));
@@ -143,7 +143,7 @@ class ScenarioServiceForkTest {
         when(audioRepository.findByThumbnailIdOrderByIdxAsc(101L)).thenReturn(List.of(originalAudio));
         when(audioRepository.save(any(Audio.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Scenario fork = scenarioService.forkScenario(1L, authentication);
+        Scenario fork = scenarioService.forkScenario(1L, null, authentication);
 
         assertEquals(99L, fork.getId());
         assertEquals(1L, fork.getParentScenarioId());
@@ -177,7 +177,7 @@ class ScenarioServiceForkTest {
         when(scenarioRepository.findByIdWithTags(2L)).thenReturn(Optional.of(draft));
 
         assertThrows(IllegalArgumentException.class,
-                () -> scenarioService.forkScenario(2L, authentication));
+                () -> scenarioService.forkScenario(2L, null, authentication));
 
         verifyNoInteractions(thumbnailRepository, audioRepository);
     }
@@ -187,7 +187,7 @@ class ScenarioServiceForkTest {
         when(authentication.isAuthenticated()).thenReturn(false);
 
         assertThrows(InsufficientAuthenticationException.class,
-                () -> scenarioService.forkScenario(1L, authentication));
+                () -> scenarioService.forkScenario(1L, null, authentication));
 
         verifyNoInteractions(scenarioRepository, thumbnailRepository, audioRepository);
     }
@@ -198,7 +198,7 @@ class ScenarioServiceForkTest {
         when(scenarioRepository.findByIdWithTags(999L)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class,
-                () -> scenarioService.forkScenario(999L, authentication));
+                () -> scenarioService.forkScenario(999L, null, authentication));
     }
 
     @Test
@@ -210,15 +210,76 @@ class ScenarioServiceForkTest {
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        // First candidate title already taken, second one is free
-        when(scenarioRepository.existsByTitle(anyString())).thenReturn(true, false);
+        // First candidate title already taken (by this same user/language), second one is free
+        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId(anyString(), eq("bob"), eq("fra")))
+                .thenReturn(true, false);
         mockSaveAssignsId(100L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
 
-        Scenario fork = scenarioService.forkScenario(1L, authentication);
+        Scenario fork = scenarioService.forkScenario(1L, null, authentication);
 
         assertTrue(fork.getTitle().contains("#2"));
-        verify(scenarioRepository, times(2)).existsByTitle(anyString());
+        verify(scenarioRepository, times(2))
+                .existsByTitleAndAuthorUsernameAndLanguageId(anyString(), eq("bob"), eq("fra"));
+    }
+
+    @Test
+    void forkScenario_honorsCustomTitle() {
+        Scenario original = publishedScenario(1L);
+
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("bob");
+        when(userService.getUserByUsername("bob")).thenReturn(bob());
+        when(userService.getUserById(42L)).thenReturn(bob());
+        when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
+        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId("My remix", "bob", "fra"))
+                .thenReturn(false);
+        mockSaveAssignsId(100L);
+        when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
+
+        Scenario fork = scenarioService.forkScenario(1L, "  My remix  ", authentication);
+
+        assertEquals("My remix", fork.getTitle());
+    }
+
+    @Test
+    void forkScenario_rejectsCustomTitleThatCollidesForSameUserAndLanguage() {
+        Scenario original = publishedScenario(1L);
+
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("bob");
+        when(userService.getUserByUsername("bob")).thenReturn(bob());
+        when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
+        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId("Taken title", "bob", "fra"))
+                .thenReturn(true);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> scenarioService.forkScenario(1L, "Taken title", authentication));
+
+        verify(scenarioRepository, never()).save(any());
+    }
+
+    @Test
+    void forkScenario_secondCopyByDifferentUserDoesNotCollideWithFirst() {
+        // Same source scenario forked by two different users should never block each other,
+        // even if they end up with the exact same auto-generated title.
+        Scenario original = publishedScenario(1L);
+
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("bob");
+        when(userService.getUserByUsername("bob")).thenReturn(bob());
+        when(userService.getUserById(42L)).thenReturn(bob());
+        when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
+        // "Copy of Original scenario" is already taken by ANOTHER user, but that must not
+        // affect bob: the check is scoped to (title, author, language), not global.
+        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId("Copy of Original scenario", "bob", "fra"))
+                .thenReturn(false);
+        mockSaveAssignsId(101L);
+        when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
+
+        Scenario fork = scenarioService.forkScenario(1L, null, authentication);
+
+        assertEquals("Copy of Original scenario", fork.getTitle());
     }
 
     @Test
@@ -230,11 +291,11 @@ class ScenarioServiceForkTest {
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        when(scenarioRepository.existsByTitle(anyString())).thenReturn(false);
+        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
         mockSaveAssignsId(99L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
 
-        Scenario fork = scenarioService.forkScenario(1L, authentication);
+        Scenario fork = scenarioService.forkScenario(1L, null, authentication);
 
         assertEquals(99L, fork.getId());
         verify(thumbnailRepository, never()).save(any());
@@ -251,7 +312,7 @@ class ScenarioServiceForkTest {
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        when(scenarioRepository.existsByTitle(anyString())).thenReturn(false);
+        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
         mockSaveAssignsId(99L);
 
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of(originalThumb));
@@ -262,7 +323,7 @@ class ScenarioServiceForkTest {
         });
         when(audioRepository.findByThumbnailIdOrderByIdxAsc(101L)).thenReturn(List.of());
 
-        scenarioService.forkScenario(1L, authentication);
+        scenarioService.forkScenario(1L, null, authentication);
 
         verify(audioRepository, never()).save(any());
     }

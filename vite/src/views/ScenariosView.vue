@@ -9,6 +9,7 @@ import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
+import CopyScenarioModal from "../components/scenario/CopyScenarioModal.vue";
 import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 import {useScenarioReader} from "../composables/useScenarioReader";
 import {useScenarioInteractions} from "../composables/useScenarioInteractions";
@@ -81,16 +82,28 @@ const { isAuthenticated, currentUser } = useAuth();
 const router = useRouter();
 const copyingId = ref(null);
 const copyError = ref("");
+const copyTarget = ref(null);
 const discussionScenario = ref(null);
 function openDiscussion(s) { discussionScenario.value = s; }
 function closeDiscussion() { discussionScenario.value = null; }
 
-async function copyScenario(s) {
-  if (copyingId.value) return;
-  copyingId.value = s.id;
+function openCopyModal(s) {
+  copyError.value = "";
+  copyTarget.value = s;
+}
+
+function closeCopyModal() {
+  copyTarget.value = null;
+}
+
+async function confirmCopy(title) {
+  if (!copyTarget.value || copyingId.value) return;
+
+  copyingId.value = copyTarget.value.id;
   copyError.value = "";
   try {
-    const result = await forkScenario(s.id);
+    const result = await forkScenario(copyTarget.value.id, title);
+    copyTarget.value = null;
     router.push(`/scenarios/${result.id}`);
   } catch (e) {
     copyError.value = e.message || "Could not copy this scenario.";
@@ -248,7 +261,7 @@ onMounted(load);
           class="sc-card"
         >
           <!-- Thumbnail -->
-          <RouterLink v-if="currentUser && s.authorUsername === currentUser.username" :to="`/scenarios/${s.id}`" class="sc-card__thumb" tabindex="-1">
+          <RouterLink v-if="currentUser && s.canEdit" :to="`/scenarios/${s.id}`" class="sc-card__thumb" tabindex="-1">
             <img
               v-if="thumbnailUrl(s.id)"
               :src="thumbnailUrl(s.id)"
@@ -291,7 +304,7 @@ onMounted(load);
 
           <!-- Body -->
           <div class="sc-card__body">
-            <RouterLink v-if="currentUser && s.authorUsername === currentUser.username" :to="`/scenarios/${s.id}`" class="sc-card__title-link">
+            <RouterLink v-if="currentUser && s.canEdit" :to="`/scenarios/${s.id}`" class="sc-card__title-link">
               <h3 class="sc-card__title">{{ s.title || "Untitled scenario" }}</h3>
             </RouterLink>
             <button v-else type="button" class="sc-card__title-link" @click="openReader(s)">
@@ -299,7 +312,12 @@ onMounted(load);
             </button>
 
             <div class="sc-card__meta">
-              <span class="sc-card__author">{{ s.authorUsername ?? "Unknown" }}</span>
+              <RouterLink
+                  v-if="s.authorUsername"
+                  :to="`/users/${s.authorUsername}/scenarios`"
+                  class="sc-card__author"
+              >{{ s.authorUsername }}</RouterLink>
+              <span v-else class="sc-card__author">Unknown</span>
               <span v-if="s.languageId" class="sc-card__lang">{{ languageName(s.languageId) }}</span>
               <template v-if="s.tags?.length">
                 <span v-for="tag in s.tags.slice(0, 2)" :key="tag" class="sc-card__tag">#{{ tag }}</span>
@@ -313,7 +331,7 @@ onMounted(load);
             <!-- Actions -->
             <div class="sc-card__actions">
               <RouterLink
-                v-if="currentUser && s.authorUsername === currentUser.username"
+                v-if="currentUser && s.canEdit"
                 :to="`/scenarios/${s.id}`"
                 class="sc-card__action sc-card__action--open"
               >
@@ -323,7 +341,7 @@ onMounted(load);
                 Open
               </RouterLink>
               <button
-                v-if="currentUser && s.authorUsername === currentUser.username"
+                v-if="currentUser && s.canEdit"
                 type="button"
                 class="sc-card__action sc-card__action--read"
                 @click="openReader(s)"
@@ -411,7 +429,7 @@ onMounted(load);
                 class="sc-card__icon-btn"
                 :disabled="copyingId === s.id"
                 :title="copyingId === s.id ? 'Copying…' : 'Copy to my scenarios'"
-                @click="copyScenario(s)"
+                @click="openCopyModal(s)"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -473,7 +491,13 @@ onMounted(load);
 
     <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
     <ScenarioDiscussionModal :scenario="discussionScenario" @close="closeDiscussion" />
-    <BaseAlert v-if="copyError" type="error">{{ copyError }}</BaseAlert>
+    <CopyScenarioModal
+        :scenario="copyTarget"
+        :saving="copyingId === copyTarget?.id"
+        :error="copyError"
+        @close="closeCopyModal"
+        @confirm="confirmCopy"
+    />
   </main>
 </template>
 
@@ -720,6 +744,11 @@ onMounted(load);
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-soft);
+  text-decoration: none;
+}
+a.sc-card__author:hover {
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 .sc-card__lang {

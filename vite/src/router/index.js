@@ -81,6 +81,13 @@ const routes = [
         meta: { title: "Scenario workspace", description: "Detailed scenario page with storyboard, playback and media panels." },
     },
     {
+        path: "/users/:username/scenarios",
+        name: "user-scenarios",
+        component: () => import("../views/UserScenariosView.vue"),
+        props: true,
+        meta: { title: "Scenarios", description: "Published scenarios a user has authored or collaborated on." },
+    },
+    {
         path: "/create-scenario",
         name: "create-scenario",
         component: CreateScenarioView,

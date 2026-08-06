@@ -5,8 +5,17 @@ return apiFetch("/api/scenarios");
 export function fetchMyScenarios() {
 return apiFetch("/api/scenarios/mine");
 }
+export function fetchSharedWithMeScenarios() {
+return apiFetch("/api/scenarios/shared-with-me");
+}
+export function fetchScenariosByAuthor(username) {
+return apiFetch(`/api/scenarios/by-author/${encodeURIComponent(username)}`);
+}
 export function fetchScenario(id) {
 return apiFetch(`/api/scenarios/${id}`);
+}
+export function fetchScenarioHistory(id) {
+return apiFetch(`/api/scenarios/${id}/history`);
 }
 export function createScenario(body) {
 return apiFetch("/api/scenarios", {
@@ -14,9 +23,10 @@ return apiFetch("/api/scenarios", {
 body,
 });
 }
-export function forkScenario(id) {
+export function forkScenario(id, title) {
 return apiFetch(`/api/scenarios/${id}/fork`, {
     method: "POST",
+    body: title ? {title} : undefined,
 });
 }
 export function publishScenario(id) {

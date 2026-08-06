@@ -10,16 +10,17 @@ const router = useRouter();
 const { currentUser, isAuthenticated, isAdmin, loadMe, logout } = useAuth();
 const {
   notifications, unreadCount, hasUnread, grouped,
-  init, teardown, markAsRead, markAllAsRead, deleteNotification,
+  init, teardown, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications,
   iconForType, formatTime,
 } = useNotifications();
 const { loadFollows, reset: resetFollows } = useLanguageFollows();
 
-const mobileMenuOpen = ref(false);
-const profileOpen    = ref(false);
-const notifOpen      = ref(false);
-const profileMenuEl  = ref(null);
-const notifMenuEl    = ref(null);
+const mobileMenuOpen   = ref(false);
+const profileOpen      = ref(false);
+const notifOpen        = ref(false);
+const profileMenuEl    = ref(null);
+const notifMenuEl      = ref(null);
+const deleteAllConfirm = ref(false);
 
 onMounted(() => {
   loadMe().then(() => {
@@ -75,6 +76,19 @@ function toggleProfile()    { profileOpen.value = !profileOpen.value; notifOpen.
 function toggleNotif() {
   notifOpen.value = !notifOpen.value;
   profileOpen.value = false;
+}
+
+function handleDeleteAll() {
+  deleteAllConfirm.value = true;
+}
+
+function cancelDeleteAll() {
+  deleteAllConfirm.value = false;
+}
+
+function confirmDeleteAllNotifications() {
+  deleteAllConfirm.value = false;
+  deleteAllNotifications();
 }
 
 function onDocClick(e) {
@@ -171,12 +185,20 @@ function notifIconPath(type) {
                 <div class="notif-head">
                   <span class="notif-head__title">Notifications</span>
                   <span v-if="hasUnread" class="notif-head__count">{{ unreadCount }} new</span>
-                  <button
-                    v-if="hasUnread"
-                    type="button"
-                    class="notif-head__mark-all"
-                    @click="markAllAsRead"
-                  >Mark all read</button>
+                  <div class="notif-head__actions">
+                    <button
+                      v-if="hasUnread"
+                      type="button"
+                      class="notif-head__mark-all"
+                      @click="markAllAsRead"
+                    >Mark all read</button>
+                    <button
+                      v-if="notifications.length"
+                      type="button"
+                      class="notif-head__delete-all"
+                      @click="handleDeleteAll"
+                    >Delete all</button>
+                  </div>
                 </div>
 
                 <!-- List -->
@@ -370,6 +392,20 @@ function notifIconPath(type) {
       </div>
     </div>
   </header>
+
+  <Teleport to="body">
+    <div v-if="deleteAllConfirm" class="notif-confirm-backdrop" @click.self="cancelDeleteAll">
+      <div class="notif-confirm">
+        <p class="notif-confirm__eyebrow">Permanent action</p>
+        <h2 class="notif-confirm__title">Delete all notifications?</h2>
+        <p class="notif-confirm__body">This will permanently remove every notification. This cannot be undone.</p>
+        <div class="notif-confirm__actions">
+          <button type="button" class="notif-confirm__cancel" @click="cancelDeleteAll">Keep them</button>
+          <button type="button" class="notif-confirm__delete" @click="confirmDeleteAllNotifications">Yes, delete all</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -456,6 +492,13 @@ function notifIconPath(type) {
   padding: 2px 8px;
 }
 
+.notif-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .notif-head__mark-all {
   border: 0;
   background: transparent;
@@ -468,6 +511,19 @@ function notifIconPath(type) {
   white-space: nowrap;
 }
 .notif-head__mark-all:hover { text-decoration: underline; }
+
+.notif-head__delete-all {
+  border: 0;
+  background: transparent;
+  color: #e53e3e;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+.notif-head__delete-all:hover { text-decoration: underline; }
 
 /* ── Notification list ── */
 .notif-list {
@@ -639,4 +695,36 @@ function notifIconPath(type) {
 .pd-leave-active { transition: opacity 120ms ease, transform 120ms ease; }
 .pd-enter-from   { opacity: 0; transform: translateY(-6px) scale(0.97); }
 .pd-leave-to     { opacity: 0; transform: translateY(-4px) scale(0.97); }
+
+/* ── Delete-all confirmation ── */
+.notif-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(30, 8, 18, 0.55);
+  backdrop-filter: blur(4px);
+}
+.notif-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(420px, 100%);
+  border: 3px solid #1E0812;
+  border-radius: 18px;
+  padding: 26px;
+  background: #FFF0EE;
+  box-shadow: 6px 6px 0 #1E0812;
+}
+.notif-confirm__eyebrow { margin: 0; font-size: 0.65rem; font-weight: 900; color: #A8334C; letter-spacing: 0.14em; text-transform: uppercase; }
+.notif-confirm__title { margin: 0; font-size: 1.25rem; font-weight: 950; color: #1E0812; letter-spacing: -0.02em; }
+.notif-confirm__body { margin: 0; font-size: 0.88rem; color: #785068; line-height: 1.55; }
+.notif-confirm__actions { display: flex; gap: 10px; }
+.notif-confirm__cancel { flex: 1; border: 1.5px solid #D4E5CA; border-radius: 12px; padding: 12px; background: transparent; color: #785068; font: inherit; font-weight: 700; cursor: pointer; transition: background 140ms ease; }
+.notif-confirm__cancel:hover { background: #D4E5CA; }
+.notif-confirm__delete { flex: 1; border: 0; border-radius: 12px; padding: 12px; background: #A8334C; color: #fff; font: inherit; font-size: 0.92rem; font-weight: 800; cursor: pointer; transition: background 160ms ease; }
+.notif-confirm__delete:hover { background: #8b2940; }
 </style>

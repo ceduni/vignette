@@ -58,4 +58,11 @@ public class NotificationController {
         notificationService.deleteNotification(id, authentication);
         return ResponseEntity.noContent().build();
     }
+
+    /** DELETE /api/notifications — dismiss all notifications for current user */
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAllNotifications(Authentication authentication) {
+        notificationService.deleteAllNotifications(authentication);
+        return ResponseEntity.noContent().build();
+    }
 }

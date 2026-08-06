@@ -302,7 +302,9 @@ public class LanguageService {
                     language.getLevel(),
                     language.getCountryIds(),
                     language.getFamily() != null ? language.getFamily().getName() : language.getFamilyId(),
-                    language.getParent() != null ? language.getParent().getName() : language.getParentId()
+                    language.getParent() != null ? language.getParent().getName() : language.getParentId(),
+                    language.getLatitude(),
+                    language.getLongitude()
             );
 
             for (String token : Arrays.stream(countryIds.split("[\\s,;]+"))

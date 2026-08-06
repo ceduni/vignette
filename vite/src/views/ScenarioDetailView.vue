@@ -9,6 +9,7 @@ import {
   deleteThumbnail,
   deleteScenario,
   fetchScenario,
+  fetchScenarioHistory,
   fetchScenarioThumbnails,
   fetchThumbnailAudios,
   publishScenario,
@@ -35,6 +36,7 @@ import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import BaseBadge from "../components/ui/BaseBadge.vue";
 import CollaboratorsPanel from "../components/community/CollaboratorsPanel.vue";
+import ScenarioHistoryPanel from "../components/scenario/ScenarioHistoryPanel.vue";
 import {useCollaborators} from "../composables/useCollaborators";
 import {
   buildPlaybackQueue,
@@ -74,10 +76,14 @@ const route = useRoute();
 const forking = ref(false);
 
 async function forkScenario() {
+  const title = window.prompt("Title for your copy:", `Copy of ${scenario.value?.title || ""}`);
+  if (title === null) return;
+
   forking.value = true;
   try {
     const response = await apiFetch(`/api/scenarios/${props.id}/fork`, {
       method: "POST",
+      body: title.trim() ? {title: title.trim()} : undefined,
     });
     toast.success("Scenario forked successfully. Redirecting to your copy...");
     await router.push(`/scenarios/${response.id}`);
@@ -172,7 +178,7 @@ const collaboratorsPanelOpen = ref(false);
 const scenarioIdRef = computed(() => props.id);
 const authorUsernameRef = computed(() => scenario.value?.authorUsername ?? "");
 const collab = useCollaborators(scenarioIdRef, {authorUsername: authorUsernameRef});
-const canEditScenario = computed(() => isOwner.value || collab.canEdit.value);
+const canEditScenario = computed(() => !isPublished.value && (isOwner.value || collab.canEdit.value));
 const hasAnyRole = computed(() => isOwner.value || !!collab.myRole.value);
 
 function openCollaboratorsPanel() {
@@ -187,6 +193,26 @@ function closeCollaboratorsPanel() {
 
 async function handleInvite(username, role) {
   await collab.invite(username, role);
+}
+
+const historyPanelOpen = ref(false);
+const historyEntries = ref([]);
+const historyLoading = ref(false);
+
+async function openHistoryPanel() {
+  historyPanelOpen.value = true;
+  historyLoading.value = true;
+  try {
+    historyEntries.value = await fetchScenarioHistory(props.id);
+  } catch (e) {
+    toast.error(e.message || "Failed to load scenario history.");
+  } finally {
+    historyLoading.value = false;
+  }
+}
+
+function closeHistoryPanel() {
+  historyPanelOpen.value = false;
 }
 
 async function handleCreateLink(payload) {
@@ -2508,7 +2534,12 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
               </div>
               <div class="si-stat__div"></div>
               <div class="si-stat">
-                <span class="si-stat__num">{{ scenario.authorUsername || "—" }}</span>
+                <RouterLink
+                    v-if="scenario.authorUsername"
+                    :to="`/users/${scenario.authorUsername}/scenarios`"
+                    class="si-stat__num si-stat__num--link"
+                >{{ scenario.authorUsername }}</RouterLink>
+                <span v-else class="si-stat__num">—</span>
                 <span class="si-stat__lbl">author</span>
               </div>
               <div class="si-stat__div"></div>
@@ -2944,6 +2975,18 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                 />
               </div>
 
+              <div
+                  v-if="historyPanelOpen"
+                  class="dialog-backdrop"
+                  @click.self="closeHistoryPanel"
+              >
+                <ScenarioHistoryPanel
+                    :entries="historyEntries"
+                    :loading="historyLoading"
+                    @close="closeHistoryPanel"
+                />
+              </div>
+
               <div v-if="storyboardItems.length" class="vg-root">
                 <div class="vg-nav">
                   <div class="vg-brand-block">
@@ -2969,7 +3012,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                       Storyboard
                     </button>
                     <button
-                        v-if="isOwner"
+                        v-if="isOwner && !isPublished"
                         type="button"
                         class="vg-tab"
                         :class="{ active: storyboardView === 'studio' }"
@@ -3025,6 +3068,18 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                         <circle cx="9" cy="7" r="4"/>
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
+                    </button>
+                    <button
+                        v-if="hasAnyRole"
+                        type="button"
+                        class="vg-icon-btn"
+                        title="History"
+                        @click="openHistoryPanel"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 7v5l3 3"/>
                       </svg>
                     </button>
                     <button
@@ -3258,7 +3313,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                   </div>
 
                   <StudioRecorderPanel
-                      v-if="globalRecorderOpen && selectedThumb && (studioFrontendOnly || isOwner)"
+                      v-if="globalRecorderOpen && selectedThumb && (studioFrontendOnly || (isOwner && !isPublished))"
                       v-model:selected-speaker="selectedSpeaker"
                       v-model:recording-trim-open="recordingTrimOpen"
                       v-model:recording-volume="recordingVolume"
@@ -3277,7 +3332,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                       :quick-recording-thumb-id="quickRecordingThumbId"
                       :recording-target-label="recordingTargetLabel"
                       :recording-status-label="recordingStatusLabel"
-                      :can-record="studioFrontendOnly || isOwner"
+                      :can-record="studioFrontendOnly || (isOwner && !isPublished)"
                       :playback-queue-length="playbackQueue.length"
                       :preview-playing="selectedVoice ? isAudioPlaying(selectedVoice, selectedThumb) : autoplay.isPlaying.value"
                       @select-voice="(voice) => selectVoice(voice, selectedThumb)"
@@ -3528,7 +3583,11 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                       />
 
                       <div class="rec-main-actions">
-                        <button type="button" @click="openRecordingAudioFile">
+                        <button
+                            type="button"
+                            :disabled="!(studioFrontendOnly || canEditScenario)"
+                            @click="openRecordingAudioFile"
+                        >
                           Import audio file
                         </button>
                       </div>
@@ -3553,7 +3612,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                         </button>
                         <button
                             type="button"
-                            :disabled="!selectedVoice || !hasVoiceAudio(selectedVoice)"
+                            :disabled="!(studioFrontendOnly || canEditScenario) || !selectedVoice || !hasVoiceAudio(selectedVoice)"
                             @click="removeVoiceAudio(selectedVoice, selectedThumb)"
                         >
                           Remove audio
@@ -3760,7 +3819,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                   </p>
 
                   <button
-                      v-if="isOwner"
+                      v-if="isOwner && !isPublished"
                       type="button"
                       class="sb-empty__cta"
                       @click="openUploadDialog"
@@ -4007,6 +4066,14 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
   font-size: 0.88rem;
   font-weight: 800;
   text-align: center;
+}
+.si-stat__num--link {
+  text-decoration: none;
+  cursor: pointer;
+}
+.si-stat__num--link:hover {
+  color: #485B38;
+  text-decoration: underline;
 }
 .si-stat__lbl {
   font-size: 0.62rem;

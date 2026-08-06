@@ -195,7 +195,16 @@ onMounted(() => {
 
         <div class="discussion-message__inner">
           <!-- Avatar -->
+          <RouterLink
+              v-if="message.authorUsername"
+              :to="`/users/${message.authorUsername}/scenarios`"
+              class="discussion-message__avatar"
+              :style="{ background: avatarColor(message.authorUsername) }"
+          >
+            {{ authorInitials(message.authorUsername) }}
+          </RouterLink>
           <div
+              v-else
               class="discussion-message__avatar"
               :style="{ background: avatarColor(message.authorUsername) }"
           >
@@ -205,7 +214,12 @@ onMounted(() => {
           <div class="discussion-message__body">
             <!-- En-tête du message -->
             <div class="discussion-message__meta">
-              <span class="discussion-message__author">{{ message.authorUsername || "Unknown user" }}</span>
+              <RouterLink
+                  v-if="message.authorUsername"
+                  :to="`/users/${message.authorUsername}/scenarios`"
+                  class="discussion-message__author"
+              >{{ message.authorUsername }}</RouterLink>
+              <span v-else class="discussion-message__author">Unknown user</span>
               <span class="discussion-message__dot">·</span>
               <span class="discussion-message__date">{{ formatDate(message.createdAt) }}</span>
               <BaseBadge v-if="message.parentMessageId" variant="warning" class="discussion-message__type">
@@ -415,6 +429,15 @@ onMounted(() => {
   color: #fff;
   letter-spacing: 0.02em;
   margin-top: 1px;
+  text-decoration: none;
+}
+
+a.discussion-message__avatar {
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+a.discussion-message__avatar:hover {
+  opacity: 0.82;
 }
 
 /* Corps du message */
@@ -437,6 +460,12 @@ onMounted(() => {
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--text);
+  text-decoration: none;
+}
+
+a.discussion-message__author:hover {
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 .discussion-message__dot {

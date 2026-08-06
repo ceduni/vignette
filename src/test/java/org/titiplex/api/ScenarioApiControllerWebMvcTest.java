@@ -53,6 +53,9 @@ class ScenarioApiControllerWebMvcTest {
     private LanguageService languageService;
 
     @MockitoBean
+    private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @MockitoBean(name = "scenarioSecurity")
@@ -96,7 +99,7 @@ class ScenarioApiControllerWebMvcTest {
                 "NONE",
                 null,
                 null,
-                null
+                null, false
         );
 
         when(scenarioService.listVisibleScenarioDtos(any())).thenReturn(List.of(dto));
@@ -142,11 +145,11 @@ class ScenarioApiControllerWebMvcTest {
                 "NONE",
                 null,
                 null,
-                null
+                null, false
         );
 
         when(scenarioService.getVisibleScenario(eq(11L), any())).thenReturn(scenario);
-        when(scenarioService.toDto(scenario)).thenReturn(dto);
+        when(scenarioService.toDto(scenario, null)).thenReturn(dto);
 
         mvc.perform(get("/api/scenarios/11"))
                 .andExpect(status().isOk())
@@ -274,7 +277,7 @@ class ScenarioApiControllerWebMvcTest {
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(),
                 21L,
-                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null
+                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null, false
         );
 
         when(scenarioService.reviewFork(eq(30L), eq(true), any(), any())).thenReturn(approved);
@@ -302,7 +305,7 @@ class ScenarioApiControllerWebMvcTest {
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(),
                 21L,
-                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough"
+                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough", false
         );
 
         when(scenarioService.reviewFork(eq(31L), eq(false), any(), any())).thenReturn(rejected);
@@ -359,7 +362,7 @@ class ScenarioApiControllerWebMvcTest {
                 "PRESET", "GRID_3", 3,
                 List.of(),
                 null,
-                "NONE", null, null, null
+                "NONE", null, null, null, false
         );
 
         when(scenarioSecurity.isAuthor(eq(21L), eq("alice"))).thenReturn(true);

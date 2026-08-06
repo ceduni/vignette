@@ -3,6 +3,7 @@ import {computed, onMounted, ref} from "vue";
 import {RouterLink} from "vue-router";
 import {
   fetchScenario,
+  fetchScenarioHistory,
   fetchScenarioThumbnails,
   fetchThumbnailAudios,
   publishScenario,
@@ -31,6 +32,7 @@ const success = ref("");
 const scenario = ref(null);
 const thumbnails = ref([]);
 const audioMap = ref({});
+const history = ref([]);
 
 const isOwner = computed(() =>
     !!currentUser.value &&
@@ -39,6 +41,9 @@ const isOwner = computed(() =>
 );
 
 const canManage = computed(() => isOwner.value || isAdmin.value);
+
+const isPublished = computed(() => scenario.value?.visibilityStatus === "PUBLISHED");
+const canEditContent = computed(() => canManage.value && (isAdmin.value || !isPublished.value));
 
 const metadataForm = ref({
   title: "",
@@ -88,6 +93,7 @@ async function loadScenarioData() {
   };
 
   thumbnails.value = await fetchScenarioThumbnails(props.id);
+  history.value = await fetchScenarioHistory(props.id).catch(() => []);
 
   const map = {};
   await Promise.all(
@@ -103,7 +109,7 @@ async function loadScenarioData() {
 }
 
 async function saveMetadata() {
-  if (!canManage.value) return;
+  if (!canEditContent.value) return;
 
   savingMetadata.value = true;
   error.value = "";
@@ -121,6 +127,17 @@ async function saveMetadata() {
   } finally {
     savingMetadata.value = false;
   }
+}
+
+function formatHistoryWhen(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 async function loadGovernance() {
@@ -161,6 +178,8 @@ async function loadAll() {
 }
 
 async function saveStoryboard() {
+  if (!canEditContent.value) return;
+
   savingStoryboard.value = true;
   error.value = "";
   success.value = "";
@@ -302,7 +321,7 @@ onMounted(loadAll);
               </div>
             </section>
 
-            <section v-if="canManage" class="card">
+            <section v-if="canEditContent" class="card">
               <h2>Scenario metadata</h2>
 
               <div class="form-grid">
@@ -332,7 +351,7 @@ onMounted(loadAll);
               </div>
             </section>
 
-            <section v-if="canManage" class="card">
+            <section v-if="canEditContent" class="card">
               <h2>Storyboard settings</h2>
 
               <div class="form-grid">
@@ -381,6 +400,21 @@ onMounted(loadAll);
               <div v-else class="empty-state">
                 <h3>No thumbnail yet</h3>
                 <p class="muted">This scenario still has no uploaded storyboard image.</p>
+              </div>
+            </section>
+
+            <section class="card">
+              <h2>History</h2>
+
+              <div v-if="history.length" class="stack-list">
+                <article v-for="entry in history" :key="entry.id" class="card card--nested">
+                  <p><strong>{{ entry.actorUsername }}</strong> {{ entry.summary }}</p>
+                  <p class="muted">{{ formatHistoryWhen(entry.createdAt) }}</p>
+                </article>
+              </div>
+
+              <div v-else class="empty-state">
+                <h3>No changes recorded yet</h3>
               </div>
             </section>
           </div>

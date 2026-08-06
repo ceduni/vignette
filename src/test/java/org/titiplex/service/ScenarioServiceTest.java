@@ -6,15 +6,22 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.ScenarioDto;
 import org.titiplex.persistence.model.CollaborationStatus;
 import org.titiplex.persistence.model.CollaboratorRole;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioCollaborator;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 import org.titiplex.persistence.model.User;
+import org.titiplex.persistence.repo.AudioRepository;
 import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
+import org.titiplex.persistence.repo.ThumbnailRepository;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,6 +50,16 @@ class ScenarioServiceTest {
     private LanguageService languageService;
     @Mock
     private ScenarioTagService scenarioTagService;
+    @Mock
+    private NotificationService notificationService;
+    @Mock
+    private ThumbnailRepository thumbnailRepo;
+    @Mock
+    private AudioRepository audioRepo;
+    @Mock
+    private ScenarioCollaboratorRepository collaboratorRepo;
+    @Mock
+    private ScenarioHistoryService scenarioHistoryService;
 
     @InjectMocks
     private ScenarioService scenarioService;
@@ -111,6 +129,236 @@ class ScenarioServiceTest {
         assertEquals(3L, dto.id());
         assertEquals("My scenario", dto.title());
         assertEquals("alice", dto.authorUsername());
+        assertEquals(false, dto.canEdit());
+    }
+
+    @Test
+    void toDto_withViewer_canEditTrueForAuthor() {
+        User author = author();
+        when(userService.getUserById(7L)).thenReturn(author);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("My scenario");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author);
+
+        ScenarioDto dto = scenarioService.toDto(scenario, "alice");
+
+        assertEquals(true, dto.canEdit());
+    }
+
+    @Test
+    void toDto_withViewer_canEditTrueForAcceptedEditorCollaborator() {
+        User author = author();
+        User viewer = new User();
+        viewer.setId(42L);
+        viewer.setUsername("bob");
+
+        when(userService.getUserById(7L)).thenReturn(author);
+        when(userService.getUserByUsername("bob")).thenReturn(viewer);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "bob")).thenReturn(false);
+
+        ScenarioCollaborator collab = new ScenarioCollaborator();
+        collab.setStatus(CollaborationStatus.ACCEPTED);
+        collab.setRole(CollaboratorRole.EDITOR);
+        when(collaboratorRepo.findByScenarioIdAndUserId(3L, 42L)).thenReturn(Optional.of(collab));
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("My scenario");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author);
+
+        ScenarioDto dto = scenarioService.toDto(scenario, "bob");
+
+        assertEquals(true, dto.canEdit());
+    }
+
+    @Test
+    void toDto_withViewer_canEditFalseForNonCollaborator() {
+        User author = author();
+        User viewer = new User();
+        viewer.setId(99L);
+        viewer.setUsername("stranger");
+
+        when(userService.getUserById(7L)).thenReturn(author);
+        when(userService.getUserByUsername("stranger")).thenReturn(viewer);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "stranger")).thenReturn(false);
+        when(collaboratorRepo.findByScenarioIdAndUserId(3L, 99L)).thenReturn(Optional.empty());
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("My scenario");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author);
+
+        ScenarioDto dto = scenarioService.toDto(scenario, "stranger");
+
+        assertEquals(false, dto.canEdit());
+    }
+
+    @Test
+    void toDto_withViewer_canEditFalseForAuthorOncePublished() {
+        User author = author();
+        when(userService.getUserById(7L)).thenReturn(author);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("My scenario");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author);
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+
+        ScenarioDto dto = scenarioService.toDto(scenario, "alice");
+
+        assertEquals(false, dto.canEdit());
+    }
+
+    @Test
+    void hasContentEditAccess_falseOncePublishedEvenForAuthor() {
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        when(scenarioRepository.findById(3L)).thenReturn(Optional.of(scenario));
+
+        assertEquals(false, scenarioService.hasContentEditAccess(3L, "alice"));
+    }
+
+    @Test
+    void hasContentEditAccess_trueForAuthorWhileDraft() {
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
+        when(scenarioRepository.findById(3L)).thenReturn(Optional.of(scenario));
+
+        assertEquals(true, scenarioService.hasContentEditAccess(3L, "alice"));
+    }
+
+    @Test
+    void hasEditAccess_stillTrueForAuthorOncePublished() {
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+
+        assertEquals(true, scenarioService.hasEditAccess(3L, "alice"));
+    }
+
+    @Test
+    void assertCanEditScenario_throwsForAuthorOncePublished() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+
+        assertThrows(AccessDeniedException.class,
+                () -> scenarioService.assertCanEditScenario(scenario, auth));
+    }
+
+    @Test
+    void assertCanEditScenario_allowsAdminEvenWhenPublished() {
+        Authentication auth = authOf("admin", "ROLE_ADMIN");
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+
+        assertDoesNotThrow(() -> scenarioService.assertCanEditScenario(scenario, auth));
+    }
+
+    @Test
+    void assertCanEditScenario_allowsAuthorWhileDraft() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
+
+        assertDoesNotThrow(() -> scenarioService.assertCanEditScenario(scenario, auth));
+    }
+
+    @Test
+    void listPublishedScenariosWorkedOnByUsername_throwsWhenUserNotFound() {
+        when(userService.getUserByUsername("ghost")).thenReturn(null);
+
+        assertThrows(NoSuchElementException.class,
+                () -> scenarioService.listPublishedScenariosWorkedOnByUsername("ghost"));
+    }
+
+    @Test
+    void listPublishedScenariosWorkedOnByUsername_includesAuthoredAndCollaboratedPublishedOnly() {
+        User bob = new User();
+        bob.setId(11L);
+        bob.setUsername("bob");
+        when(userService.getUserByUsername("bob")).thenReturn(bob);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(userService.getUserById(11L)).thenReturn(bob);
+        when(userService.getUserById(7L)).thenReturn(author());
+
+        Scenario authoredPublished = new Scenario();
+        authoredPublished.setId(1L);
+        authoredPublished.setTitle("Authored + published");
+        authoredPublished.setAuthor_id(11L);
+        authoredPublished.setAuthor(bob);
+        authoredPublished.setCreatedAt(Instant.parse("2025-02-01T00:00:00Z"));
+        authoredPublished.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        authoredPublished.setTags(Set.of());
+
+        Scenario authoredDraft = new Scenario();
+        authoredDraft.setId(2L);
+        authoredDraft.setTitle("Authored draft");
+        authoredDraft.setAuthor_id(11L);
+        authoredDraft.setAuthor(bob);
+        authoredDraft.setCreatedAt(Instant.parse("2025-01-01T00:00:00Z"));
+        authoredDraft.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
+        authoredDraft.setTags(Set.of());
+
+        Scenario collaboratedPublished = new Scenario();
+        collaboratedPublished.setId(3L);
+        collaboratedPublished.setTitle("Collaborated + published");
+        collaboratedPublished.setAuthor_id(7L);
+        collaboratedPublished.setAuthor(author());
+        collaboratedPublished.setCreatedAt(Instant.parse("2025-03-01T00:00:00Z"));
+        collaboratedPublished.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        collaboratedPublished.setTags(Set.of());
+
+        when(scenarioRepository.findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc("bob"))
+                .thenReturn(List.of(authoredPublished, authoredDraft));
+
+        ScenarioCollaborator collab = new ScenarioCollaborator();
+        collab.setScenarioId(3L);
+        when(collaboratorRepo.findByUserIdAndStatus(11L, CollaborationStatus.ACCEPTED))
+                .thenReturn(List.of(collab));
+        when(scenarioRepository.findAllByIdInWithTags(List.of(3L)))
+                .thenReturn(List.of(collaboratedPublished));
+
+        List<ScenarioDto> result = scenarioService.listPublishedScenariosWorkedOnByUsername("bob");
+
+        assertEquals(2, result.size());
+        assertEquals("Collaborated + published", result.get(0).title());
+        assertEquals("Authored + published", result.get(1).title());
+    }
+
+    private Authentication authOf(String username, String... authorities) {
+        return new UsernamePasswordAuthenticationToken(
+                username,
+                "N/A",
+                java.util.Arrays.stream(authorities).map(SimpleGrantedAuthority::new).toList()
+        );
     }
 
     @Test

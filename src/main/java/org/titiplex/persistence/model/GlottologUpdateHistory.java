@@ -62,6 +62,18 @@ public class GlottologUpdateHistory {
     @Column(name = "pipeline_status", length = 64)
     private String pipelineStatus;
 
+    @Column(name = "remote_checksum", length = 128)
+    private String remoteChecksum;
+
+    @Column(name = "imported_checksum", length = 128)
+    private String importedChecksum;
+
+    @Column(name = "retry_count")
+    private Integer retryCount;
+
+    @Column(name = "worker_id", length = 255)
+    private String workerId;
+
     public Long getId() {
         return id;
     }
@@ -192,5 +204,37 @@ public class GlottologUpdateHistory {
 
     public void setPipelineStatus(String pipelineStatus) {
         this.pipelineStatus = pipelineStatus;
+    }
+
+    public String getRemoteChecksum() {
+        return remoteChecksum;
+    }
+
+    public void setRemoteChecksum(String remoteChecksum) {
+        this.remoteChecksum = remoteChecksum;
+    }
+
+    public String getImportedChecksum() {
+        return importedChecksum;
+    }
+
+    public void setImportedChecksum(String importedChecksum) {
+        this.importedChecksum = importedChecksum;
+    }
+
+    public Integer getRetryCount() {
+        return retryCount;
+    }
+
+    public void setRetryCount(Integer retryCount) {
+        this.retryCount = retryCount;
+    }
+
+    public String getWorkerId() {
+        return workerId;
+    }
+
+    public void setWorkerId(String workerId) {
+        this.workerId = workerId;
     }
 }

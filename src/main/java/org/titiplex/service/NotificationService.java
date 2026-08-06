@@ -302,6 +302,13 @@ public class NotificationService {
         });
     }
 
+    @Transactional
+    public void deleteAllNotifications(Authentication authentication) {
+        requireAuthenticated(authentication);
+        User user = userService.getUserByUsername(authentication.getName());
+        repo.deleteAllByUserId(user.getId());
+    }
+
     // ── DTO ────────────────────────────────────────────────────────────────
 
     public Map<String, Object> toDto(Notification n) {

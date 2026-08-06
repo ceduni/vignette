@@ -81,6 +81,16 @@ export function useNotifications() {
     }
   }
 
+  async function deleteAllNotifications() {
+    const prev = notifications.value;
+    notifications.value = [];
+    try {
+      await apiFetch("/api/notifications", { method: "DELETE" });
+    } catch {
+      notifications.value = prev;
+    }
+  }
+
   // ── SSE ───────────────────────────────────────────────────────────────────
   const { connect, disconnect, connected } = useSSE("/api/notifications/stream", {
     onMessage(data) {
@@ -169,6 +179,7 @@ export function useNotifications() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
     iconForType,
     labelForType,
     formatTime,

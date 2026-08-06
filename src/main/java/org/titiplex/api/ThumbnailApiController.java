@@ -24,8 +24,10 @@ import org.titiplex.api.security.OwnerOrAdminOperation;
 import org.titiplex.api.security.ProtectedResource;
 import org.titiplex.api.security.PublicOperation;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
@@ -43,11 +45,18 @@ public class ThumbnailApiController {
     private final ThumbnailService thumbnailService;
     private final UserService userService;
     private final ScenarioService scenarioService;
+    private final ScenarioHistoryService scenarioHistoryService;
 
-    public ThumbnailApiController(ThumbnailService thumbnailService, UserService userService, ScenarioService scenarioService) {
+    public ThumbnailApiController(
+            ThumbnailService thumbnailService,
+            UserService userService,
+            ScenarioService scenarioService,
+            ScenarioHistoryService scenarioHistoryService
+    ) {
         this.thumbnailService = thumbnailService;
         this.userService = userService;
         this.scenarioService = scenarioService;
+        this.scenarioHistoryService = scenarioHistoryService;
     }
 
     /**
@@ -216,6 +225,12 @@ public class ThumbnailApiController {
         scenarioService.assertCanEditScenario(scenario, auth);
 
         Thumbnail saved = thumbnailService.save(title, image, scenario, user);
+
+        String historySummary = (saved.getTitle() != null && !saved.getTitle().isBlank())
+                ? "Added thumbnail \"" + saved.getTitle() + "\""
+                : "Added a thumbnail";
+        scenarioHistoryService.record(scenario.getId(), user.getId(), ScenarioHistoryAction.THUMBNAIL_ADDED, historySummary);
+
         return new UploadResponse(saved.getId());
     }
 
@@ -349,6 +364,9 @@ public class ThumbnailApiController {
         scenarioService.assertCanEditScenario(scenario, auth);
 
         Thumbnail saved = thumbnailService.updateLayout(id, req);
+
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenario.getId(), actorId, ScenarioHistoryAction.THUMBNAIL_UPDATED, "Repositioned a thumbnail");
 
         return new ThumbnailRowDto(
                 saved.getId(),

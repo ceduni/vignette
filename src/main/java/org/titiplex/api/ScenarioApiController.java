@@ -21,6 +21,7 @@ import org.titiplex.api.security.PublicOperation;
 import org.titiplex.api.security.UserOperation;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.service.LanguageService;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
 
@@ -37,11 +38,18 @@ public class ScenarioApiController {
     private final ScenarioService scenarioService;
     private final UserService userService;
     private final LanguageService languageService;
+    private final ScenarioHistoryService scenarioHistoryService;
 
-    public ScenarioApiController(ScenarioService scenarioService, UserService userService, LanguageService languageService) {
+    public ScenarioApiController(
+            ScenarioService scenarioService,
+            UserService userService,
+            LanguageService languageService,
+            ScenarioHistoryService scenarioHistoryService
+    ) {
         this.scenarioService = scenarioService;
         this.userService = userService;
         this.languageService = languageService;
+        this.scenarioHistoryService = scenarioHistoryService;
     }
 
     /**
@@ -176,8 +184,59 @@ public class ScenarioApiController {
             Authentication auth
     ) {
         Scenario s = scenarioService.getVisibleScenario(id, auth);
+        String viewerUsername = (auth != null && auth.isAuthenticated()) ? auth.getName() : null;
 
-        return scenarioService.toDto(s);
+        return scenarioService.toDto(s, viewerUsername);
+    }
+
+    /**
+     * Retrieves the chronological change history of a scenario.
+     *
+     * @param id ({@link Long}) the unique identifier of the scenario
+     * @return a {@link List} of {@link ScenarioHistoryEntryDto}, most recent first
+     */
+    @Operation(
+            summary = "Get a scenario's change history",
+            description = "Returns the chronological list of edits made to a scenario (metadata, storyboard, thumbnails, audio, publish events), most recent first. Visible to anyone who can view the scenario."
+    )
+    @PublicOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "History retrieved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = ScenarioHistoryEntryDto.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Scenario not found with the specified ID",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @GetMapping("/{id}/history")
+    public List<ScenarioHistoryEntryDto> history(
+            @Parameter(
+                    description = "ID of the scenario to retrieve the history for",
+                    required = true
+            )
+            @PathVariable Long id,
+
+            @Parameter(hidden = true)
+            Authentication auth
+    ) {
+        scenarioService.getVisibleScenario(id, auth);
+
+        return scenarioHistoryService.list(id).stream()
+                .map(e -> new ScenarioHistoryEntryDto(
+                        e.getId(),
+                        e.getActorUsername(),
+                        e.getAction().name(),
+                        e.getSummary(),
+                        e.getCreatedAt()
+                ))
+                .toList();
     }
 
     /**
@@ -558,6 +617,62 @@ public class ScenarioApiController {
     }
 
     @Operation(
+            summary = "List scenarios I collaborate on",
+            description = "Returns all scenarios where the current authenticated user is an accepted collaborator (not the author)."
+    )
+    @UserOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Shared scenarios retrieved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @GetMapping("/shared-with-me")
+    public List<ScenarioDto> listSharedWithMe(
+            @Parameter(hidden = true)
+            Authentication auth
+    ) {
+        return scenarioService.listSharedWithMeScenarioDtos(auth);
+    }
+
+    @Operation(
+            summary = "List published scenarios a user has worked on",
+            description = "Returns all published scenarios where the given user is the author or an accepted collaborator. Drafts are always excluded."
+    )
+    @PublicOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Scenarios retrieved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "User not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @GetMapping("/by-author/{username}")
+    public List<ScenarioDto> listPublishedScenariosWorkedOnByUsername(
+            @Parameter(description = "Username to look up", required = true)
+            @PathVariable String username
+    ) {
+        return scenarioService.listPublishedScenariosWorkedOnByUsername(username);
+    }
+
+    @Operation(
             summary = "Update scenario metadata",
             description = """
                     Updates editable scenario metadata such as title and description.
@@ -696,10 +811,19 @@ public class ScenarioApiController {
     public CreateScenarioResponse fork(
             @Parameter(description = "ID of the scenario to fork", required = true)
             @PathVariable Long id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Optional fork details, such as a custom title for the copy.",
+                    required = false,
+                    content = @Content(
+                            schema = @Schema(implementation = ForkScenarioRequest.class)
+                    )
+            )
+            @RequestBody(required = false) ForkScenarioRequest req,
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        Long forkId = scenarioService.forkScenario(id, auth).getId();
+        String requestedTitle = req != null ? req.title() : null;
+        Long forkId = scenarioService.forkScenario(id, requestedTitle, auth).getId();
         return new CreateScenarioResponse(forkId);
     }
 }

@@ -331,7 +331,7 @@ onMounted(load);
                 <rect x="14" y="14" width="7" height="7" rx="1"/>
               </svg>
             </div>
-            <div class="bk-card__overlay"><span>Open →</span></div>
+            <div class="bk-card__overlay"><span>Read →</span></div>
           </RouterLink>
 
           <!-- Body -->
@@ -373,13 +373,6 @@ onMounted(load);
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
               </button>
-              <RouterLink :to="`/scenarios/${s.id}`" class="bk-card__action bk-card__action--open">
-                Open
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                     stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </RouterLink>
             </div>
           </div>
         </div>
@@ -471,7 +464,7 @@ onMounted(load);
 .bk-card:hover { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(42,21,0,0.11); }
 
 /* Category row */
-.bk-card__cat-row { position: relative; padding: 8px 12px 0; }
+.bk-card__cat-row { position: relative; padding: 8px 12px; }
 .bk-card__cat-btn { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; border: 1.5px dashed var(--border); background: transparent; color: var(--text-soft); font: inherit; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
 .bk-card__cat-btn:hover { border-color: var(--primary); color: var(--primary); border-style: solid; }
 .bk-card__cat-btn--set { border-style: solid; border-color: rgba(192,74,8,0.3); background: rgba(192,74,8,0.06); color: var(--primary); }

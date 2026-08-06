@@ -12,6 +12,8 @@ import org.titiplex.api.dto.UpdateScenarioStoryboardRequest;
 import org.titiplex.persistence.model.CollaboratorRole;
 import org.titiplex.persistence.model.CollaborationStatus;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioCollaborator;
+import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 import org.titiplex.persistence.model.StoryboardLayoutMode;
 import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
@@ -20,12 +22,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.titiplex.persistence.model.Audio;
 import org.titiplex.persistence.model.ReviewStatus;
 import org.titiplex.persistence.model.Thumbnail;
+import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.AudioRepository;
 import org.titiplex.persistence.repo.ThumbnailRepository;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -41,6 +48,7 @@ public class ScenarioService {
     private final ThumbnailRepository thumbnailRepo;
     private final AudioRepository audioRepo;
     private final ScenarioCollaboratorRepository collaboratorRepo;
+    private final ScenarioHistoryService scenarioHistoryService;
 
     public ScenarioService(
             ScenarioRepository scenarioRepository,
@@ -50,7 +58,8 @@ public class ScenarioService {
             NotificationService notificationService,
             ThumbnailRepository thumbnailRepo,
             AudioRepository audioRepo,
-            ScenarioCollaboratorRepository collaboratorRepo
+            ScenarioCollaboratorRepository collaboratorRepo,
+            ScenarioHistoryService scenarioHistoryService
     ) {
         this.repo = scenarioRepository;
         this.userService = userService;
@@ -60,6 +69,7 @@ public class ScenarioService {
         this.thumbnailRepo = thumbnailRepo;
         this.audioRepo = audioRepo;
         this.collaboratorRepo = collaboratorRepo;
+        this.scenarioHistoryService = scenarioHistoryService;
     }
 
     public boolean existsByIdAndAuthorUsername(Long scenarioId, String username) {
@@ -84,7 +94,9 @@ public class ScenarioService {
         scenario.setStoryboardPreset("GRID_3");
         scenario.setStoryboardColumns(3);
         scenario.setTags(new LinkedHashSet<>(scenarioTagService.resolveTags(tags)));
-        return repo.save(scenario);
+        Scenario saved = repo.save(scenario);
+        scenarioHistoryService.record(saved.getId(), authorId, ScenarioHistoryAction.SCENARIO_CREATED, "Created the scenario");
+        return saved;
     }
 
     public Scenario getRequiredScenario(Long id) {
@@ -138,8 +150,44 @@ public class ScenarioService {
     }
 
     public List<ScenarioDto> listSharedWithMeScenarioDtos(Authentication authentication) {
+        String username = authenticatedUsername(authentication);
         return listSharedWithMeScenarios(authentication).stream()
-                .map(this::toDto)
+                .map(s -> toDto(s, username))
+                .toList();
+    }
+
+    /**
+     * Published scenarios a user has worked on — either as author or as an accepted
+     * collaborator. Drafts are always excluded, regardless of the viewer.
+     */
+    public List<ScenarioDto> listPublishedScenariosWorkedOnByUsername(String username) {
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            throw new NoSuchElementException("User not found");
+        }
+
+        List<Long> collaboratedIds = collaboratorRepo.findByUserIdAndStatus(user.getId(), CollaborationStatus.ACCEPTED)
+                .stream()
+                .map(ScenarioCollaborator::getScenarioId)
+                .toList();
+
+        Map<Long, Scenario> published = new LinkedHashMap<>();
+        for (Scenario s : repo.findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc(username)) {
+            if (s.getVisibilityStatus() == ScenarioVisibilityStatus.PUBLISHED) {
+                published.put(s.getId(), s);
+            }
+        }
+        if (!collaboratedIds.isEmpty()) {
+            for (Scenario s : repo.findAllByIdInWithTags(collaboratedIds)) {
+                if (s.getVisibilityStatus() == ScenarioVisibilityStatus.PUBLISHED) {
+                    published.putIfAbsent(s.getId(), s);
+                }
+            }
+        }
+
+        return published.values().stream()
+                .sorted(Comparator.comparing(Scenario::getCreatedAt).reversed())
+                .map(s -> toDto(s, null))
                 .toList();
     }
 
@@ -176,6 +224,10 @@ public class ScenarioService {
         }
 
         Scenario saved = repo.save(scenario);
+
+        Long actorId = userService.getUserByUsername(authentication.getName()).getId();
+        scenarioHistoryService.record(saved.getId(), actorId, ScenarioHistoryAction.PUBLISHED, "Published the scenario");
+
         // Notify followers of this language
         notificationService.notifyNewScenarioInLanguage(saved);
         return saved;
@@ -185,6 +237,20 @@ public class ScenarioService {
         if (username == null) return false;
         if (existsByIdAndAuthorUsername(scenarioId, username)) return true;
         return hasEditorAccess(scenarioId, username);
+    }
+
+    /**
+     * Like {@link #hasEditAccess}, but also requires the scenario to still be a draft.
+     * Once a scenario is published, its content is frozen for everyone but admins —
+     * use this (not {@link #hasEditAccess}) to gate actual content-editing actions
+     * (metadata, storyboard, thumbnails, audio). {@link #hasEditAccess} on its own
+     * remains publish-agnostic since it also backs scenario deletion, which stays
+     * allowed for the owner after publish.
+     */
+    public boolean hasContentEditAccess(Long scenarioId, String username) {
+        if (!hasEditAccess(scenarioId, username)) return false;
+        Scenario scenario = repo.findById(scenarioId).orElse(null);
+        return scenario != null && scenario.getVisibilityStatus() != ScenarioVisibilityStatus.PUBLISHED;
     }
 
     public Scenario updateStoryboard(Long id, UpdateScenarioStoryboardRequest request, Authentication authentication) {
@@ -207,12 +273,19 @@ public class ScenarioService {
             scenario.setStoryboardColumns(columns);
         }
 
-        return repo.save(scenario);
+        Scenario saved = repo.save(scenario);
+
+        Long actorId = userService.getUserByUsername(authentication.getName()).getId();
+        scenarioHistoryService.record(saved.getId(), actorId, ScenarioHistoryAction.STORYBOARD_UPDATED, "Updated the storyboard settings");
+
+        return saved;
     }
 
     public Scenario updateScenarioMetadata(Long id, UpdateScenarioMetadataRequest request, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
         assertCanEditScenario(scenario, authentication);
+
+        List<String> changedFields = new ArrayList<>();
 
         if (request.title() != null) {
             String title = request.title().trim();
@@ -220,17 +293,28 @@ public class ScenarioService {
                 throw new IllegalArgumentException("Title is required");
             }
             scenario.setTitle(title);
+            changedFields.add("title");
         }
 
         if (request.description() != null) {
             scenario.setDescription(request.description().trim());
+            changedFields.add("description");
         }
 
         if (request.tags() != null) {
             scenario.setTags(new LinkedHashSet<>(scenarioTagService.resolveTags(request.tags())));
+            changedFields.add("tags");
         }
 
-        return repo.save(scenario);
+        Scenario saved = repo.save(scenario);
+
+        if (!changedFields.isEmpty()) {
+            Long actorId = userService.getUserByUsername(authentication.getName()).getId();
+            scenarioHistoryService.record(saved.getId(), actorId, ScenarioHistoryAction.METADATA_UPDATED,
+                    "Updated " + String.join(", ", changedFields));
+        }
+
+        return saved;
     }
 
     public void deleteScenario(Long id) {
@@ -275,6 +359,9 @@ public class ScenarioService {
         }
         if (isAdmin(authentication)) {
             return;
+        }
+        if (scenario.getVisibilityStatus() == ScenarioVisibilityStatus.PUBLISHED) {
+            throw new AccessDeniedException("Published scenarios can no longer be edited.");
         }
 
         String username = authenticatedUsername(authentication);
@@ -335,10 +422,17 @@ public class ScenarioService {
     }
 
     public ScenarioDto toDto(Scenario s) {
+        return toDto(s, null);
+    }
+
+    public ScenarioDto toDto(Scenario s, String viewerUsername) {
         String authorUsername = userService.getUserById(s.getAuthor_id()).getUsername();
         String reviewedByUsername = s.getReviewedById() != null
                 ? userService.getUserById(s.getReviewedById()).getUsername()
                 : null;
+        boolean canEdit = viewerUsername != null
+                && s.getVisibilityStatus() != ScenarioVisibilityStatus.PUBLISHED
+                && hasEditAccess(s.getId(), viewerUsername);
 
         return new ScenarioDto(
                 s.getId(),
@@ -357,7 +451,8 @@ public class ScenarioService {
                 s.getReviewStatus().name(),
                 reviewedByUsername,
                 s.getReviewedAt(),
-                s.getReviewComment()
+                s.getReviewComment(),
+                canEdit
         );
     }
 
@@ -383,14 +478,16 @@ public class ScenarioService {
     }
 
     public List<ScenarioDto> listVisibleScenarioDtos(Authentication authentication) {
+        String username = authenticatedUsername(authentication);
         return listVisibleScenarios(authentication).stream()
-                .map(this::toDto)
+                .map(s -> toDto(s, username))
                 .toList();
     }
 
     public List<ScenarioDto> listMyScenarioDtos(Authentication authentication) {
+        String username = authenticatedUsername(authentication);
         return listMyScenarios(authentication).stream()
-                .map(this::toDto)
+                .map(s -> toDto(s, username))
                 .toList();
     }
 
@@ -430,7 +527,7 @@ public class ScenarioService {
         return Math.max(1, Math.min(limit, DISCOVERY_SCENARIO_LIMIT));
     }
 
-    public Scenario forkScenario(Long originalId, Authentication authentication) {
+    public Scenario forkScenario(Long originalId, String requestedTitle, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new InsufficientAuthenticationException("Authentication required");
         }
@@ -444,8 +541,18 @@ public class ScenarioService {
         String username = authentication.getName();
         Long userId = userService.getUserByUsername(username).getId();
 
+        String title;
+        if (requestedTitle != null && !requestedTitle.isBlank()) {
+            title = requestedTitle.trim();
+            if (repo.existsByTitleAndAuthorUsernameAndLanguageId(title, username, original.getLanguage_id())) {
+                throw new IllegalArgumentException("Scenario already exists for this user and language");
+            }
+        } else {
+            title = generateUniqueScenarioTitle(original.getTitle(), username, original.getLanguage_id());
+        }
+
         Scenario fork = new Scenario();
-        fork.setTitle(generateUniqueScenarioTitle(original.getTitle(), username));
+        fork.setTitle(title);
         fork.setDescription(original.getDescription());
         fork.setAuthor_id(userId);
         fork.setLanguage_id(original.getLanguage_id());
@@ -552,11 +659,11 @@ public class ScenarioService {
         return saved;
     }
 
-    private String generateUniqueScenarioTitle(String baseTitle, String username) {
-        String candidate = "Copy of " + baseTitle + " (" + username + ")";
+    private String generateUniqueScenarioTitle(String baseTitle, String username, String languageId) {
+        String candidate = "Copy of " + baseTitle;
         int counter = 2;
-        while (repo.existsByTitle(candidate)) {
-            candidate = "Copy of " + baseTitle + " (" + username + " #" + counter + ")";
+        while (repo.existsByTitleAndAuthorUsernameAndLanguageId(candidate, username, languageId)) {
+            candidate = "Copy of " + baseTitle + " #" + counter;
             counter++;
         }
         return candidate;

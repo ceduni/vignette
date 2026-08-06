@@ -23,7 +23,9 @@ import org.titiplex.api.dto.CreateAudioResponse;
 import org.titiplex.api.dto.LanguagePreviewAudioDto;
 import org.titiplex.api.dto.UpdateMarkerRequest;
 import org.titiplex.api.security.*;
+import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.service.AudioService;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
@@ -43,12 +45,20 @@ public class AudioApiController {
     private final UserService userService;
     private final ThumbnailService thumbnailService;
     private final ScenarioService scenarioService;
+    private final ScenarioHistoryService scenarioHistoryService;
 
-    public AudioApiController(AudioService audioService, UserService userService, ThumbnailService thumbnailService, ScenarioService scenarioService) {
+    public AudioApiController(
+            AudioService audioService,
+            UserService userService,
+            ThumbnailService thumbnailService,
+            ScenarioService scenarioService,
+            ScenarioHistoryService scenarioHistoryService
+    ) {
         this.audioService = audioService;
         this.userService = userService;
         this.thumbnailService = thumbnailService;
         this.scenarioService = scenarioService;
+        this.scenarioHistoryService = scenarioHistoryService;
     }
 
     /**
@@ -215,6 +225,11 @@ public class AudioApiController {
 
         Long authorId = userService.getUserByUsername(auth.getName()).getId();
         Long id = audioService.createAudio(thumbId, title, idx, authorId, audio, markerX, markerY, markerLabel);
+
+        Long scenarioId = audioService.getScenarioIdForAudio(id);
+        String historySummary = (title != null && !title.isBlank()) ? "Added audio \"" + title.trim() + "\"" : "Added an audio clip";
+        scenarioHistoryService.record(scenarioId, authorId, ScenarioHistoryAction.AUDIO_ADDED, historySummary);
+
         return new CreateAudioResponse(id);
     }
 
@@ -272,9 +287,16 @@ public class AudioApiController {
                             schema = @Schema(implementation = UpdateMarkerRequest.class)
                     )
             )
-            @RequestBody UpdateMarkerRequest req
+            @RequestBody UpdateMarkerRequest req,
+
+            @Parameter(hidden = true)
+            Authentication auth
     ) {
+        Long scenarioId = audioService.getScenarioIdForAudio(audioId);
         audioService.updateMarker(audioId, req.markerX(), req.markerY(), req.markerLabel());
+
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.AUDIO_UPDATED, "Updated an audio marker");
     }
 
     /**
@@ -306,9 +328,16 @@ public class AudioApiController {
     @DeleteMapping("/audios/{audioId}")
     public void delete(
             @Parameter(description = "ID of the audio file to delete", required = true)
-            @PathVariable Long audioId
+            @PathVariable Long audioId,
+
+            @Parameter(hidden = true)
+            Authentication auth
     ) {
+        Long scenarioId = audioService.getScenarioIdForAudio(audioId);
         audioService.deleteAudio(audioId);
+
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.AUDIO_DELETED, "Deleted an audio clip");
     }
 
     /**

@@ -336,19 +336,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
           :key="s.id"
           class="lv-card"
         >
-          <RouterLink v-if="currentUser && s.authorUsername === currentUser.username" :to="`/scenarios/${s.id}`" class="lv-card__thumb" tabindex="-1">
-            <img v-if="thumbnailUrls[s.id]" :src="thumbnailUrls[s.id]" :alt="s.title" class="lv-card__img"/>
-            <div v-else class="lv-card__placeholder" :style="{ background: placeholderGradient(index) }">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="lv-card__placeholder-icon">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-            </div>
-            <div class="lv-card__overlay"><span>Open studio →</span></div>
-          </RouterLink>
-          <button v-else type="button" class="lv-card__thumb" @click="openReader(s)">
+          <button type="button" class="lv-card__thumb" @click="openReader(s)">
             <img v-if="thumbnailUrls[s.id]" :src="thumbnailUrls[s.id]" :alt="s.title" class="lv-card__img"/>
             <div v-else class="lv-card__placeholder" :style="{ background: placeholderGradient(index) }">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="lv-card__placeholder-icon">
@@ -362,10 +350,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
           </button>
 
           <div class="lv-card__body">
-            <RouterLink v-if="currentUser && s.authorUsername === currentUser.username" :to="`/scenarios/${s.id}`" class="lv-card__title-btn">
-              {{ s.title || "Untitled" }}
-            </RouterLink>
-            <button v-else type="button" class="lv-card__title-btn" @click="openReader(s)">
+            <button type="button" class="lv-card__title-btn" @click="openReader(s)">
               {{ s.title || "Untitled" }}
             </button>
             <div class="lv-card__meta">
@@ -375,12 +360,6 @@ watch(() => props.id, (id) => load(id), { immediate: true });
               <span v-for="tag in s.tags.slice(0, 3)" :key="tag" class="lv-card__tag">#{{ tag }}</span>
             </div>
             <div class="lv-card__actions">
-              <RouterLink v-if="currentUser && s.authorUsername === currentUser.username" :to="`/scenarios/${s.id}`" class="lv-card__open-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-                Open
-              </RouterLink>
               <button type="button" class="lv-card__read-btn" @click="openReader(s)">
                 <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="12" height="12">
                   <polygon points="5 3 19 12 5 21 5 3"/>
@@ -474,13 +453,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
                 </svg>
               </div>
               <div class="lv-single__img-overlay">
-                <RouterLink v-if="currentUser && currentScenario.authorUsername === currentUser.username" :to="`/scenarios/${currentScenario.id}`" class="lv-single__play-btn">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                  Open studio
-                </RouterLink>
-                <button v-else type="button" class="lv-single__play-btn" @click="openReader(currentScenario)">
+                <button type="button" class="lv-single__play-btn" @click="openReader(currentScenario)">
                   <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="22" height="22">
                     <polygon points="5 3 19 12 5 21 5 3"/>
                   </svg>
@@ -509,12 +482,6 @@ watch(() => props.id, (id) => load(id), { immediate: true });
               </div>
 
               <div class="lv-single__actions">
-                <RouterLink v-if="currentUser && currentScenario.authorUsername === currentUser.username" :to="`/scenarios/${currentScenario.id}`" class="lv-single__open-btn">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                  Open
-                </RouterLink>
                 <button type="button" class="lv-single__read-btn" @click="openReader(currentScenario)">
                   <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14">
                     <polygon points="5 3 19 12 5 21 5 3"/>

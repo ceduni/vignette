@@ -99,7 +99,9 @@ public class LanguageApiController {
                 l.getLevel(),
                 l.getCountryIds(),
                 l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
-                l.getParent() != null ? l.getParent().getName() : l.getParentId()
+                l.getParent() != null ? l.getParent().getName() : l.getParentId(),
+                l.getLatitude(),
+                l.getLongitude()
         ));
     }
 
@@ -337,7 +339,9 @@ public class LanguageApiController {
                         l.getLevel(),
                         l.getCountryIds(),
                         l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
-                        l.getParent() != null ? l.getParent().getName() : l.getParentId()
+                        l.getParent() != null ? l.getParent().getName() : l.getParentId(),
+                        l.getLatitude(),
+                        l.getLongitude()
                 )).toList();
     }
 }

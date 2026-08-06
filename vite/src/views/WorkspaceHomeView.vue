@@ -1,7 +1,7 @@
 <script setup>
 import {computed, onMounted, ref, watch} from "vue";
 import {RouterLink} from "vue-router";
-import {deleteScenario, fetchMyScenarios, fetchScenarioThumbnails, updateScenarioMetadata} from "../api/scenarios";
+import {deleteScenario, fetchMyScenarios, fetchScenarioThumbnails, fetchSharedWithMeScenarios, updateScenarioMetadata} from "../api/scenarios";
 import {buildApiUrl} from "../api/rest";
 import {useDebouncedRef} from "../composables/useDebouncedRef";
 import BaseLoader from "../components/ui/BaseLoader.vue";
@@ -12,6 +12,8 @@ import {apiFetch} from "../api/rest";
 import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 
 const scenarios = ref([]);
+const sharedScenarios = ref([]);
+const sharedLoading = ref(false);
 const previewMap = ref({});
 const likeCountMap = ref({});
 const discussionScenario = ref(null);
@@ -30,16 +32,19 @@ const stats = computed(() => ({
   draft: scenarios.value.filter(s => s.visibilityStatus !== "PUBLISHED").length,
 }));
 
+const isSharedTab = computed(() => statusFilter.value === "SHARED");
+
 const filtered = computed(() => {
   const q = effectiveSearch.value;
-  return scenarios.value.filter(s => {
+  const source = isSharedTab.value ? sharedScenarios.value : scenarios.value;
+  return source.filter(s => {
     const matchesSearch = !q || [
       s.title ?? "",
       String(s.languageId ?? ""),
       s.description ?? "",
       ...(s.tags ?? []).map(String),
     ].some(v => v.toLowerCase().includes(q));
-    const matchesStatus = statusFilter.value === "ALL" ||
+    const matchesStatus = isSharedTab.value || statusFilter.value === "ALL" ||
       String(s.visibilityStatus).toUpperCase() === statusFilter.value;
     return matchesSearch && matchesStatus;
   });
@@ -125,6 +130,27 @@ function draftPath(draft) {
   return `/scenarios/emergency-${draft.id}?draftAudio=${draft.id}`;
 }
 
+async function loadThumbnailsAndLikes(list, map, likes) {
+  await Promise.all(
+    list.map(async (s) => {
+      try {
+        const thumbs = await fetchScenarioThumbnails(s.id);
+        map[s.id] = thumbs?.[0]?.id ?? null;
+      } catch {
+        map[s.id] = null;
+      }
+      if (s.visibilityStatus === "PUBLISHED") {
+        try {
+          const status = await apiFetch(`/api/scenarios/${s.id}/interactions`);
+          likes[s.id] = status?.likeCount ?? 0;
+        } catch {
+          likes[s.id] = 0;
+        }
+      }
+    })
+  );
+}
+
 async function load() {
   loading.value = true;
   error.value = "";
@@ -133,26 +159,9 @@ async function load() {
     scenarios.value = Array.isArray(data) ? data : (data.content ?? []);
     const map = {};
     const likes = {};
-    await Promise.all(
-      scenarios.value.map(async (s) => {
-        try {
-          const thumbs = await fetchScenarioThumbnails(s.id);
-          map[s.id] = thumbs?.[0]?.id ?? null;
-        } catch {
-          map[s.id] = null;
-        }
-        if (s.visibilityStatus === "PUBLISHED") {
-          try {
-            const status = await apiFetch(`/api/scenarios/${s.id}/interactions`);
-            likes[s.id] = status?.likeCount ?? 0;
-          } catch {
-            likes[s.id] = 0;
-          }
-        }
-      })
-    );
-    previewMap.value = map;
-    likeCountMap.value = likes;
+    await loadThumbnailsAndLikes(scenarios.value, map, likes);
+    previewMap.value = {...previewMap.value, ...map};
+    likeCountMap.value = {...likeCountMap.value, ...likes};
   } catch (e) {
     error.value = e.message;
   } finally {
@@ -160,7 +169,24 @@ async function load() {
   }
 }
 
-onMounted(() => { load(); loadDrafts(); });
+async function loadShared() {
+  sharedLoading.value = true;
+  try {
+    const data = await fetchSharedWithMeScenarios();
+    sharedScenarios.value = Array.isArray(data) ? data : (data.content ?? []);
+    const map = {};
+    const likes = {};
+    await loadThumbnailsAndLikes(sharedScenarios.value, map, likes);
+    previewMap.value = {...previewMap.value, ...map};
+    likeCountMap.value = {...likeCountMap.value, ...likes};
+  } catch {
+    sharedScenarios.value = [];
+  } finally {
+    sharedLoading.value = false;
+  }
+}
+
+onMounted(() => { load(); loadShared(); loadDrafts(); });
 
 const { openReader, activeScenario, closeReader } = useScenarioReader();
 </script>
@@ -233,11 +259,16 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
         <button type="button" class="ms-tab" :class="{ active: statusFilter === 'DRAFT' }" @click="statusFilter = 'DRAFT'">
           Drafts <span class="ms-tab__count ms-tab__count--draft">{{ stats.draft }}</span>
         </button>
+        <button type="button" class="ms-tab" :class="{ active: statusFilter === 'SHARED' }" @click="statusFilter = 'SHARED'">
+          Shared with me <span class="ms-tab__count ms-tab__count--shared">{{ sharedScenarios.length }}</span>
+        </button>
       </div>
     </div>
 
-    <BaseLoader v-if="loading">Loading your scenarios…</BaseLoader>
-    <BaseAlert v-else-if="error" type="error">{{ error }}</BaseAlert>
+    <BaseLoader v-if="isSharedTab ? sharedLoading : loading">
+      {{ isSharedTab ? "Loading shared scenarios…" : "Loading your scenarios…" }}
+    </BaseLoader>
+    <BaseAlert v-else-if="!isSharedTab && error" type="error">{{ error }}</BaseAlert>
 
     <template v-else>
       <div v-if="filtered.length" class="ms-grid">
@@ -253,7 +284,7 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
               {{ s.visibilityStatus === "PUBLISHED" ? "Published" : "Draft" }}
             </span>
             <div class="ms-card__overlay" aria-hidden="true">
-              <span class="ms-card__overlay-label">Open studio →</span>
+              <span class="ms-card__overlay-label">{{ s.canEdit ? "Open studio →" : "View →" }}</span>
             </div>
           </RouterLink>
 
@@ -262,6 +293,12 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
               <h3 class="ms-card__title">{{ s.title || "Untitled scenario" }}</h3>
             </RouterLink>
             <div class="ms-card__meta">
+              <span v-if="isSharedTab" class="ms-card__owner">by
+                <RouterLink :to="`/users/${s.authorUsername}/scenarios`" class="ms-card__owner-link">{{ s.authorUsername }}</RouterLink>
+              </span>
+              <template v-if="isSharedTab && s.languageId">
+                <span class="ms-card__meta-sep">·</span>
+              </template>
               <span v-if="s.languageId" class="ms-card__lang">{{ s.languageId }}</span>
               <template v-if="s.tags?.length">
                 <span class="ms-card__meta-sep">·</span>
@@ -273,7 +310,7 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
             </p>
             <div class="ms-card__actions">
               <RouterLink :to="`/scenarios/${s.id}`" class="ms-card__action ms-card__action--open">
-                Open studio
+                {{ s.canEdit ? "Open studio" : "View" }}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
@@ -297,13 +334,16 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
               </button>
-              <button type="button" class="ms-card__action ms-card__action--edit" title="Edit" @click.stop="openEdit(s)">
+              <span v-if="isSharedTab" class="ms-card__role" :class="s.canEdit ? 'ms-card__role--editor' : 'ms-card__role--viewer'">
+                {{ s.canEdit ? "Editor" : "Viewer" }}
+              </span>
+              <button v-if="!isSharedTab && s.canEdit" type="button" class="ms-card__action ms-card__action--edit" title="Edit" @click.stop="openEdit(s)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                   <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
                 </svg>
               </button>
-              <button type="button" class="ms-card__action ms-card__action--delete" title="Delete" @click.stop="openDelete(s)">
+              <button v-if="!isSharedTab" type="button" class="ms-card__action ms-card__action--delete" title="Delete" @click.stop="openDelete(s)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                   <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
@@ -314,7 +354,7 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
         </div>
       </div>
 
-      <div v-else-if="scenarios.length" class="ms-noresults">
+      <div v-else-if="(isSharedTab ? sharedScenarios : scenarios).length" class="ms-noresults">
         <div class="ms-noresults__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -322,6 +362,17 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
         </div>
         <p class="ms-noresults__text">No scenarios match <strong>"{{ search || statusFilter }}"</strong></p>
         <button type="button" class="ms-noresults__reset" @click="search = ''; statusFilter = 'ALL'">Clear filters</button>
+      </div>
+
+      <div v-else-if="isSharedTab" class="ms-empty">
+        <div class="ms-empty__tiles" aria-hidden="true">
+          <div class="ms-empty__tile" style="background: linear-gradient(135deg,#D4E5CA,#D4E5CA); height:110px; width: 130px;"></div>
+          <div class="ms-empty__tile" style="background: linear-gradient(135deg,#FFF0EE,#D4E5CA); height:140px; width: 100px;"></div>
+          <div class="ms-empty__tile" style="background: linear-gradient(135deg,#c5d9b8,#afc8a0); height:95px; width: 120px;"></div>
+        </div>
+        <p class="ms-empty__eyebrow">Nothing here yet</p>
+        <h2 class="ms-empty__title">No scenarios shared with you</h2>
+        <p class="ms-empty__sub">When someone invites you to collaborate on their scenario, it will show up here.</p>
       </div>
 
       <div v-else class="ms-empty">
@@ -566,4 +617,22 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
   color: var(--primary);
   background: rgba(192, 74, 8, 0.05);
 }
+
+.ms-tab__count--shared { background: rgba(74,103,65,0.12); color: #4A6741; }
+
+.ms-card__owner { font-size: 0.75rem; font-weight: 700; color: var(--text-soft); }
+.ms-card__owner-link { color: var(--text-soft); text-decoration: none; }
+.ms-card__owner-link:hover { color: var(--primary); text-decoration: underline; }
+.ms-card__role {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.ms-card__role--editor { background: rgba(74,103,65,0.12); color: #4A6741; }
+.ms-card__role--viewer { background: var(--surface-alt); color: var(--text-soft); }
 </style>

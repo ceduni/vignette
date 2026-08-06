@@ -14,7 +14,7 @@ public class Scenario {
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id", nullable = false, updatable = false)
     private Long id;
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String title;
     @Column
     private String description;

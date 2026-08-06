@@ -37,6 +37,8 @@ public record ScenarioDto(
         @Schema(description = "Timestamp when the fork was reviewed.")
         Instant reviewedAt,
         @Schema(description = "Optional comment left by the reviewer.")
-        String reviewComment
+        String reviewComment,
+        @Schema(description = "Whether the requesting user can edit this scenario (author, or accepted OWNER/EDITOR collaborator).")
+        boolean canEdit
 ) {
 }

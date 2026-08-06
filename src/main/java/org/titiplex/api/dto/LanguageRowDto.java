@@ -15,5 +15,9 @@ public record LanguageRowDto(
         @Schema(description = "Name of the family to which the language belongs.")
         String family,
         @Schema(description = "Name of the parent language/group/family.")
-        String parent) {
+        String parent,
+        @Schema(description = "Latitude")
+        Float latitude,
+        @Schema(description = "Longitude")
+        Float longitude) {
 }
