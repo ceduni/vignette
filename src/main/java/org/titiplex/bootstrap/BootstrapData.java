@@ -5,20 +5,22 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.titiplex.config.GlottologProperties;
 import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.UserRepository;
-import org.titiplex.config.GlottologProperties;
-import org.titiplex.service.LanguageImportService;
+import org.titiplex.service.GlottologAdminService;
+import org.titiplex.service.GlottologPythonBootstrapService;
 import org.titiplex.service.RolesService;
 
 @Component
 public class BootstrapData implements ApplicationRunner {
 
-    private final LanguageImportService importService;
     private final RolesService rolesService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final GlottologProperties glottologProperties;
+    private final GlottologPythonBootstrapService pythonBootstrapService;
+    private final GlottologAdminService glottologAdminService;
 
     @Value("${app.bootstrap.admin.enabled:false}")
     private boolean bootstrapAdminEnabled;
@@ -33,35 +35,46 @@ public class BootstrapData implements ApplicationRunner {
     private String bootstrapAdminPassword;
 
     public BootstrapData(
-            LanguageImportService importService,
             RolesService rolesService,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            GlottologProperties glottologProperties
+            GlottologProperties glottologProperties,
+            GlottologPythonBootstrapService pythonBootstrapService,
+            GlottologAdminService glottologAdminService
     ) {
-        this.importService = importService;
         this.rolesService = rolesService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.glottologProperties = glottologProperties;
+        this.pythonBootstrapService = pythonBootstrapService;
+        this.glottologAdminService = glottologAdminService;
     }
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
+    public void run(ApplicationArguments args) {
         rolesService.loadRoles();
         bootstrapAdminAccount();
 
         if (!glottologProperties.isBootstrapImportEnabled()) {
-            System.out.println("Classpath language bootstrap disabled (Python pipeline owns initial import).");
+            System.out.println(
+                    "Language bootstrap at startup disabled "
+                            + "(app.glottolog.bootstrap-import-enabled=false)."
+            );
             return;
         }
 
-        int inserted = importService.importIfEmptyFromClasspath();
-        if (inserted > 0) {
-            System.out.println("Imported " + inserted + " languages.");
-        } else {
-            System.out.println("Languages already present, skipping import.");
+        // Ensure glottolog_admin_settings exists for the Python worker.
+        try {
+            glottologAdminService.getSettings();
+        } catch (Exception ex) {
+            System.out.println(
+                    "Could not init Glottolog admin settings before Python bootstrap: "
+                            + ex.getMessage()
+            );
         }
+
+        // Empty DB only: run Python worker pipeline (Zenodo → PostgreSQL).
+        pythonBootstrapService.bootstrapIfEmpty();
     }
 
     private void bootstrapAdminAccount() {
