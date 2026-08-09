@@ -161,7 +161,12 @@ onMounted(load);
 
     <template v-else>
       <div v-if="scenarios.length" class="us-grid">
-        <article v-for="(s, index) in scenarios" :key="s.id" class="us-card">
+        <article
+            v-for="(s, index) in scenarios"
+            :key="s.id"
+            class="us-card"
+            :class="{ 'us-card--bookmark-open': bookmarkCategoryPickerId === s.id }"
+        >
           <button type="button" class="us-card__thumb" @click="openReader(s)">
             <img
                 v-if="thumbnailUrl(s.id)"
@@ -332,6 +337,11 @@ onMounted(load);
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
 .us-card:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(30, 8, 18, 0.1); }
+
+/* :hover applies a transform, which creates a new stacking context — without
+   this, the bookmark picker's z-index only wins locally within its own card
+   and still ends up underneath a later sibling card in the grid. */
+.us-card--bookmark-open { position: relative; z-index: 20; }
 
 .us-card__thumb {
   position: relative;

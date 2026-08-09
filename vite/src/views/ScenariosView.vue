@@ -259,6 +259,7 @@ onMounted(load);
           v-for="(s, index) in filtered"
           :key="s.id"
           class="sc-card"
+          :class="{ 'sc-card--bookmark-open': bookmarkCategoryPickerId === s.id }"
         >
           <!-- Thumbnail -->
           <RouterLink v-if="currentUser && s.canEdit" :to="`/scenarios/${s.id}`" class="sc-card__thumb" tabindex="-1">
@@ -648,6 +649,14 @@ onMounted(load);
   transform: translateY(-4px);
   box-shadow: 0 14px 36px rgba(42, 21, 0, 0.11);
   border-color: rgba(192, 74, 8, 0.2);
+}
+
+/* :hover applies a transform, which creates a new stacking context — without
+   this, the bookmark picker's z-index only wins locally within its own card
+   and still ends up underneath a later sibling card in the grid. */
+.sc-card--bookmark-open {
+  position: relative;
+  z-index: 20;
 }
 
 .sc-card__thumb {
