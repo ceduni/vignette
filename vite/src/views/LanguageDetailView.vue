@@ -27,6 +27,7 @@ const scenarios  = ref([]);
 const error      = ref("");
 const loading    = ref(false);
 
+// ── Follow ────────────────────────────────────────────────────────────────
 const { isFollowing: isFollowingFn, toggleFollow: toggleFollowFn, followedIdsArray } = useLanguageFollows();
 const isFollowing = ref(false);
 watch(followedIdsArray, () => { isFollowing.value = isFollowingFn(props.id); });
@@ -42,6 +43,7 @@ async function toggleFollow() {
   );
 }
 
+// ── Thumbnails ────────────────────────────────────────────────────────────
 const thumbnailUrls = ref({});
 const likeCounts    = ref({}); // { scenarioId: number }
 
@@ -63,9 +65,11 @@ async function loadThumbnails(list) {
   }));
   thumbnailUrls.value = urls;
   likeCounts.value    = counts;
+  // Initialize reactive map from fetched counts
   likeCountMap.value  = { ...counts };
 }
 
+// ── Filtres ───────────────────────────────────────────────────────────────
 const search      = ref("");
 const activeTag   = ref("");
 const sortBy      = ref("recent"); // "recent" | "title"
@@ -102,6 +106,7 @@ const filtered = computed(() => {
   return list;
 });
 
+// ── Single view navigation ────────────────────────────────────────────────
 const singleIndex = ref(0);
 watch(filtered, () => { singleIndex.value = 0; infoOpen.value = false; });
 watch(singleIndex, () => {
@@ -111,6 +116,7 @@ const currentScenario = computed(() => filtered.value[singleIndex.value] ?? null
 function prevScenario() { if (singleIndex.value > 0) singleIndex.value--; }
 function nextScenario() { if (singleIndex.value < filtered.value.length - 1) singleIndex.value++; }
 
+// ── Load ──────────────────────────────────────────────────────────────────
 function levelVariant(level) {
   if (!level) return "neutral";
   const l = String(level).toLowerCase();
@@ -128,6 +134,7 @@ function formatDate(value) {
 function handleToggleLike(scenarioId) {
   const id = String(scenarioId);
   const wasLiked = isLiked(id);
+  // Optimistic update — mutate reactive map
   const current = likeCountMap.value[id] ?? 0;
   likeCountMap.value = { ...likeCountMap.value, [id]: current + (wasLiked ? -1 : 1) };
   toggleLike(id);
@@ -183,6 +190,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 
     <template v-else-if="language">
 
+      <!-- ── Hero ─────────────────────────────────────────────────────── -->
       <div class="lv-hero">
         <div class="lv-hero__left">
           <div class="lv-hero__icon" :style="{ background: `linear-gradient(135deg, ${avatarColor(language.name)} 0%, #1E0812 100%)` }">
@@ -227,8 +235,10 @@ watch(() => props.id, (id) => load(id), { immediate: true });
         </div>
       </div>
 
+      <!-- ── Toolbar ───────────────────────────────────────────────────── -->
       <div class="lv-toolbar">
 
+        <!-- Search -->
         <div class="lv-search">
           <svg class="lv-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -237,6 +247,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
           <button v-if="search" type="button" class="lv-search__clear" @click="search = ''">×</button>
         </div>
 
+        <!-- Sort -->
         <div class="lv-dropdown" :class="{ 'lv-dropdown--open': sortOpen }">
           <button type="button" class="lv-dropdown__trigger" @click="sortOpen = !sortOpen">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -263,6 +274,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
           </div>
         </div>
 
+        <!-- View toggle -->
         <div class="lv-view-toggle">
           <button
             type="button"
@@ -293,6 +305,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
         </div>
       </div>
 
+      <!-- Tag filters -->
       <div v-if="allTags.length" class="lv-tags">
         <button
           type="button"
@@ -310,11 +323,13 @@ watch(() => props.id, (id) => load(id), { immediate: true });
         >#{{ tag }}</button>
       </div>
 
+      <!-- Count -->
       <p class="lv-count">
         {{ filtered.length }} scenario{{ filtered.length !== 1 ? 's' : '' }}
         <span v-if="activeTag || search" class="lv-count__filtered">· filtered</span>
       </p>
 
+      <!-- ── Grid view ─────────────────────────────────────────────────── -->
       <div v-if="viewMode === 'grid'" class="lv-grid">
         <div
           v-for="(s, index) in filtered"
@@ -413,9 +428,11 @@ watch(() => props.id, (id) => load(id), { immediate: true });
         </div>
       </div>
 
+      <!-- ── Single view ───────────────────────────────────────────────── -->
       <div v-else class="lv-single">
         <template v-if="filtered.length">
           <div class="lv-single__card">
+            <!-- Image -->
             <div class="lv-single__img-wrap">
               <img
                 v-if="thumbnailUrls[currentScenario.id]"
@@ -445,6 +462,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
               </div>
             </div>
 
+            <!-- Info -->
             <div class="lv-single__info">
               <div class="lv-single__counter">
                 {{ singleIndex + 1 }} / {{ filtered.length }}
@@ -504,6 +522,8 @@ watch(() => props.id, (id) => load(id), { immediate: true });
                 </button>
               </div>
 
+              <!-- Nav -->
+              <!-- Like count + info button -->
               <div class="lv-single__stats">
                 <span class="lv-single__like-count">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -572,6 +592,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 
     </template>
 
+    <!-- Info popup -->
     <Teleport to="body">
       <Transition name="lv-popup">
         <div v-if="infoOpen && currentScenario" class="lv-info-backdrop" @click.self="infoOpen = false">
@@ -591,11 +612,11 @@ watch(() => props.id, (id) => load(id), { immediate: true });
               </div>
               <div class="lv-info-popup__row">
                 <span class="lv-info-popup__label">Published</span>
-                <span class="lv-info-popup__value">{{ formatDate(currentScenario.createdAt) || "Unknown" }}</span>
+                <span class="lv-info-popup__value">{{ formatDate(currentScenario.createdAt) || "—" }}</span>
               </div>
               <div class="lv-info-popup__row">
                 <span class="lv-info-popup__label">Language</span>
-                <span class="lv-info-popup__value">{{ language?.name ?? "Unknown" }}</span>
+                <span class="lv-info-popup__value">{{ language?.name ?? "—" }}</span>
               </div>
               <div v-if="currentScenario.tags?.length" class="lv-info-popup__row">
                 <span class="lv-info-popup__label">Tags</span>
@@ -623,6 +644,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 <style scoped>
 .lv-root { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; display: flex; flex-direction: column; gap: 20px; }
 
+/* ── Hero ── */
 .lv-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 28px; background: linear-gradient(180deg,#FFFCF7 0%,#FFF0EE 100%); border: 1.5px solid rgba(192,74,8,0.2); border-radius: 20px; box-shadow: 0 4px 24px rgba(42,21,0,0.07); }
 .lv-hero__left { display: flex; align-items: center; gap: 18px; flex: 1; min-width: 0; }
 .lv-hero__icon { width: 72px; height: 72px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: #fff; flex-shrink: 0; box-shadow: 0 4px 16px rgba(30,8,18,0.25); }
@@ -639,6 +661,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-follow-btn--active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .lv-follow-btn--active:hover { background: var(--primary-strong); }
 
+/* ── Toolbar ── */
 .lv-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .lv-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--border); border-radius: 12px; padding: 0 14px; background: #fff; transition: border-color 160ms, box-shadow 160ms; }
 .lv-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(192,74,8,0.08); }
@@ -661,6 +684,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-view-btn:hover { color: var(--text); background: rgba(30,8,18,0.06); }
 .lv-view-btn--active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(30,8,18,0.1); }
 
+/* ── Tag filters ── */
 .lv-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .lv-tag { display: inline-flex; align-items: center; padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--border); background: #fff; color: var(--text-soft); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .lv-tag:hover { border-color: var(--primary); color: var(--primary); }
@@ -669,6 +693,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-count { font-size: 0.82rem; color: var(--text-soft); margin: 0; }
 .lv-count__filtered { opacity: 0.7; }
 
+/* ── Grid view ── */
 .lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; align-items: start; }
 .lv-card { display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: #fff; border: 1.5px solid var(--border); box-shadow: 0 2px 8px rgba(42,21,0,0.05); transition: transform 200ms ease, box-shadow 200ms ease; }
 .lv-card:hover { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(42,21,0,0.11); }
@@ -697,6 +722,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-single__open-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: 1.5px solid var(--border); border-radius: 12px; background: transparent; color: var(--text); font: inherit; font-size: 0.9rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: all 0.15s; }
 .lv-single__open-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.05); transform: translateY(-1px); }
 
+/* ── Single view ── */
 .lv-single { display: flex; flex-direction: column; gap: 20px; }
 .lv-single__card { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; background: #fff; border: 1.5px solid var(--border); border-radius: 22px; overflow: hidden; box-shadow: 0 4px 24px rgba(42,21,0,0.08); }
 .lv-single__img-wrap { position: relative; aspect-ratio: 4/3; background: var(--surface-alt); overflow: hidden; }
@@ -742,6 +768,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-info-slide-enter-active, .lv-info-slide-leave-active { transition: opacity 160ms ease, transform 160ms ease; }
 .lv-info-slide-enter-from, .lv-info-slide-leave-to { opacity: 0; transform: translateY(-6px); }
 
+/* Info popup */
 .lv-info-backdrop { position: fixed; inset: 0; z-index: 1200; background: rgba(30,8,18,0.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .lv-info-popup { background: #fff; border: 1.5px solid var(--border); border-radius: 20px; box-shadow: 0 16px 48px rgba(30,8,18,0.18); width: min(400px, 100%); overflow: hidden; }
 .lv-info-popup__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
@@ -757,6 +784,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-popup-enter-active, .lv-popup-leave-active { transition: opacity 180ms ease, transform 180ms ease; }
 .lv-popup-enter-from, .lv-popup-leave-to { opacity: 0; transform: scale(0.96); }
 
+/* ── Empty ── */
 .lv-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 60px 20px 80px; text-align: center; grid-column: 1 / -1; }
 .lv-empty__tiles { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 8px; }
 .lv-empty__tile { border: 2.5px solid #1E0812; border-radius: 12px; box-shadow: 3px 3px 0 #1E0812; opacity: 0.4; }

@@ -16,6 +16,7 @@ const previewMap = ref({});
 const loading = ref(false);
 const error = ref("");
 
+// Only show scenarios that are liked
 const scenarios = computed(() =>
   allScenarios.value.filter(s => likedIds.value.has(String(s.id)))
 );

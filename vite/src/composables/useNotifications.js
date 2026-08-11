@@ -1,3 +1,5 @@
+// composables/useNotifications.js
+// Notifications backend + SSE temps réel
 import { ref, computed, watch } from "vue";
 import { apiFetch } from "../api/rest";
 import { useAuth } from "./useAuth";
@@ -9,12 +11,14 @@ const initialized   = ref(false);
 export function useNotifications() {
   const { currentUser, isAuthenticated } = useAuth();
 
+  // ── Computed ──────────────────────────────────────────────────────────────
   const unreadCount = computed(() =>
     notifications.value.filter(n => !n.read).length
   );
 
   const hasUnread = computed(() => unreadCount.value > 0);
 
+  // Groupées par date pour l'affichage
   const grouped = computed(() => {
     const today     = new Date(); today.setHours(0,0,0,0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
@@ -29,24 +33,28 @@ export function useNotifications() {
     return groups;
   });
 
+  // ── API calls ─────────────────────────────────────────────────────────────
   async function fetchNotifications() {
     try {
       const data = await apiFetch("/api/notifications");
       notifications.value = Array.isArray(data) ? data : (data.content ?? []);
       initialized.value = true;
     } catch {
+      // silencieux — on réessaie via SSE
     }
   }
 
   async function markAsRead(id) {
     const n = notifications.value.find(n => n.id === id);
     if (!n || n.read) return;
+    // optimistic
     notifications.value = notifications.value.map(item =>
       item.id === id ? { ...item, read: true } : item
     );
     try {
       await apiFetch(`/api/notifications/${id}/read`, { method: "POST" });
     } catch {
+      // rollback
       notifications.value = notifications.value.map(item =>
         item.id === id ? { ...item, read: false } : item
       );
@@ -83,9 +91,11 @@ export function useNotifications() {
     }
   }
 
+  // ── SSE ───────────────────────────────────────────────────────────────────
   const { connect, disconnect, connected } = useSSE("/api/notifications/stream", {
     onMessage(data) {
       if (!data?.id) return;
+      // Ajouter en tête si pas déjà présente
       const exists = notifications.value.some(n => n.id === data.id);
       if (!exists) {
         notifications.value = [data, ...notifications.value];
@@ -93,6 +103,7 @@ export function useNotifications() {
     },
   });
 
+  // ── Init / cleanup ────────────────────────────────────────────────────────
   function init() {
     if (!isAuthenticated.value) return;
     fetchNotifications();
@@ -105,11 +116,13 @@ export function useNotifications() {
     initialized.value = false;
   }
 
+  // Se (re)connecte quand l'utilisateur change
   watch(() => currentUser.value?.username, (username) => {
     teardown();
     if (username) init();
   });
 
+  // ── Helpers affichage ─────────────────────────────────────────────────────
   function iconForType(type) {
     switch (type) {
       case "NEW_SCENARIO_IN_FOLLOWED_LANGUAGE": return "scenario";

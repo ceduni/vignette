@@ -18,10 +18,6 @@ public class ScenarioSchemaMaintenance implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        // Older schema versions had a global UNIQUE constraint on scenario.title alone,
-        // which blocked different authors from ever reusing a title. It has been replaced
-        // by a per-author/per-language composite constraint declared on the entity; drop
-        // the stale single-column one here since ddl-auto=update never removes constraints.
         List<String> staleConstraints;
         try {
             staleConstraints = jdbc.queryForList(
@@ -47,7 +43,6 @@ public class ScenarioSchemaMaintenance implements ApplicationRunner {
                     String.class
             );
         } catch (org.springframework.jdbc.BadSqlGrammarException e) {
-            // information_schema layout can vary across H2 modes/versions; skip rather than fail startup.
             return;
         }
         for (String name : staleConstraints) {

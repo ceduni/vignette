@@ -12,7 +12,7 @@ public class GlottologProperties {
     private boolean updateEnabled = true;
     /** When true, Java still runs ProcessBuilder + CSV import (legacy). */
     private boolean legacyPipelineEnabled = false;
-    /** When true, BootstrapData imports languages from classpath if empty. Default false. */
+    /** When true, Java runs Python worker --bootstrap if languages are empty at startup. */
     private boolean bootstrapImportEnabled = false;
     private int frequencyDaysMin = 1;
     private int frequencyDaysMax = 365;

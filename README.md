@@ -36,6 +36,7 @@ community-oriented features.
   * [Links](#links)
   * [Getting started](#getting-started)
     * [Prerequisites](#prerequisites)
+    * [Local setup with PostgreSQL and the languages map](#local-setup-with-postgresql-and-the-languages-map)
     * [Back-End](#back-end)
       * [Building and launching the application](#building-and-launching-the-application)
       * [Test backend code](#test-backend-code)
@@ -103,6 +104,7 @@ Languages data and metadata are directly imported from [Glottolog](https://glott
 .
 ├── .github/workflows/       # CI and documentation publication workflows
 ├── docs/                    # Static API documentation published on GitHub Pages
+├── scripts/                 # Glottolog Python worker (import / updates)
 ├── src/                     # Spring Boot backend
 │   ├── main/java/org/titiplex/
 │   │   ├── api/
@@ -126,13 +128,182 @@ Languages data and metadata are directly imported from [Glottolog](https://glott
 
 ### Prerequisites
 
-Make sure you have the following installed:
+You need:
 
-- Java 23
+- Java 21+ (23 is fine)
 - Maven 3.9+
 - Node.js 22+
 - npm
-- PostgreSQL (only needed for production-like setup)
+- Python 3 (Glottolog language import)
+- PostgreSQL (for the full setup with the world map)
+- on macOS, Homebrew `postgresql@16` works well
+
+Two local modes:
+
+| Mode | Profile | Database | Use when |
+|------|---------|----------|----------|
+| Full stack | `pgdev` | PostgreSQL | languages map, Glottolog import, admin updates |
+| Light | `dev` | H2 file (`./data/bootapp`) | quick Java work without the Python pipeline |
+
+For H2 only, see [Back-End](#back-end) with profile `dev`.
+For the map and languages, use the setup below.
+
+### Local setup with PostgreSQL and the languages map
+
+Open a terminal at the **project root** (folder with `pom.xml`, `vite/`, and `scripts/`).
+
+#### One-time setup
+
+**1. Install dependencies**
+
+```bash
+# Python (Glottolog worker → Postgres)
+pip3 install -r scripts/glottolog_worker/requirements.txt
+
+# Frontend (Vue, map, UI)
+cd vite
+npm install
+cd ..
+```
+
+**2. Start PostgreSQL**
+
+```bash
+brew services start postgresql@16
+```
+
+(or start Postgres with your usual method)
+
+**3. Create the database user and database (once)**
+
+```bash
+psql postgres
+```
+
+In `psql`:
+
+```sql
+CREATE ROLE vignette LOGIN SUPERUSER;
+CREATE DATABASE vignette OWNER vignette;
+\q
+```
+
+If Postgres says `already exists`, ignore it and type `\q`.
+
+Check:
+
+```bash
+psql -U vignette -d vignette -c "SELECT 1;"
+```
+
+**4. Emails (optional) — who sends notifications**
+
+```bash
+cp scripts/glottolog_worker/.env.example scripts/glottolog_worker/.env
+```
+
+Edit `scripts/glottolog_worker/.env`:
+
+- `GLOTTOLOG_SMTP_USER` / `GLOTTOLOG_SMTP_FROM` → Gmail account that **sends** mail
+- `GLOTTOLOG_SMTP_PASSWORD` → Gmail **App Password** (16 characters), not the normal account password
+
+Do not commit `.env`.
+
+Who **receives** mail is set in the admin UI (see below).
+
+#### Every time you run the app
+
+Use **at least two terminals**. A third terminal is only needed for continuous Glottolog auto-updates.
+
+**Terminal A — Java (PostgreSQL)**
+
+```bash
+# project root
+mvn spring-boot:run -Dspring-boot.run.profiles=pgdev
+```
+
+Wait for `Started Application`.
+
+- API: `http://localhost:8081`
+- If there are **no languages** in the database yet, Java starts the Python import
+  (`python3 -m glottolog_worker --bootstrap`). The first import can take a few minutes.
+- Related log lines: `Startup Python bootstrap`, `[glottolog_worker]`.
+
+Local admin account:
+
+- username: `admin`
+- password: `admin12345`
+
+**Terminal B — Frontend**
+
+```bash
+cd vite
+npm run dev
+```
+
+Open:
+
+- site: http://localhost:5173/
+- languages map: http://localhost:5173/languages
+- admin: http://localhost:5173/admin
+
+**Terminal C — Python worker (optional)**
+
+Leave this open for scheduled Glottolog updates:
+
+```bash
+cd scripts
+python3 -m glottolog_worker
+```
+
+#### Admin: who receives notification emails
+
+1. Log in as `admin` / `admin12345`.
+2. Open `/admin`.
+3. In Glottolog / Schedule, set **Notification email** (recipient).
+4. Save.
+
+| Config | Role |
+|--------|------|
+| `scripts/glottolog_worker/.env` | account that **sends** mail |
+| Admin → Notification email | address that **receives** mail |
+
+Test email:
+
+```bash
+cd scripts
+python3 -m glottolog_worker.send_test_email --to you@example.com
+```
+
+#### Checks
+
+Languages API (expect a large JSON, not `{}`):
+
+http://localhost:8081/api/languages/by-country
+
+If this is empty or fails, clicking a country on the map will not show useful data.
+
+Also:
+
+- Swagger UI: http://localhost:8081/api/docs
+- OpenAPI JSON: http://localhost:8081/api/docs/openapi
+
+#### If languages are still missing after startup
+
+Run one import by hand (Postgres must be up):
+
+```bash
+cd scripts
+export PGHOST=localhost
+export PGPORT=5432
+export PGDATABASE=vignette
+export PGUSER=vignette
+export PGPASSWORD=
+
+python3 -m glottolog_worker --bootstrap
+```
+
+Reload http://localhost:5173/languages.
 
 ### Back-End
 
@@ -140,19 +311,21 @@ The backend is the API part of the project that powers the web app.
 
 #### Building and launching the application
 
+Light local mode with **H2** (no PostgreSQL / no Python pipeline required):
+
 ````shell
 # in project root
 mvn clean build
 
-# launching the application
+# launching the application (H2)
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ````
 
-> Note: the `-Dspring-boot.run.profiles=dev` flag is only needed for development.
+> For the map and languages, use profile `pgdev` in [Local setup with PostgreSQL and the languages map](#local-setup-with-postgresql-and-the-languages-map).
 
 Backend should start on `http://localhost:8081`
 
-Dev endpoints :
+Dev endpoints (`dev` profile):
 
 - Swagger UI: `http://localhost:8081/api/docs`
 - OpenAPI JSON: `http://localhost:8081/api/docs/openapi`
@@ -216,15 +389,26 @@ npm run e2e:ui
 
 ## Configuration
 
-### Development profile
+### Development profile (`dev`)
 
-The `dev` profile is configured for local development with:
+The `dev` profile is a light local mode with:
 
 - port `8081`,
-- an H2 file database,
+- an H2 file database (`./data/bootapp`),
 - H2 console enabled,
 - multipart upload limits,
 - Swagger / OpenAPI enabled.
+
+It does **not** share data with PostgreSQL. The Python Glottolog worker is meant for Postgres.
+
+### Local PostgreSQL profile (`pgdev`)
+
+The `pgdev` profile shares a local PostgreSQL database with the Python worker:
+
+- port `8081`,
+- Postgres on `localhost` (default port `5432`, database `vignette`, user `vignette`),
+- password empty by default (or set `DB_PASSWORD` if you use one),
+- language catalogue can be filled at first start via the Python worker when the table is empty.
 
 ### Production profile
 

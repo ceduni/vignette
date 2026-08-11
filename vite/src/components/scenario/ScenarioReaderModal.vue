@@ -5,17 +5,17 @@ import { buildApiUrl } from "../../api/rest";
 import { buildStoryboardItems, storyboardItemStyle } from "../../utils/scenarioStoryboard.js";
 
 const props = defineProps({
-  scenario: { type: Object, default: null }, // { id, title, authorUsername, storyboardLayoutMode, storyboardPreset, storyboardColumns }
+  scenario: { type: Object, default: null },
 });
 
 const emit = defineEmits(["close"]);
 
 const loading = ref(false);
 const error = ref("");
-const thumbnails = ref([]); // sorted list of thumb objects
-const audioMap = ref({});   // { thumbId: [audio, ...] }
+const thumbnails = ref([]);
+const audioMap = ref({});
 const currentIndex = ref(0);
-const viewMode = ref("grid"); // "grid" (storyboard) | "scene" (focused player)
+const viewMode = ref("grid");
 const isAutoplay = ref(false);
 const isFullscreen = ref(false);
 const audioRef = ref(null);

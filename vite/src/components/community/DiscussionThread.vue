@@ -63,11 +63,13 @@ const threadedMessages = computed(() => {
   return flat;
 });
 
+// Initiales de l'auteur pour l'avatar
 function authorInitials(username) {
   if (!username) return "?";
   return username.slice(0, 2).toUpperCase();
 }
 
+// Couleur d'avatar déterministe basée sur le nom
 function avatarColor(username) {
   const colors = [
     "#0f766e", "#0b5f59", "#1d4e89", "#6d28d9",
@@ -90,6 +92,7 @@ function formatDate(value) {
 
 function setReply(message) {
   replyTo.value = message;
+  // Scroll vers le composer
   document.querySelector(".discussion-thread__composer")?.scrollIntoView({behavior: "smooth", block: "nearest"});
 }
 
@@ -154,6 +157,7 @@ onMounted(() => {
 <template>
   <section class="discussion-thread">
 
+    <!-- En-tête -->
     <div class="discussion-thread__header">
       <div class="discussion-thread__header-left">
         <h2 class="discussion-thread__title">{{ title }}</h2>
@@ -171,11 +175,13 @@ onMounted(() => {
 
     <BaseAlert v-if="error" type="error">{{ error }}</BaseAlert>
 
+    <!-- Chargement -->
     <div v-if="loading" class="discussion-thread__loading">
       <span class="loader-spinner"></span>
       <span class="muted">Loading discussion...</span>
     </div>
 
+    <!-- Liste des messages -->
     <div v-else-if="threadedMessages.length" class="discussion-thread__list">
       <article
           v-for="message in threadedMessages"
@@ -184,9 +190,11 @@ onMounted(() => {
           :class="{ 'discussion-message--reply': message._depth > 0 }"
           :style="{ '--discussion-depth': message._depth }"
       >
+        <!-- Ligne de fil pour les réponses -->
         <div v-if="message._depth > 0" class="discussion-message__thread-line"></div>
 
         <div class="discussion-message__inner">
+          <!-- Avatar -->
           <RouterLink
               v-if="message.authorUsername"
               :to="`/users/${message.authorUsername}/scenarios`"
@@ -204,6 +212,7 @@ onMounted(() => {
           </div>
 
           <div class="discussion-message__body">
+            <!-- En-tête du message -->
             <div class="discussion-message__meta">
               <RouterLink
                   v-if="message.authorUsername"
@@ -218,8 +227,10 @@ onMounted(() => {
               </BaseBadge>
             </div>
 
+            <!-- Contenu -->
             <p class="discussion-message__content">{{ message.content }}</p>
 
+            <!-- Actions -->
             <div v-if="isAuthenticated" class="discussion-message__actions">
               <button type="button" class="discussion-message__reply-btn" @click="setReply(message)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -234,14 +245,17 @@ onMounted(() => {
       </article>
     </div>
 
+    <!-- État vide -->
     <BaseEmptyState
         v-else-if="!loading"
         :title="emptyTitle"
         :message="emptyMessage"
     />
 
+    <!-- Composer -->
     <div class="discussion-thread__composer">
 
+      <!-- Réponse à -->
       <div v-if="replyTo" class="discussion-thread__reply-preview">
         <div class="discussion-thread__reply-preview-inner">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -258,6 +272,7 @@ onMounted(() => {
         </button>
       </div>
 
+      <!-- Formulaire authentifié -->
       <template v-if="isAuthenticated">
         <div class="discussion-thread__form">
           <label class="discussion-thread__label discussion-thread__label--full">
@@ -289,6 +304,7 @@ onMounted(() => {
         </div>
       </template>
 
+      <!-- Non authentifié -->
       <template v-else>
         <div class="discussion-thread__guest">
           <div class="discussion-thread__guest-icon">
@@ -314,6 +330,7 @@ onMounted(() => {
   gap: 1.25rem;
 }
 
+/* En-tête */
 .discussion-thread__header {
   display: flex;
   align-items: flex-start;
@@ -347,6 +364,7 @@ onMounted(() => {
   padding: 4px 10px;
 }
 
+/* Chargement */
 .discussion-thread__loading {
   display: flex;
   align-items: center;
@@ -354,12 +372,14 @@ onMounted(() => {
   padding: 1rem 0;
 }
 
+/* Liste */
 .discussion-thread__list {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
 }
 
+/* Message */
 .discussion-message {
   position: relative;
   margin-left: calc(var(--discussion-depth, 0) * 1.5rem);
@@ -395,6 +415,7 @@ onMounted(() => {
   background: linear-gradient(180deg, #f8fbff 0%, #f1f6ff 100%);
 }
 
+/* Avatar */
 .discussion-message__avatar {
   flex-shrink: 0;
   width: 34px;
@@ -419,6 +440,7 @@ a.discussion-message__avatar:hover {
   opacity: 0.82;
 }
 
+/* Corps du message */
 .discussion-message__body {
   flex: 1;
   min-width: 0;
@@ -497,6 +519,7 @@ a.discussion-message__author:hover {
   background: var(--accent-cool);
 }
 
+/* Composer */
 .discussion-thread__composer {
   border-top: 1px solid var(--border);
   padding-top: 1.25rem;
@@ -505,6 +528,7 @@ a.discussion-message__author:hover {
   gap: 1rem;
 }
 
+/* Prévisualisation de réponse */
 .discussion-thread__reply-preview {
   display: flex;
   align-items: center;
@@ -552,6 +576,7 @@ a.discussion-message__author:hover {
   background: rgba(180, 35, 24, 0.08);
 }
 
+/* Formulaire */
 .discussion-thread__form {
   display: flex;
   flex-direction: column;
@@ -597,6 +622,7 @@ a.discussion-message__author:hover {
   line-height: 1.6;
 }
 
+/* Barre d'envoi */
 .discussion-thread__toolbar {
   display: flex;
   align-items: center;
@@ -614,6 +640,7 @@ a.discussion-message__author:hover {
   color: #b54708;
 }
 
+/* Invité */
 .discussion-thread__guest {
   display: flex;
   align-items: center;

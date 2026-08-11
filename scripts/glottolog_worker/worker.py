@@ -493,12 +493,111 @@ def event_loop(settings: Settings) -> int:
     return 0
 
 
+def run_bootstrap(conn, settings: Settings, admin: db.AdminSettings) -> bool:
+    """Force one full pipeline cycle (used at Java startup when languages are empty)."""
+    if not db.try_acquire_lock(conn, settings.worker_id, settings.lock_ttl_seconds):
+        print("Could not acquire pipeline lock for bootstrap — skipping.", flush=True)
+        return False
+
+    history_id: int | None = None
+    try:
+        print("Starting BOOTSTRAP run (startup / empty database).", flush=True)
+        state = db.fetch_pipeline_state(conn)
+        history_id = db.insert_history(
+            conn,
+            triggered_by="system:startup-bootstrap",
+            trigger_type=db.TRIGGER_AUTO,
+            glottolog_version=settings.glottolog_version,
+            worker_id=settings.worker_id,
+            retry_count=state.retry_count,
+        )
+        heartbeat = make_heartbeat(conn, settings, request_id=None)
+        result = run_pipeline(conn, settings, history_id=history_id, heartbeat=heartbeat)
+        next_run = db.schedule_next_run(conn, admin)
+        idle_message = result.message
+        if next_run is not None:
+            idle_message = f"{result.message} Next auto run at {next_run.isoformat()}."
+        idle_status = (
+            db.STATUS_WAITING if admin.auto_update_enabled else db.STATUS_IDLE
+        )
+        if result.pipeline_status == db.STATUS_NO_CHANGE:
+            idle_status = (
+                db.STATUS_WAITING if admin.auto_update_enabled else db.STATUS_AUTO_DISABLED
+            )
+        db.set_pipeline_status(conn, idle_status, idle_message)
+        print(f"Bootstrap finished: {result.pipeline_status} — {idle_message}", flush=True)
+        _notify_admin(
+            settings,
+            admin,
+            conn,
+            trigger_type=db.TRIGGER_AUTO,
+            pipeline_status=result.pipeline_status,
+            triggered_by="system:startup-bootstrap",
+            history_id=history_id,
+            message=idle_message,
+            inserted=result.inserted_count,
+            updated=result.updated_count,
+            database_count=result.database_count,
+            next_run_at=next_run,
+        )
+        return True
+    except PipelineError as exc:
+        print(f"Bootstrap pipeline error [{exc.status}]: {exc.message}", flush=True)
+        conn.rollback()
+        if history_id is not None:
+            try:
+                db.update_history(
+                    conn,
+                    history_id,
+                    status=db.HISTORY_FAILED,
+                    finished_at=db.utcnow(),
+                    pipeline_status=exc.status,
+                    error_message=exc.message,
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        return False
+    except Exception as exc:  # noqa: BLE001
+        print(f"Bootstrap failed: {exc}", flush=True)
+        conn.rollback()
+        return False
+    finally:
+        try:
+            db.release_lock(conn, settings.worker_id)
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(argv or [])
     once = "--once" in args
+    bootstrap = "--bootstrap" in args
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
     settings = load_settings()
+    if bootstrap:
+        print("Running forced bootstrap import (--bootstrap).", flush=True)
+        try:
+            with db.connect(settings) as conn:
+                db.ensure_pipeline_row(conn)
+                admin = sync_admin_config(conn, settings)
+                if admin is None:
+                    print(
+                        "No admin settings row — start Java (pgdev) once so "
+                        "glottolog_admin_settings is created, then retry.",
+                        flush=True,
+                    )
+                    return 1
+                ran = run_bootstrap(conn, settings, admin)
+                print("Bootstrap executed." if ran else "Bootstrap did not run.", flush=True)
+                return 0 if ran else 1
+        except Exception as exc:
+            print(
+                "Cannot reach PostgreSQL. Set DATABASE_URL or PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD.\n"
+                f"Detail: {exc}",
+                flush=True,
+            )
+            return 2
     if once:
         print("Running a single poll cycle (--once).", flush=True)
         try:

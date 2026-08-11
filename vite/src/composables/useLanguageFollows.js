@@ -1,7 +1,10 @@
+// composables/useLanguageFollows.js
+// Source de vérité : backend uniquement — plus de localStorage
 import { ref, computed } from "vue";
 import { apiFetch } from "../api/rest";
 import { useAuth } from "./useAuth";
 
+// État réactif — réinitialisé à chaque changement de compte
 const followedIdsArray = ref([]);   // string[]
 const followedMeta    = ref({});    // { languageId: { id, name } }
 const initialized     = ref(false);
@@ -9,6 +12,7 @@ const initialized     = ref(false);
 export function useLanguageFollows() {
   const { currentUser } = useAuth();
 
+  // ── Charger les follows depuis le backend ────────────────────────────────
   async function loadFollows() {
     try {
       const ids = await apiFetch("/api/languages/followed");
@@ -22,12 +26,14 @@ export function useLanguageFollows() {
     }
   }
 
+  // ── Réinitialiser quand l'utilisateur change ─────────────────────────────
   function reset() {
     followedIdsArray.value = [];
     followedMeta.value     = {};
     initialized.value      = false;
   }
 
+  // ── API ──────────────────────────────────────────────────────────────────
   function isFollowing(languageId) {
     return followedIdsArray.value.includes(String(languageId));
   }
@@ -36,6 +42,7 @@ export function useLanguageFollows() {
     const id = String(languageId);
     const wasFollowing = isFollowing(id);
 
+    // Optimistic update
     if (wasFollowing) {
       followedIdsArray.value = followedIdsArray.value.filter(x => x !== id);
       const next = { ...followedMeta.value };
@@ -49,9 +56,11 @@ export function useLanguageFollows() {
       };
     }
 
+    // Sync backend
     try {
       await apiFetch(`/api/languages/${id}/follow`, { method: "POST" });
     } catch {
+      // Rollback on error
       if (wasFollowing) {
         followedIdsArray.value = [...followedIdsArray.value, id];
       } else {

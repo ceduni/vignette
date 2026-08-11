@@ -161,7 +161,12 @@ onMounted(load);
 
     <template v-else>
       <div v-if="scenarios.length" class="us-grid">
-        <article v-for="(s, index) in scenarios" :key="s.id" class="us-card">
+        <article
+            v-for="(s, index) in scenarios"
+            :key="s.id"
+            class="us-card"
+            :class="{ 'us-card--bookmark-open': bookmarkCategoryPickerId === s.id }"
+        >
           <button type="button" class="us-card__thumb" @click="openReader(s)">
             <img
                 v-if="thumbnailUrl(s.id)"
@@ -332,6 +337,7 @@ onMounted(load);
 }
 .us-card:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(30, 8, 18, 0.1); }
 
+.us-card--bookmark-open { position: relative; z-index: 20; }
 .us-card__thumb {
   position: relative;
   aspect-ratio: 4 / 3;

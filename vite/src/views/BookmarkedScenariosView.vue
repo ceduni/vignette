@@ -1,18 +1,51 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { RouterLink } from "vue-router";
-import { fetchScenarios, fetchScenarioThumbnails } from "../api/scenarios";
+import { RouterLink, useRouter } from "vue-router";
+import { fetchScenarios, fetchScenarioThumbnails, forkScenario } from "../api/scenarios";
 import { buildApiUrl } from "../api/rest";
 import { useScenarioInteractions } from "../composables/useScenarioInteractions";
 import { useBookmarkCategories, SUGGESTED_CATEGORIES } from "../composables/useBookmarkCategories";
 import { useScenarioReader } from "../composables/useScenarioReader";
+import { useAuth } from "../composables/useAuth";
 import BaseLoader from "../components/ui/BaseLoader.vue";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
 import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
+import CopyScenarioModal from "../components/scenario/CopyScenarioModal.vue";
 
-const { isBookmarked, toggleBookmark, bookmarkedIds } = useScenarioInteractions();
+const { isLiked, toggleLike, isBookmarked, toggleBookmark, bookmarkedIds } = useScenarioInteractions();
 const { categoryMap, categoryList, getCategory, setCategory, removeCategory, addCategory, deleteCategory, renameCategory, groupByCategory } = useBookmarkCategories();
 const { openReader, activeScenario, closeReader } = useScenarioReader();
+const { isAuthenticated, currentUser } = useAuth();
+const router = useRouter();
+
+const copyingId = ref(null);
+const copyError = ref("");
+const copyTarget = ref(null);
+
+function openCopyModal(s) {
+  copyError.value = "";
+  copyTarget.value = s;
+}
+
+function closeCopyModal() {
+  copyTarget.value = null;
+}
+
+async function confirmCopy(title) {
+  if (!copyTarget.value || copyingId.value) return;
+
+  copyingId.value = copyTarget.value.id;
+  copyError.value = "";
+  try {
+    const result = await forkScenario(copyTarget.value.id, title);
+    copyTarget.value = null;
+    router.push(`/scenarios/${result.id}`);
+  } catch (e) {
+    copyError.value = e.message || "Could not copy this scenario.";
+  } finally {
+    copyingId.value = null;
+  }
+}
 
 const allScenarios = ref([]);
 const previewMap = ref({});
@@ -22,6 +55,7 @@ const discussionScenario = ref(null);
 function openDiscussion(s) { discussionScenario.value = s; }
 function closeDiscussion() { discussionScenario.value = null; }
 
+// UI state
 const activeCategory = ref("__all__"); // "__all__" | "__none__" | categoryName
 const categoryPickerScenarioId = ref(null); // which scenario's picker is open
 const newCategoryName = ref("");
@@ -38,6 +72,7 @@ const filtered = computed(() => {
   return scenarios.value.filter(s => getCategory(s.id) === activeCategory.value);
 });
 
+// Count per category for badges
 const categoryCounts = computed(() => {
   const counts = { __all__: scenarios.value.length, __none__: 0 };
   for (const s of scenarios.value) {
@@ -48,6 +83,7 @@ const categoryCounts = computed(() => {
   return counts;
 });
 
+// Categories that have at least one bookmark
 const usedCategories = computed(() =>
   categoryList.value.filter(c => (categoryCounts.value[c] ?? 0) > 0)
 );
@@ -133,6 +169,7 @@ onMounted(load);
 <template>
   <main class="bk-root">
 
+    <!-- Hero -->
     <div class="bk-hero">
       <div>
         <p class="bk-eyebrow">Your bookmarks</p>
@@ -150,6 +187,7 @@ onMounted(load);
       </div>
     </div>
 
+    <!-- Manage categories panel -->
     <Transition name="bk-fade">
       <div v-if="showManageCategories" class="bk-manage">
         <div class="bk-manage__head">
@@ -157,6 +195,7 @@ onMounted(load);
           <button type="button" class="bk-manage__close" @click="showManageCategories = false">×</button>
         </div>
 
+        <!-- Suggestions -->
         <div class="bk-manage__suggestions">
           <p class="bk-manage__label">Suggestions</p>
           <div class="bk-suggestion-row">
@@ -176,6 +215,7 @@ onMounted(load);
           </div>
         </div>
 
+        <!-- Existing categories -->
         <div class="bk-manage__list">
           <p class="bk-manage__label">Your categories</p>
           <div v-for="cat in categoryList" :key="cat" class="bk-manage__item">
@@ -201,6 +241,7 @@ onMounted(load);
           <div v-if="!categoryList.length" class="bk-manage__empty">No categories yet.</div>
         </div>
 
+        <!-- Add new -->
         <div class="bk-manage__add">
           <input
             v-model="newCategoryName"
@@ -215,6 +256,7 @@ onMounted(load);
       </div>
     </Transition>
 
+    <!-- Category filter tabs -->
     <div class="bk-tabs">
       <button
         type="button"
@@ -262,7 +304,9 @@ onMounted(load);
           v-for="(s, index) in filtered"
           :key="s.id"
           class="bk-card"
+          :class="{ 'bk-card--picker-open': categoryPickerScenarioId === s.id }"
         >
+          <!-- Category badge -->
           <div class="bk-card__cat-row">
             <button
               type="button"
@@ -277,6 +321,7 @@ onMounted(load);
               {{ getCategory(s.id) ?? "Add category" }}
             </button>
 
+            <!-- Category picker dropdown -->
             <div v-if="categoryPickerScenarioId === s.id" class="bk-cat-picker">
               <button
                 type="button"
@@ -298,7 +343,7 @@ onMounted(load);
                 <span v-if="getCategory(s.id) === cat">✓</span>
               </button>
               <div v-if="!categoryList.length" class="bk-cat-picker__empty">
-                No categories yet.
+                No categories yet —
                 <button type="button" @click="showManageCategories = true; categoryPickerScenarioId = null">create one</button>
               </div>
               <div class="bk-cat-picker__divider"></div>
@@ -308,6 +353,7 @@ onMounted(load);
             </div>
           </div>
 
+          <!-- Thumbnail -->
           <RouterLink :to="`/scenarios/${s.id}`" class="bk-card__thumb" tabindex="-1">
             <img v-if="thumbnailUrl(s.id)" :src="thumbnailUrl(s.id)" :alt="s.title" class="bk-card__img"/>
             <div v-else class="bk-card__placeholder" :style="{ background: placeholderGradient(index) }">
@@ -322,6 +368,7 @@ onMounted(load);
             <div class="bk-card__overlay"><span>Read →</span></div>
           </RouterLink>
 
+          <!-- Body -->
           <div class="bk-card__body">
             <RouterLink :to="`/scenarios/${s.id}`" class="bk-card__title-link">
               <h3 class="bk-card__title">{{ s.title || "Untitled" }}</h3>
@@ -341,6 +388,18 @@ onMounted(load);
                 Read
               </button>
               <button
+                v-if="isAuthenticated"
+                type="button"
+                class="bk-card__icon-btn"
+                :class="{ 'bk-card__icon-btn--active': isLiked(s.id) }"
+                :title="isLiked(s.id) ? 'Unlike' : 'Like'"
+                @click="toggleLike(s.id)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" :fill="isLiked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </button>
+              <button
                 type="button"
                 class="bk-card__icon-btn bk-card__icon-btn--active"
                 title="Remove bookmark"
@@ -348,6 +407,20 @@ onMounted(load);
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </button>
+              <button
+                v-if="isAuthenticated && currentUser && s.authorUsername !== currentUser.username"
+                type="button"
+                class="bk-card__icon-btn"
+                :disabled="copyingId === s.id"
+                :title="copyingId === s.id ? 'Copying…' : 'Copy to my scenarios'"
+                @click="openCopyModal(s)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>
               </button>
               <button
@@ -384,12 +457,20 @@ onMounted(load);
 
     <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
     <ScenarioDiscussionModal :scenario="discussionScenario" @close="closeDiscussion" />
+    <CopyScenarioModal
+        :scenario="copyTarget"
+        :saving="copyingId === copyTarget?.id"
+        :error="copyError"
+        @close="closeCopyModal"
+        @confirm="confirmCopy"
+    />
   </main>
 </template>
 
 <style scoped>
 .bk-root { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; display: flex; flex-direction: column; gap: 20px; }
 
+/* Hero */
 .bk-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .bk-eyebrow { margin: 0 0 6px; font-size: 0.72rem; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: var(--primary); }
 .bk-title { margin: 0 0 6px; font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 950; letter-spacing: -0.025em; color: var(--text); line-height: 1.05; }
@@ -400,6 +481,7 @@ onMounted(load);
 .bk-manage-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 18px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff; color: var(--text); font: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: border-color 160ms ease, color 160ms ease; }
 .bk-manage-btn:hover { border-color: var(--primary); color: var(--primary); }
 
+/* Manage panel */
 .bk-manage { background: #fff; border: 1.5px solid var(--border); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
 .bk-manage__head { display: flex; justify-content: space-between; align-items: center; }
 .bk-manage__title { margin: 0; font-size: 1rem; font-weight: 800; color: var(--text); }
@@ -426,6 +508,7 @@ onMounted(load);
 .bk-manage__add-btn:hover:not(:disabled) { background: var(--primary-strong); }
 .bk-manage__add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* Category tabs */
 .bk-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .bk-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--border); background: #fff; color: var(--text-soft); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .bk-tab:hover { border-color: var(--primary); color: var(--primary); }
@@ -440,16 +523,25 @@ onMounted(load);
 @keyframes spin { to { transform: rotate(360deg); } }
 .bk-error { color: var(--danger); font-size: 0.9rem; }
 
+/* Grid */
 .bk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start; }
 
+/* Card */
 .bk-card { display: flex; flex-direction: column; border-radius: 18px; overflow: visible; background: #fff; border: 1.5px solid var(--border); box-shadow: 0 2px 8px rgba(42,21,0,0.05); transition: transform 200ms ease, box-shadow 200ms ease; position: relative; }
 .bk-card:hover { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(42,21,0,0.11); }
 
+/* :hover applies a transform, which creates a new stacking context — without
+   this, the category picker's z-index only wins locally within its own card
+   and still ends up underneath a later sibling card in the grid. */
+.bk-card--picker-open { z-index: 20; }
+
+/* Category row */
 .bk-card__cat-row { position: relative; padding: 8px 12px; }
 .bk-card__cat-btn { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; border: 1.5px dashed var(--border); background: transparent; color: var(--text-soft); font: inherit; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
 .bk-card__cat-btn:hover { border-color: var(--primary); color: var(--primary); border-style: solid; }
 .bk-card__cat-btn--set { border-style: solid; border-color: rgba(192,74,8,0.3); background: rgba(192,74,8,0.06); color: var(--primary); }
 
+/* Category picker */
 .bk-cat-picker { position: absolute; top: calc(100% + 4px); left: 12px; z-index: 100; background: #fff; border: 1.5px solid var(--border); border-radius: 14px; box-shadow: 0 8px 24px rgba(42,21,0,0.12); padding: 6px; min-width: 200px; display: flex; flex-direction: column; gap: 2px; }
 .bk-cat-picker__item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: left; transition: background 0.12s; }
 .bk-cat-picker__item:hover { background: var(--surface-alt); }
@@ -484,11 +576,13 @@ onMounted(load);
 .bk-card__icon-btn--active { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.08); }
 .bk-card__icon-btn:hover { border-color: var(--danger); color: var(--danger); background: rgba(180,35,24,0.06); }
 
+/* Empty */
 .bk-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 60px 20px 80px; text-align: center; }
 .bk-empty__icon { color: var(--text-soft); opacity: 0.3; }
 .bk-empty__title { margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--text); }
 .bk-empty__sub { margin: 0; font-size: 0.9rem; color: var(--text-soft); max-width: 400px; }
 
+/* Transitions */
 .bk-fade-enter-active, .bk-fade-leave-active { transition: opacity 180ms ease, transform 180ms ease; }
 .bk-fade-enter-from, .bk-fade-leave-to { opacity: 0; transform: translateY(-8px); }
 

@@ -1,3 +1,5 @@
+// composables/useSSE.js
+// Connexion SSE persistante avec reconnexion automatique
 import { ref, onUnmounted } from "vue";
 import { buildApiUrl } from "../api/rest";
 
@@ -27,6 +29,7 @@ export function useSSE(path, { onMessage, onError } = {}) {
         }
       };
 
+      // Listen to named events too
       es.addEventListener("notification", (event) => {
         try {
           const data = JSON.parse(event.data);

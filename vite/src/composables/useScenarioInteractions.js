@@ -1,7 +1,10 @@
+// composables/useScenarioInteractions.js
+// État réactif par userId — se recalcule au changement de compte
 import { ref, computed, watch } from "vue";
 import { apiFetch } from "../api/rest";
 import { useAuth } from "./useAuth";
 
+// Refs réactifs au niveau du module — mis à jour à chaque toggle
 const _likedIds     = ref(new Set());
 const _bookmarkedIds = ref(new Set());
 let   _loadedUid    = null;
@@ -27,6 +30,7 @@ export function useScenarioInteractions() {
       ?? "guest";
   }
 
+  // Recharge depuis localStorage si l'utilisateur a changé
   function ensureLoaded() {
     const currentUid = uid();
     if (currentUid !== _loadedUid) {
@@ -36,6 +40,7 @@ export function useScenarioInteractions() {
     }
   }
 
+  // Se réinitialise automatiquement au changement de compte
   watch(() => currentUser.value?.id ?? currentUser.value?.username, () => {
     _loadedUid = null;
     ensureLoaded();
@@ -51,6 +56,7 @@ export function useScenarioInteractions() {
     return _bookmarkedIds.value.has(String(scenarioId));
   }
 
+  // bookmarkedIds réactif pour BookmarkedScenariosView
   const bookmarkedIds = computed(() => {
     ensureLoaded();
     return _bookmarkedIds.value;
@@ -66,6 +72,7 @@ export function useScenarioInteractions() {
     const id = String(scenarioId);
     const wasLiked = _likedIds.value.has(id);
 
+    // Mise à jour réactive immédiate — crée un nouveau Set pour déclencher la réactivité
     const next = new Set(_likedIds.value);
     wasLiked ? next.delete(id) : next.add(id);
     _likedIds.value = next;

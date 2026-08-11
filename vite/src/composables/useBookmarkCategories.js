@@ -1,8 +1,11 @@
+// composables/useBookmarkCategories.js
+// Gestion des catégories de bookmarks — localStorage, backend plus tard
 import { ref, computed } from "vue";
 
 const CATEGORIES_KEY = "vignette_bookmark_categories";  // { scenarioId: categoryName }
 const CATEGORY_LIST_KEY = "vignette_bookmark_category_list"; // string[]
 
+// Suggestions de catégories par défaut
 export const SUGGESTED_CATEGORIES = [
   "To study",
   "Favorites",
@@ -23,6 +26,7 @@ function loadCategoryList() {
   return [...SUGGESTED_CATEGORIES];
 }
 
+// État global partagé
 const categoryMap = ref(loadCategoryMap());   // { scenarioId → categoryName }
 const categoryList = ref(loadCategoryList()); // liste de toutes les catégories
 
@@ -33,15 +37,18 @@ function persist() {
 
 export function useBookmarkCategories() {
 
+  // Catégorie d'un scénario (null = non catégorisé)
   function getCategory(scenarioId) {
     return categoryMap.value[String(scenarioId)] ?? null;
   }
 
+  // Assigner une catégorie à un bookmark
   function setCategory(scenarioId, category) {
     const id = String(scenarioId);
     const next = { ...categoryMap.value };
     if (category) {
       next[id] = category;
+      // Ajouter la catégorie à la liste si elle n'existe pas
       if (!categoryList.value.includes(category)) {
         categoryList.value = [...categoryList.value, category];
       }
@@ -52,6 +59,7 @@ export function useBookmarkCategories() {
     persist();
   }
 
+  // Retirer la catégorie quand on retire le bookmark
   function removeCategory(scenarioId) {
     const id = String(scenarioId);
     const next = { ...categoryMap.value };
@@ -60,6 +68,7 @@ export function useBookmarkCategories() {
     persist();
   }
 
+  // Créer une nouvelle catégorie personnalisée
   function addCategory(name) {
     const trimmed = name?.trim();
     if (!trimmed || categoryList.value.includes(trimmed)) return false;
@@ -68,6 +77,7 @@ export function useBookmarkCategories() {
     return true;
   }
 
+  // Supprimer une catégorie (et retirer les assignments)
   function deleteCategory(name) {
     categoryList.value = categoryList.value.filter(c => c !== name);
     const next = { ...categoryMap.value };
@@ -78,6 +88,7 @@ export function useBookmarkCategories() {
     persist();
   }
 
+  // Renommer une catégorie
   function renameCategory(oldName, newName) {
     const trimmed = newName?.trim();
     if (!trimmed || trimmed === oldName) return false;
@@ -91,6 +102,7 @@ export function useBookmarkCategories() {
     return true;
   }
 
+  // Scénarios groupés par catégorie { categoryName: [scenarioId, ...], "": [uncategorized ids] }
   function groupByCategory(scenarioIds) {
     const groups = {};
     for (const id of scenarioIds) {

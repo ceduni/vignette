@@ -91,6 +91,12 @@ return apiFetch(`/api/scenarios/${id}/background-audios`, {
         body: formData,
 });
 }
+export function updateAudioMarker(audioId, body) {
+return apiFetch(`/api/audios/${audioId}/marker`, {
+        method: "PATCH",
+body,
+});
+}
 export function reorderScenarioThumbnails(id, thumbnailIds) {
 return apiFetch(`/api/scenarios/${id}/thumbnails/reorder`, {
         method: "PATCH",

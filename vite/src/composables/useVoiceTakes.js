@@ -5,9 +5,6 @@ import {useDraftAudioImport} from "./useDraftAudioImport";
 import {useRecordingLabels} from "./useRecordingLabels";
 
 export function useVoiceTakes(options = {}) {
-    // `quickRecording` is created after `voiceSelection` but a couple of voice-selection
-    // functions (e.g. removeVoice) need to stop an in-progress quick recording. These
-    // getters close over the binding below, which is filled in once quickRecording exists.
     let quickRecording;
 
     const voiceSelection = useVoiceSelection({

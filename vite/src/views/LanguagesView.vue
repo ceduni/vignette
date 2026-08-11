@@ -50,6 +50,7 @@ const visibleLevels = ref({
   language: true,
   dialect: false,
 });
+/** @type {import('vue').Ref<null | { mode: 'playing' | 'empty', languageName: string }>} */
 const audioPreviewUi = ref(null);
 
 let previewAudioPlayer = null;
@@ -112,6 +113,7 @@ const filteredByLevel = computed(() => {
 });
 
 const filteredLanguages = computed(() => {
+  // Important: catalogue stays independent from map click.
   return filteredByLevel.value;
 });
 const canPrevPage = computed(() => page.value > 0);
