@@ -1,0 +1,6 @@
+id,name,bookkeeping,level,family_id,country_ids,child_family_count,child_language_count,child_dialect_count
+fra,French,false,language,maya1287,FRA,0,0,0
+no-country,No Country,false,language,maya1287,,0,0,0
+chuj-dialect,Chuj dialect,false,dialect,maya1287,GTM,0,0,0
+maya1287,Mayan,false,family,,,0,0,0
+orphan-family,Orphan,false,family,,,0,0,0

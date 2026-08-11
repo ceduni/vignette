@@ -21,9 +21,12 @@ import org.titiplex.api.dto.ApiError;
 import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.api.dto.CreateAudioResponse;
 import org.titiplex.api.dto.LanguagePreviewAudioDto;
+import org.titiplex.api.dto.ScenarioBackgroundAudioDto;
 import org.titiplex.api.dto.UpdateMarkerRequest;
 import org.titiplex.api.security.*;
+import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.service.AudioService;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
@@ -43,12 +46,20 @@ public class AudioApiController {
     private final UserService userService;
     private final ThumbnailService thumbnailService;
     private final ScenarioService scenarioService;
+    private final ScenarioHistoryService scenarioHistoryService;
 
-    public AudioApiController(AudioService audioService, UserService userService, ThumbnailService thumbnailService, ScenarioService scenarioService) {
+    public AudioApiController(
+            AudioService audioService,
+            UserService userService,
+            ThumbnailService thumbnailService,
+            ScenarioService scenarioService,
+            ScenarioHistoryService scenarioHistoryService
+    ) {
         this.audioService = audioService;
         this.userService = userService;
         this.thumbnailService = thumbnailService;
         this.scenarioService = scenarioService;
+        this.scenarioHistoryService = scenarioHistoryService;
     }
 
     /**
@@ -93,6 +104,58 @@ public class AudioApiController {
         var scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
         scenarioService.assertCanViewScenario(scenario, auth);
         return audioService.listForThumbnail(thumbId);
+    }
+
+    @Operation(
+            summary = "List scenario background audio",
+            description = "Returns scenario-level background ambience or soundtrack clips."
+    )
+    @PublicOperation
+    @GetMapping("/scenarios/{scenarioId}/background-audios")
+    public List<ScenarioBackgroundAudioDto> listBackground(
+            @Parameter(description = "ID of the scenario to retrieve background audio for", required = true)
+            @PathVariable Long scenarioId,
+
+            @Parameter(hidden = true)
+            Authentication auth
+    ) {
+        var scenario = scenarioService.getRequiredScenario(scenarioId);
+        scenarioService.assertCanViewScenario(scenario, auth);
+        return audioService.listBackgroundForScenario(scenarioId);
+    }
+
+    @Operation(
+            summary = "Uploads scenario background audio",
+            description = "Uploads an ambience or soundtrack clip for the whole scenario."
+    )
+    @OwnerOrAdminOperation(
+            resource = ProtectedResource.SCENARIO,
+            param = "scenarioId"
+    )
+    @PostMapping(value = "/scenarios/{scenarioId}/background-audios", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public CreateAudioResponse uploadBackground(
+            @Parameter(description = "ID of the scenario to associate the background audio with", required = true)
+            @PathVariable Long scenarioId,
+
+            @Parameter(description = "Title of the background audio")
+            @RequestParam(defaultValue = "") String title,
+
+            @Parameter(description = "Credit or source label for the background audio")
+            @RequestParam(defaultValue = "") String sourceLabel,
+
+            @Parameter(description = "Source URL for attribution or provenance")
+            @RequestParam(defaultValue = "") String sourceUrl,
+
+            @Parameter(description = "Background audio file to upload.", required = true)
+            @RequestPart("audio") MultipartFile audio,
+
+            @Parameter(hidden = true)
+            Authentication auth
+    ) throws Exception {
+        Long authorId = userService.getUserByUsername(auth.getName()).getId();
+        Long id = audioService.createBackgroundAudio(scenarioId, title, sourceLabel, sourceUrl, authorId, audio);
+        return new CreateAudioResponse(id);
     }
 
     /**
@@ -215,6 +278,11 @@ public class AudioApiController {
 
         Long authorId = userService.getUserByUsername(auth.getName()).getId();
         Long id = audioService.createAudio(thumbId, title, idx, authorId, audio, markerX, markerY, markerLabel);
+
+        Long scenarioId = audioService.getScenarioIdForAudio(id);
+        String historySummary = (title != null && !title.isBlank()) ? "Added audio \"" + title.trim() + "\"" : "Added an audio clip";
+        scenarioHistoryService.record(scenarioId, authorId, ScenarioHistoryAction.AUDIO_ADDED, historySummary);
+
         return new CreateAudioResponse(id);
     }
 
@@ -272,9 +340,16 @@ public class AudioApiController {
                             schema = @Schema(implementation = UpdateMarkerRequest.class)
                     )
             )
-            @RequestBody UpdateMarkerRequest req
+            @RequestBody UpdateMarkerRequest req,
+
+            @Parameter(hidden = true)
+            Authentication auth
     ) {
+        Long scenarioId = audioService.getScenarioIdForAudio(audioId);
         audioService.updateMarker(audioId, req.markerX(), req.markerY(), req.markerLabel());
+
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.AUDIO_UPDATED, "Updated an audio marker");
     }
 
     /**
@@ -306,9 +381,16 @@ public class AudioApiController {
     @DeleteMapping("/audios/{audioId}")
     public void delete(
             @Parameter(description = "ID of the audio file to delete", required = true)
-            @PathVariable Long audioId
+            @PathVariable Long audioId,
+
+            @Parameter(hidden = true)
+            Authentication auth
     ) {
+        Long scenarioId = audioService.getScenarioIdForAudio(audioId);
         audioService.deleteAudio(audioId);
+
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.AUDIO_DELETED, "Deleted an audio clip");
     }
 
     /**

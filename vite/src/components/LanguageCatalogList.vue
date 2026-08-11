@@ -21,7 +21,7 @@ const emit = defineEmits([
   "preview-audio",
 ]);
 
-function normalizeText(value, fallback = "Non renseigné") {
+function normalizeText(value, fallback = "Not specified") {
   const text = String(value ?? "").trim();
   return text || fallback;
 }
@@ -40,7 +40,7 @@ const rows = computed(() => {
       .map((item, index) => ({
         key: item.id ?? `${item.name}-${index}`,
         id: item.id,
-        name: normalizeText(item.name, "Langue sans nom"),
+        name: normalizeText(item.name, "Unnamed language"),
         level: normalizeLevel(item.level),
         countryIds: String(item.countryIds ?? ""),
         hasCountryIds: String(item.countryIds ?? "").trim().length > 0,
@@ -50,7 +50,7 @@ const rows = computed(() => {
 
 <template>
   <div class="language-list">
-    <p v-if="!rows.length" class="empty-state">Aucune langue à afficher</p>
+    <p v-if="!rows.length" class="empty-state">No languages to display</p>
 
     <ul v-else class="list" role="list">
       <li
@@ -79,8 +79,8 @@ const rows = computed(() => {
           <button
               type="button"
               class="language-action"
-              aria-label="Voir les informations de la langue"
-              title="Informations"
+              aria-label="View language information"
+              title="Information"
               @click.stop="emit('open-info', item)"
           >
             <Info :size="15"/>
@@ -90,8 +90,8 @@ const rows = computed(() => {
               type="button"
               class="language-action"
               :disabled="!item.hasCountryIds"
-              aria-label="Localiser la langue sur la carte"
-              title="Localisation"
+              aria-label="Locate language on the map"
+              title="Location"
               @click.stop="emit('focus-location', item)"
           >
             <MapPinned :size="15"/>
@@ -100,7 +100,7 @@ const rows = computed(() => {
           <button
               type="button"
               class="language-action language-action--muted"
-              aria-label="Prévisualiser l'audio"
+              aria-label="Preview audio"
               title="Audio"
               @click.stop="emit('preview-audio', item)"
           >

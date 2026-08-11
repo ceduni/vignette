@@ -5,7 +5,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.api.dto.LanguagePreviewAudioDto;
+import org.titiplex.api.dto.ScenarioBackgroundAudioDto;
 import org.titiplex.persistence.model.Audio;
+import org.titiplex.persistence.model.AudioScope;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.repo.AudioRepository;
@@ -46,29 +48,19 @@ public class AudioService {
 
     public List<AudioRowDto> listForThumbnail(Long thumbnailId) {
         return audios.findByThumbnailIdOrderByIdxAsc(thumbnailId).stream()
-                .map(a -> new AudioRowDto(
-                        a.getId(),
-                        a.getTitle(),
-                        a.getIdx(),
-                        a.getMime(),
-                        a.getMarkerX(),
-                        a.getMarkerY(),
-                        a.getMarkerLabel()
-                ))
+                .map(this::toAudioRowDto)
                 .toList();
     }
 
     public List<AudioRowDto> listForLanguage(String languageId) {
         return audios.findAllPublishedByLanguageId(languageId).stream()
-                .map(a -> new AudioRowDto(
-                        a.getId(),
-                        a.getTitle(),
-                        a.getIdx(),
-                        a.getMime(),
-                        a.getMarkerX(),
-                        a.getMarkerY(),
-                        a.getMarkerLabel()
-                ))
+                .map(this::toAudioRowDto)
+                .toList();
+    }
+
+    public List<ScenarioBackgroundAudioDto> listBackgroundForScenario(Long scenarioId) {
+        return audios.findByScenarioIdAndScopeOrderByIdxAscIdAsc(scenarioId, AudioScope.BACKGROUND).stream()
+                .map(this::toBackgroundDto)
                 .toList();
     }
 
@@ -162,6 +154,7 @@ public class AudioService {
 
         Audio a = new Audio();
         a.setThumbnailId(thumbnailId);
+        a.setScope(AudioScope.SCENE);
         a.setMime(stored.contentType());
         a.setAudioSha256(stored.sha256());
         a.setStoragePath(stored.relativePath());
@@ -185,6 +178,50 @@ public class AudioService {
         a.setAuthorId(authorId);
         a.setScenarioId(scenarioId);
         a.setLanguageId(s.getLanguage_id());
+
+        audios.save(a);
+        return a.getId();
+    }
+
+    @Transactional
+    public Long createBackgroundAudio(Long scenarioId,
+                                      String title,
+                                      String sourceLabel,
+                                      String sourceUrl,
+                                      Long authorId,
+                                      MultipartFile audioFile) throws Exception {
+        if (audioFile == null || audioFile.isEmpty()) {
+            throw new IllegalArgumentException("audio is empty");
+        }
+
+        Scenario s = scenarioService.getRequiredScenario(scenarioId);
+        int effectiveIdx = audios.maxBackgroundIdx(scenarioId) + 1;
+        StoredFile stored = storage.storeScenarioAudio(audioFile, scenarioId);
+
+        Audio a = new Audio();
+        a.setScope(AudioScope.BACKGROUND);
+        a.setThumbnailId(null);
+        a.setMime(stored.contentType());
+        a.setAudioSha256(stored.sha256());
+        a.setStoragePath(stored.relativePath());
+        a.setSizeBytes(stored.sizeBytes());
+        a.setOriginalFilename(stored.originalFilename());
+
+        String effectiveTitle;
+        if (title != null && !title.isBlank()) {
+            effectiveTitle = title.trim();
+        } else if (audioFile.getOriginalFilename() != null && !audioFile.getOriginalFilename().isBlank()) {
+            effectiveTitle = audioFile.getOriginalFilename().trim();
+        } else {
+            effectiveTitle = "Background audio " + effectiveIdx;
+        }
+        a.setTitle(effectiveTitle);
+        a.setIdx(effectiveIdx);
+        a.setAuthorId(authorId);
+        a.setScenarioId(scenarioId);
+        a.setLanguageId(s.getLanguage_id());
+        a.setSourceLabel((sourceLabel == null || sourceLabel.isBlank()) ? null : sourceLabel.trim());
+        a.setSourceUrl((sourceUrl == null || sourceUrl.isBlank()) ? null : sourceUrl.trim());
 
         audios.save(a);
         return a.getId();
@@ -219,5 +256,29 @@ public class AudioService {
         Audio a = getAudioOrThrow(audioId);
         storage.deleteQuietly(a.getStoragePath());
         audios.delete(a);
+    }
+
+    private AudioRowDto toAudioRowDto(Audio a) {
+        return new AudioRowDto(
+                a.getId(),
+                a.getTitle(),
+                a.getIdx(),
+                a.getMime(),
+                a.getMarkerX(),
+                a.getMarkerY(),
+                a.getMarkerLabel()
+        );
+    }
+
+    private ScenarioBackgroundAudioDto toBackgroundDto(Audio a) {
+        return new ScenarioBackgroundAudioDto(
+                a.getId(),
+                a.getTitle(),
+                a.getIdx(),
+                a.getMime(),
+                "/api/audios/" + a.getId() + "/content",
+                a.getSourceLabel(),
+                a.getSourceUrl()
+        );
     }
 }

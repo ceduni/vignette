@@ -20,6 +20,7 @@ import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
 import org.titiplex.service.AudioService;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
@@ -48,6 +49,9 @@ class AudioApiControllerTest {
 
     @Mock
     private ScenarioService scenarioService;
+
+    @Mock
+    private ScenarioHistoryService scenarioHistoryService;
 
     @InjectMocks
     private AudioApiController controller;
@@ -133,14 +137,26 @@ class AudioApiControllerTest {
 
     @Test
     void updateMarker_delegatesToService() {
-        controller.updateMarker(5L, new UpdateMarkerRequest(11.0, 22.0, "target"));
+        Authentication auth = auth("alice", "ROLE_USER");
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
+        controller.updateMarker(5L, new UpdateMarkerRequest(11.0, 22.0, "target"), auth);
 
         verify(audioService).updateMarker(5L, 11.0, 22.0, "target");
     }
 
     @Test
     void delete_delegatesToService() {
-        controller.delete(6L);
+        Authentication auth = auth("alice", "ROLE_USER");
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
+        controller.delete(6L, auth);
         verify(audioService).deleteAudio(6L);
     }
 

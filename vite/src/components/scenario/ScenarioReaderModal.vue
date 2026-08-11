@@ -2,19 +2,20 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { fetchScenarioThumbnails, fetchThumbnailAudios } from "../../api/scenarios";
 import { buildApiUrl } from "../../api/rest";
+import { buildStoryboardItems, storyboardItemStyle } from "../../utils/scenarioStoryboard.js";
 
 const props = defineProps({
-  scenario: { type: Object, default: null }, // { id, title, authorUsername }
+  scenario: { type: Object, default: null }, // { id, title, authorUsername, storyboardLayoutMode, storyboardPreset, storyboardColumns }
 });
 
 const emit = defineEmits(["close"]);
 
-// ── State ──────────────────────────────────────────────────────────────────
 const loading = ref(false);
 const error = ref("");
 const thumbnails = ref([]); // sorted list of thumb objects
 const audioMap = ref({});   // { thumbId: [audio, ...] }
 const currentIndex = ref(0);
+const viewMode = ref("grid"); // "grid" (storyboard) | "scene" (focused player)
 const isAutoplay = ref(false);
 const isFullscreen = ref(false);
 const audioRef = ref(null);
@@ -24,7 +25,6 @@ const audioDuration = ref(0);
 const audioCurrentTime = ref(0);
 const audioPlaying = ref(false);
 
-// ── Derived ────────────────────────────────────────────────────────────────
 const currentThumb = computed(() => thumbnails.value[currentIndex.value] ?? null);
 
 const currentAudios = computed(() => {
@@ -43,6 +43,87 @@ const thumbImageUrl = computed(() => {
   return buildApiUrl(`/api/thumbnails/${currentThumb.value.id}/content`);
 });
 
+function gridThumbUrl(thumb) {
+  return buildApiUrl(`/api/thumbnails/${thumb.id}/content`);
+}
+
+function thumbHasAudio(thumb) {
+  return (audioMap.value[thumb.id] ?? []).length > 0;
+}
+
+function gridAudioUrl(thumb) {
+  const first = (audioMap.value[thumb.id] ?? [])[0];
+  return first ? buildApiUrl(`/api/audios/${first.id}/content`) : null;
+}
+
+const gridPlayingId = ref(null);
+const isGridSequencePlaying = ref(false);
+const gridSequenceList = ref([]);
+const gridSequenceIndex = ref(-1);
+
+function stopGridSequence() {
+  isGridSequencePlaying.value = false;
+  gridSequenceList.value = [];
+  gridSequenceIndex.value = -1;
+}
+
+function toggleGridAudio(thumb) {
+  const el = audioRef.value;
+  const url = gridAudioUrl(thumb);
+  if (!el || !url) return;
+
+  if (gridPlayingId.value === String(thumb.id)) {
+    stopGridSequence();
+    el.pause();
+    return;
+  }
+
+  stopGridSequence();
+  el.pause();
+  el.src = url;
+  el.currentTime = 0;
+  gridPlayingId.value = String(thumb.id);
+  el.play().catch(() => { gridPlayingId.value = null; });
+}
+
+function playFromStart() {
+  const withAudio = thumbnails.value.filter(thumbHasAudio);
+  if (!withAudio.length) return;
+  isGridSequencePlaying.value = true;
+  gridSequenceList.value = withAudio;
+  gridSequenceIndex.value = -1;
+  advanceGridSequence();
+}
+
+function advanceGridSequence() {
+  const nextIndex = gridSequenceIndex.value + 1;
+  if (nextIndex >= gridSequenceList.value.length) {
+    stopGridSequence();
+    gridPlayingId.value = null;
+    return;
+  }
+  gridSequenceIndex.value = nextIndex;
+  const thumb = gridSequenceList.value[nextIndex];
+  const el = audioRef.value;
+  const url = gridAudioUrl(thumb);
+  if (!el || !url) { advanceGridSequence(); return; }
+
+  el.pause();
+  el.src = url;
+  el.currentTime = 0;
+  gridPlayingId.value = String(thumb.id);
+  el.play().catch(() => { advanceGridSequence(); });
+}
+
+const storyboardItems = computed(() => {
+  return buildStoryboardItems({
+    thumbnails: thumbnails.value,
+    layoutMode: props.scenario?.storyboardLayoutMode ?? "PRESET",
+    preset: props.scenario?.storyboardPreset ?? "GRID_3",
+    columns: props.scenario?.storyboardColumns ?? 3,
+  });
+});
+
 const progressPercent = computed(() => {
   if (!audioDuration.value) return 0;
   return (audioCurrentTime.value / audioDuration.value) * 100;
@@ -52,13 +133,15 @@ const totalScenes = computed(() => thumbnails.value.length);
 const hasNext = computed(() => currentIndex.value < totalScenes.value - 1);
 const hasPrev = computed(() => currentIndex.value > 0);
 
-// ── Load data ──────────────────────────────────────────────────────────────
 async function loadScenario(id) {
   loading.value = true;
   error.value = "";
   thumbnails.value = [];
   audioMap.value = {};
   currentIndex.value = 0;
+  viewMode.value = "grid";
+  stopGridSequence();
+  gridPlayingId.value = null;
 
   try {
     const thumbs = await fetchScenarioThumbnails(id);
@@ -80,7 +163,24 @@ async function loadScenario(id) {
   }
 }
 
-// ── Navigation ─────────────────────────────────────────────────────────────
+function enterScene(index, autoplay = false) {
+  if (index < 0 || index >= totalScenes.value) return;
+  viewMode.value = "scene";
+  goTo(index, false);
+  if (autoplay) startAutoplay();
+}
+
+function enterSceneById(id) {
+  stopGridSequence();
+  const index = thumbnails.value.findIndex((t) => String(t.id) === String(id));
+  enterScene(index);
+}
+
+function backToGrid() {
+  stopAutoplay();
+  viewMode.value = "grid";
+}
+
 function clearTimer() {
   if (autoplayTimer.value) {
     clearTimeout(autoplayTimer.value);
@@ -96,6 +196,7 @@ function goTo(index, keepAutoplay = false) {
   audioCurrentTime.value = 0;
   audioDuration.value = 0;
   audioPlaying.value = false;
+  gridPlayingId.value = null;
 }
 
 function goNext(keepAutoplay = false) {
@@ -105,7 +206,6 @@ function goNext(keepAutoplay = false) {
 
 function goPrev() { goTo(currentIndex.value - 1, false); }
 
-// ── Autoplay ───────────────────────────────────────────────────────────────
 const AUTOPLAY_FALLBACK_MS = 3500;
 
 function startAutoplay() {
@@ -116,6 +216,8 @@ function startAutoplay() {
 function stopAutoplay() {
   isAutoplay.value = false;
   clearTimer();
+  stopGridSequence();
+  gridPlayingId.value = null;
   if (audioRef.value) {
     audioRef.value.pause();
     audioRef.value.currentTime = 0;
@@ -127,13 +229,11 @@ function toggleAutoplay() {
   else startAutoplay();
 }
 
-// Central function: play current scene during autoplay
 function playCurrentScene() {
   if (!isAutoplay.value) return;
   clearTimer();
 
   if (currentAudioUrl.value && audioRef.value) {
-    // Reset and reload audio for this scene
     audioRef.value.pause();
     audioRef.value.currentTime = 0;
     audioRef.value.src = currentAudioUrl.value;
@@ -142,21 +242,18 @@ function playCurrentScene() {
     const playPromise = audioRef.value.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        // Autoplay blocked — fall back to timer
         autoplayTimer.value = setTimeout(() => {
           if (isAutoplay.value) goNext(true);
         }, AUTOPLAY_FALLBACK_MS);
       });
     }
   } else {
-    // No audio for this scene — advance after delay
     autoplayTimer.value = setTimeout(() => {
       if (isAutoplay.value) goNext(true);
     }, AUTOPLAY_FALLBACK_MS);
   }
 }
 
-// Watch for scene changes during autoplay
 watch(currentIndex, () => {
   if (isAutoplay.value) {
     nextTick(() => playCurrentScene());
@@ -165,6 +262,11 @@ watch(currentIndex, () => {
 
 function onAudioEnded() {
   audioPlaying.value = false;
+  if (isGridSequencePlaying.value) {
+    advanceGridSequence();
+    return;
+  }
+  gridPlayingId.value = null;
   if (isAutoplay.value) {
     autoplayTimer.value = setTimeout(() => {
       if (isAutoplay.value) goNext(true);
@@ -173,7 +275,7 @@ function onAudioEnded() {
 }
 
 function onAudioPlay() { audioPlaying.value = true; }
-function onAudioPause() { audioPlaying.value = false; }
+function onAudioPause() { audioPlaying.value = false; gridPlayingId.value = null; }
 function onAudioTimeUpdate() {
   if (audioRef.value) audioCurrentTime.value = audioRef.value.currentTime;
 }
@@ -181,7 +283,6 @@ function onAudioLoadedMetadata() {
   if (audioRef.value) audioDuration.value = audioRef.value.duration;
 }
 function onAudioCanPlay() {
-  // Not used for autoplay anymore — kept for manual play consistency
 }
 
 function toggleAudio() {
@@ -190,7 +291,6 @@ function toggleAudio() {
   else audioRef.value.play().catch(() => {});
 }
 
-// ── Fullscreen ─────────────────────────────────────────────────────────────
 async function toggleFullscreen() {
   if (!document.fullscreenElement) {
     await containerRef.value?.requestFullscreen?.();
@@ -205,17 +305,23 @@ function onFullscreenChange() {
   isFullscreen.value = !!document.fullscreenElement;
 }
 
-// ── Keyboard ───────────────────────────────────────────────────────────────
 function onKeyDown(e) {
   if (!props.scenario) return;
-  if (e.key === "Escape") { if (isFullscreen.value) document.exitFullscreen?.(); else close(); }
-  else if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); goNext(); }
+
+  if (e.key === "Escape") {
+    if (isFullscreen.value) { document.exitFullscreen?.(); return; }
+    if (viewMode.value === "scene") { backToGrid(); return; }
+    close();
+    return;
+  }
+
+  if (viewMode.value !== "scene") return;
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); goNext(); }
   else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); goPrev(); }
   else if (e.key === " ") { e.preventDefault(); currentAudioUrl.value ? toggleAudio() : toggleAutoplay(); }
   else if (e.key === "f" || e.key === "F") toggleFullscreen();
 }
 
-// ── Lifecycle ──────────────────────────────────────────────────────────────
 function close() {
   stopAutoplay();
   if (isFullscreen.value) document.exitFullscreen?.();
@@ -244,16 +350,23 @@ onUnmounted(() => {
       <div v-if="scenario" class="reader-backdrop" @click.self="close">
         <div ref="containerRef" class="reader" :class="{ 'reader--fullscreen': isFullscreen }">
 
-          <!-- Header -->
           <div class="reader-header">
             <div class="reader-header__info">
-              <p class="reader-header__eyebrow">Scenario reader</p>
+              <button v-if="viewMode === 'scene'" type="button" class="reader-back" @click="backToGrid">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+                Storyboard
+              </button>
+              <p class="reader-header__eyebrow">
+                {{ viewMode === "scene" ? `Scene ${currentIndex + 1} of ${totalScenes}` : "Scenario reader" }}
+              </p>
               <h2 class="reader-header__title">{{ scenario.title ?? "Untitled" }}</h2>
               <p class="reader-header__meta">By {{ scenario.authorUsername ?? "Unknown" }}</p>
             </div>
             <div class="reader-header__actions">
-              <!-- Autoplay toggle -->
               <button
+                v-if="viewMode === 'scene'"
                 type="button"
                 class="reader-btn"
                 :class="{ 'reader-btn--active': isAutoplay }"
@@ -269,7 +382,6 @@ onUnmounted(() => {
                 {{ isAutoplay ? "Stop" : "Autoplay" }}
               </button>
 
-              <!-- Fullscreen toggle -->
               <button
                 type="button"
                 class="reader-icon-btn"
@@ -284,7 +396,6 @@ onUnmounted(() => {
                 </svg>
               </button>
 
-              <!-- Close -->
               <button type="button" class="reader-icon-btn" title="Close (Esc)" @click="close">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M18 6 6 18M6 6l12 12"/>
@@ -293,8 +404,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Progress bar -->
-          <div class="reader-progress-bar">
+          <div v-if="viewMode === 'scene'" class="reader-progress-bar">
             <div
               v-for="(_, i) in thumbnails"
               :key="i"
@@ -313,21 +423,17 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Main stage -->
-          <div class="reader-stage">
-            <!-- Loading -->
+          <div class="reader-stage" :class="{ 'reader-stage--grid': viewMode === 'grid' }">
             <div v-if="loading" class="reader-loader">
               <div class="reader-spinner"></div>
               <p>Loading scenes…</p>
             </div>
 
-            <!-- Error -->
             <div v-else-if="error" class="reader-error">
               <p>{{ error }}</p>
               <button type="button" class="reader-btn" @click="loadScenario(scenario.id)">Retry</button>
             </div>
 
-            <!-- Empty -->
             <div v-else-if="!thumbnails.length" class="reader-empty">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -336,9 +442,68 @@ onUnmounted(() => {
               <p>This scenario has no scenes yet.</p>
             </div>
 
-            <!-- Scene -->
-            <template v-else-if="currentThumb">
-              <!-- Nav prev -->
+            <div v-else-if="viewMode === 'grid'" class="reader-grid-wrap">
+              <div class="reader-grid-toolbar">
+                <span class="reader-grid-count">{{ totalScenes }} scene{{ totalScenes !== 1 ? "s" : "" }}</span>
+                <button
+                    v-if="isGridSequencePlaying"
+                    type="button"
+                    class="reader-btn reader-btn--primary"
+                    @click="stopAutoplay"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>
+                  </svg>
+                  Stop
+                </button>
+                <button v-else type="button" class="reader-btn reader-btn--primary" @click="playFromStart">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  Play from start
+                </button>
+              </div>
+
+              <div class="reader-grid" :class="{ 'reader-grid--spotlight': !!gridPlayingId }">
+                <div
+                  v-for="item in storyboardItems"
+                  :key="item.id"
+                  class="reader-grid-card"
+                  :class="{ 'reader-grid-card--active': gridPlayingId === String(item.id) }"
+                  :style="storyboardItemStyle(item)"
+                  role="button"
+                  tabindex="0"
+                  @click="enterSceneById(item.id)"
+                  @keydown.enter="enterSceneById(item.id)"
+                >
+                  <span class="reader-grid-card__num">{{ String(item._sceneNumber).padStart(2, "0") }}</span>
+                  <button
+                    v-if="thumbHasAudio(item)"
+                    type="button"
+                    class="reader-grid-card__audio"
+                    :class="{ 'reader-grid-card__audio--playing': gridPlayingId === String(item.id) }"
+                    :title="gridPlayingId === String(item.id) ? 'Pause audio' : 'Play audio'"
+                    @click.stop="toggleGridAudio(item)"
+                  >
+                    <svg v-if="gridPlayingId !== String(item.id)" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span v-else class="reader-audio-bars">
+                      <span></span><span></span><span></span>
+                    </span>
+                  </button>
+                  <img
+                    :src="gridThumbUrl(item)"
+                    :alt="item.title || `Scene ${item._sceneNumber}`"
+                    class="reader-grid-card__img"
+                    loading="lazy"
+                  />
+                  <span v-if="item.title" class="reader-grid-card__title">{{ item.title }}</span>
+                </div>
+              </div>
+            </div>
+
+            <template v-else-if="viewMode === 'scene' && currentThumb">
               <button
                 type="button"
                 class="reader-nav reader-nav--prev"
@@ -351,7 +516,6 @@ onUnmounted(() => {
                 </svg>
               </button>
 
-              <!-- Image -->
               <Transition name="scene-slide" mode="out-in">
                 <div :key="currentThumb.id" class="reader-scene">
                   <img
@@ -368,13 +532,11 @@ onUnmounted(() => {
                     <p>No image</p>
                   </div>
 
-                  <!-- Scene label -->
                   <div class="reader-scene__label">
                     <span class="reader-scene__counter">{{ currentIndex + 1 }} / {{ totalScenes }}</span>
                     <span v-if="currentThumb.title" class="reader-scene__title">{{ currentThumb.title }}</span>
                   </div>
 
-                  <!-- Audio indicator -->
                   <button
                     v-if="currentAudioUrl"
                     type="button"
@@ -393,7 +555,6 @@ onUnmounted(() => {
                 </div>
               </Transition>
 
-              <!-- Nav next -->
               <button
                 type="button"
                 class="reader-nav reader-nav--next"
@@ -408,7 +569,6 @@ onUnmounted(() => {
             </template>
           </div>
 
-          <!-- Audio element always in DOM — src changes trigger canplay reliably -->
           <audio
             ref="audioRef"
             :src="currentAudioUrl ?? ''"
@@ -422,12 +582,17 @@ onUnmounted(() => {
             @canplay="onAudioCanPlay"
           />
 
-          <!-- Footer hint -->
           <div class="reader-footer">
-            <span>← → navigate</span>
-            <span>Space: {{ currentAudioUrl ? 'play/pause' : 'autoplay' }}</span>
-            <span>F: fullscreen</span>
-            <span>Esc: close</span>
+            <template v-if="viewMode === 'scene'">
+              <span>← → navigate</span>
+              <span>Space: {{ currentAudioUrl ? "play/pause" : "autoplay" }}</span>
+              <span>F: fullscreen</span>
+              <span>Esc: back to storyboard</span>
+            </template>
+            <template v-else>
+              <span>Click a scene to open it</span>
+              <span>Esc: close</span>
+            </template>
           </div>
 
         </div>
@@ -437,12 +602,11 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* Backdrop */
 .reader-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1400;
-  background: rgba(20, 8, 4, 0.72);
+  background: rgba(30, 8, 18, 0.55);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -450,17 +614,16 @@ onUnmounted(() => {
   padding: 20px;
 }
 
-/* Modal */
 .reader {
   position: relative;
-  width: min(880px, 100%);
-  max-height: min(92vh, 900px);
+  width: min(1320px, 96vw);
+  max-height: min(94vh, 1040px);
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, #2A1200 0%, #1A0A00 100%);
+  background: var(--surface-alt);
   border-radius: 24px;
-  border: 1px solid rgba(192, 74, 8, 0.25);
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  border: 3px solid var(--text);
+  box-shadow: 8px 8px 0 var(--text);
   overflow: hidden;
 }
 
@@ -471,18 +634,35 @@ onUnmounted(() => {
   max-height: 100vh;
   border-radius: 0;
   border: none;
+  box-shadow: none;
 }
 
-/* Header */
 .reader-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   padding: 18px 20px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1.5px solid var(--border);
   flex-shrink: 0;
 }
+
+.reader-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.reader-back:hover { color: var(--primary-strong); }
 
 .reader-header__eyebrow {
   margin: 0 0 2px;
@@ -495,16 +675,16 @@ onUnmounted(() => {
 
 .reader-header__title {
   margin: 0 0 2px;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #FFF4EC;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--text);
   letter-spacing: -0.01em;
 }
 
 .reader-header__meta {
   margin: 0;
   font-size: 0.75rem;
-  color: rgba(255, 244, 236, 0.45);
+  color: var(--text-soft);
 }
 
 .reader-header__actions {
@@ -514,16 +694,15 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* Buttons */
 .reader-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0.4rem 0.9rem;
+  padding: 0.45rem 0.95rem;
   border-radius: 999px;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 244, 236, 0.75);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
@@ -533,9 +712,9 @@ onUnmounted(() => {
 }
 
 .reader-btn:hover {
-  background: rgba(192, 74, 8, 0.2);
+  background: var(--accent-green);
   border-color: var(--primary);
-  color: #FFF4EC;
+  color: var(--text);
 }
 
 .reader-btn--active {
@@ -549,6 +728,13 @@ onUnmounted(() => {
   border-color: var(--primary-strong);
 }
 
+.reader-btn--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.reader-btn--primary:hover { background: var(--primary-strong); border-color: var(--primary-strong); color: #fff; }
+
 .reader-icon-btn {
   display: flex;
   align-items: center;
@@ -556,20 +742,19 @@ onUnmounted(() => {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 244, 236, 0.7);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .reader-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #FFF4EC;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--text);
+  color: var(--surface-alt);
+  border-color: var(--text);
 }
 
-/* Progress bar */
 .reader-progress-bar {
   display: flex;
   gap: 3px;
@@ -581,7 +766,7 @@ onUnmounted(() => {
   flex: 1;
   height: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--border);
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -589,15 +774,16 @@ onUnmounted(() => {
 }
 
 .reader-progress-bar__segment:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--accent-green);
 }
 
 .reader-progress-bar__segment--done {
-  background: rgba(192, 74, 8, 0.6);
+  background: var(--primary);
+  opacity: 0.55;
 }
 
 .reader-progress-bar__segment--active {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border);
 }
 
 .reader-progress-bar__fill {
@@ -608,7 +794,6 @@ onUnmounted(() => {
   transition: width 0.2s linear;
 }
 
-/* Stage */
 .reader-stage {
   flex: 1;
   display: flex;
@@ -620,7 +805,147 @@ onUnmounted(() => {
   padding: 12px 0;
 }
 
-/* Scene */
+.reader-stage--grid {
+  align-items: stretch;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.reader-grid-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 20px 22px;
+}
+
+.reader-grid-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reader-grid-count {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-soft);
+}
+
+.reader-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: 95px;
+  grid-auto-flow: dense;
+  gap: 8px;
+}
+
+.reader-grid-card {
+  position: relative;
+  display: block;
+  min-height: 60px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0;
+  background: var(--accent-green);
+  cursor: pointer;
+  overflow: hidden;
+  transition: box-shadow 160ms ease, transform 120ms ease, opacity 220ms ease;
+  text-align: left;
+}
+
+.reader-grid-card:hover {
+  box-shadow: 0 0 0 3px var(--primary);
+  transform: translateY(-1px);
+}
+
+.reader-grid--spotlight .reader-grid-card {
+  opacity: 0.32;
+}
+
+.reader-grid--spotlight .reader-grid-card:hover {
+  opacity: 0.55;
+}
+
+.reader-grid-card--active,
+.reader-grid--spotlight .reader-grid-card--active {
+  opacity: 1;
+  box-shadow: 0 0 0 3px var(--primary), 0 10px 26px rgba(30,8,18,0.22);
+}
+
+.reader-grid-card--active:hover,
+.reader-grid--spotlight .reader-grid-card--active:hover {
+  opacity: 1;
+}
+
+.reader-grid-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--accent-green);
+  display: block;
+}
+
+.reader-grid-card__num {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 1;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(30,8,18,0.68);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.reader-grid-card__audio {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: background 140ms ease, transform 120ms ease;
+}
+
+.reader-grid-card__audio:hover {
+  background: var(--primary-strong);
+  transform: scale(1.08);
+}
+
+.reader-grid-card__audio--playing {
+  background: #8B3010;
+}
+
+.reader-grid-card__audio .reader-audio-bars {
+  height: 11px;
+}
+
+.reader-grid-card__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  padding: 14px 10px 7px;
+  background: linear-gradient(180deg, rgba(30,8,18,0) 0%, rgba(30,8,18,0.75) 100%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .reader-scene {
   position: relative;
   width: 100%;
@@ -643,7 +968,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  color: rgba(255, 244, 236, 0.3);
+  color: var(--text-soft);
 }
 
 .reader-scene__placeholder p {
@@ -651,7 +976,6 @@ onUnmounted(() => {
   font-size: 0.85rem;
 }
 
-/* Scene label */
 .reader-scene__label {
   position: absolute;
   bottom: 12px;
@@ -661,17 +985,17 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 5px 14px;
-  background: rgba(20, 8, 4, 0.7);
+  background: rgba(30, 8, 18, 0.72);
   backdrop-filter: blur(8px);
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   white-space: nowrap;
 }
 
 .reader-scene__counter {
   font-size: 0.75rem;
   font-weight: 800;
-  color: rgba(255, 244, 236, 0.6);
+  color: rgba(255, 244, 236, 0.65);
 }
 
 .reader-scene__title {
@@ -683,7 +1007,6 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 
-/* Audio button */
 .reader-scene__audio-btn {
   position: absolute;
   top: 12px;
@@ -692,9 +1015,9 @@ onUnmounted(() => {
   height: 36px;
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.2);
-  background: rgba(20, 8, 4, 0.6);
+  background: rgba(30, 8, 18, 0.62);
   backdrop-filter: blur(8px);
-  color: rgba(255, 244, 236, 0.8);
+  color: rgba(255, 244, 236, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -714,7 +1037,6 @@ onUnmounted(() => {
   color: #fff;
 }
 
-/* Audio bars animation */
 .reader-audio-bars {
   display: flex;
   align-items: center;
@@ -738,7 +1060,6 @@ onUnmounted(() => {
   50% { transform: scaleY(1); }
 }
 
-/* Nav arrows */
 .reader-nav {
   position: absolute;
   top: 50%;
@@ -747,10 +1068,10 @@ onUnmounted(() => {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  background: rgba(20, 8, 4, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(30, 8, 18, 0.55);
   backdrop-filter: blur(8px);
-  color: rgba(255, 244, 236, 0.8);
+  color: rgba(255, 244, 236, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -773,20 +1094,19 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-/* Loader / error / empty */
 .reader-loader, .reader-error, .reader-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  color: rgba(255, 244, 236, 0.5);
+  color: var(--text-soft);
   font-size: 0.88rem;
 }
 
 .reader-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  border: 3px solid var(--border);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -794,24 +1114,22 @@ onUnmounted(() => {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Footer */
 .reader-footer {
   display: flex;
   justify-content: center;
   gap: 20px;
   padding: 10px 20px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1.5px solid var(--border);
   flex-shrink: 0;
 }
 
 .reader-footer span {
   font-size: 0.68rem;
-  font-weight: 600;
-  color: rgba(255, 244, 236, 0.28);
+  font-weight: 700;
+  color: var(--text-soft);
   letter-spacing: 0.04em;
 }
 
-/* Transitions */
 .reader-fade-enter-active, .reader-fade-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
@@ -832,7 +1150,6 @@ onUnmounted(() => {
   transform: translateX(-24px);
 }
 
-/* Responsive */
 @media (max-width: 600px) {
   .reader-backdrop { padding: 0; }
   .reader { border-radius: 0; max-height: 100vh; width: 100vw; }
@@ -841,5 +1158,6 @@ onUnmounted(() => {
   .reader-nav { width: 36px; height: 36px; }
   .reader-nav--prev { left: 8px; }
   .reader-nav--next { right: 8px; }
+  .reader-grid { grid-auto-rows: 34px; }
 }
 </style>

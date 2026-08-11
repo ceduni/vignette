@@ -1,140 +1,127 @@
 <script setup>
-import {computed} from "vue";
 import {buildApiUrl} from "../api/rest";
-import BaseBadge from "./ui/BaseBadge.vue";
 
 const props = defineProps({
-  thumb: {type: Object, required: true},
-  audios: {type: Array, default: () => []},
-  selected: {type: Boolean, default: false},
-  highlighted: {type: Boolean, default: false},
-  quickRecording: {type: Boolean, default: false},
-  canDelete: {type: Boolean, default: false},
+  thumb:         {type: Object,  required: true},
+  audios:        {type: Array,   default: () => []},
+  selected:      {type: Boolean, default: false},
+  highlighted:   {type: Boolean, default: false},
+  quickRecording:{type: Boolean, default: false},
+  canDelete:     {type: Boolean, default: false},
+  canResize:     {type: Boolean, default: false},
+  canReorder:    {type: Boolean, default: false},
+  colSpan:       {type: Number,  default: 1},
+  rowSpan:       {type: Number,  default: 1},
 });
 
-const emit = defineEmits(["select", "play", "quick-record", "delete"]);
+const emit = defineEmits([
+  "select",
+  "delete", "reorder", "resize-start",
+  "pointer-reorder-start",
+]);
 
 function thumbnailContentUrl(thumb) {
+  if (thumb?.previewUrl) return thumb.previewUrl;
   if (!thumb?.id) return "";
   return buildApiUrl(`/api/thumbnails/${thumb.id}/content`);
 }
 
-const markers = computed(() => {
-  return props.audios
-      .filter((audio) =>
-          audio?.markerX !== null &&
-          audio?.markerX !== undefined &&
-          audio?.markerY !== null &&
-          audio?.markerY !== undefined &&
-          audio?.markerX !== "" &&
-          audio?.markerY !== ""
-      )
-      .map((audio) => {
-        const x = Number(audio.markerX);
-        const y = Number(audio.markerY);
-
-        return {
-          ...audio,
-          _x: Number.isFinite(x) ? Math.max(0, Math.min(100, x)) : null,
-          _y: Number.isFinite(y) ? Math.max(0, Math.min(100, y)) : null,
-        };
-      })
-      .filter((audio) => audio._x !== null && audio._y !== null);
-});
-
-function markerStyle(marker) {
-  return {
-    left: `${marker._x}%`,
-    top: `${marker._y}%`,
-  };
-}
-
-function onPlayClick() {
-  emit("select", props.thumb);
-  emit("play", props.thumb);
-}
-
-function onQuickRecordClick() {
-  emit("select", props.thumb);
-  emit("quick-record", props.thumb);
+function onDeleteClick() {
+  if (!confirm("Delete this scene? This cannot be undone.")) return;
+  emit("delete", props.thumb);
 }
 </script>
 
 <template>
   <article
-      class="card thumb-card storyboard-tile"
-      :class="{ selected, 'thumb-card--highlighted': highlighted }"
-      :data-thumbnail-id="thumb.id"
-      @click="emit('select', thumb)"
+    class="card thumb-card storyboard-tile"
+    :class="{
+      selected,
+      'thumb-card--highlighted': highlighted,
+      'storyboard-tile--recording': quickRecording,
+    }"
+    :data-thumbnail-id="thumb.id"
+    @click="emit('select', thumb)"
   >
     <div class="storyboard-tile__stage">
       <img
-          :src="thumbnailContentUrl(thumb)"
-          :alt="thumb.title || `Thumbnail ${thumb.id}`"
-          class="storyboard-tile__image"
+        :src="thumbnailContentUrl(thumb)"
+        :alt="thumb.title || `Thumbnail ${thumb.id}`"
+        class="storyboard-tile__image"
       />
 
-      <div class="storyboard-tile__overlay">
-        <BaseBadge v-if="selected" variant="success">Selected</BaseBadge>
-        <BaseBadge v-else variant="neutral">
-          {{ thumb.idx ?? thumb.id }}
-        </BaseBadge>
+      <button
+        v-if="canReorder"
+        type="button"
+        class="storyboard-tile__drag-handle"
+        draggable="false"
+        title="Drag to move this scene"
+        aria-label="Drag to move scene"
+        @click.stop
+        @pointerdown.stop="emit('pointer-reorder-start', thumb, $event)"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <circle cx="8" cy="6" r="1" fill="currentColor"/><circle cx="16" cy="6" r="1" fill="currentColor"/>
+          <circle cx="8" cy="12" r="1" fill="currentColor"/><circle cx="16" cy="12" r="1" fill="currentColor"/>
+          <circle cx="8" cy="18" r="1" fill="currentColor"/><circle cx="16" cy="18" r="1" fill="currentColor"/>
+        </svg>
+      </button>
+
+      <button
+        v-if="canDelete"
+        type="button"
+        class="storyboard-tile__delete"
+        draggable="false"
+        title="Delete scene"
+        aria-label="Delete scene"
+        @click.stop="onDeleteClick"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>
+
+      <div class="storyboard-tile__caption">
+        <span>{{ thumb.title || `Scene ${thumb.idx ?? thumb.id}` }}</span>
+        <small class="storyboard-tile__meta">
+          {{ audios.length }} {{ audios.length === 1 ? "take" : "takes" }}
+        </small>
       </div>
-
-      <button
-          v-for="marker in markers"
-          :key="marker.id"
-          type="button"
-          class="marker-dot storyboard-tile__marker"
-          :style="markerStyle(marker)"
-          :title="marker.markerLabel || marker.title || `Audio #${marker.id}`"
-          @click.stop="emit('select', thumb, marker)"
-      >
-        <span class="marker-dot__pulse"></span>
-        <span class="marker-dot__core"></span>
-      </button>
-
-      <button
-          type="button"
-          class="storyboard-tile__play"
-          :title="`Play from ${thumb.title || `thumbnail ${thumb.idx ?? thumb.id}`}`"
-          aria-label="Play thumbnail audio"
-          @click.stop="onPlayClick"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M8 6.5v11l9-5.5-9-5.5z"/>
-        </svg>
-      </button>
-
-      <button
-          type="button"
-          class="storyboard-tile__quick-record"
-          :class="{ 'storyboard-tile__quick-record--active': quickRecording }"
-          :title="quickRecording
-      ? `Stop quick recording for ${thumb.title || `thumbnail ${thumb.idx ?? thumb.id}`}`
-      : `Quick record on ${thumb.title || `thumbnail ${thumb.idx ?? thumb.id}`}`"
-          aria-label="Quick record audio"
-          @click.stop="onQuickRecordClick"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 15.5a3.5 3.5 0 0 0 3.5-3.5V7a3.5 3.5 0 1 0-7 0v5a3.5 3.5 0 0 0 3.5 3.5Z"/>
-          <path
-              d="M6 11.5a1 1 0 1 1 2 0 4 4 0 1 0 8 0 1 1 0 1 1 2 0 6 6 0 0 1-5 5.91V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.59A6 6 0 0 1 6 11.5Z"/>
-        </svg>
-      </button>
-
-      <button
-          v-if="canDelete"
-          type="button"
-          class="storyboard-tile__delete"
-          :title="`Delete ${thumb.title || `thumbnail ${thumb.idx ?? thumb.id}`}`"
-          aria-label="Delete thumbnail"
-          @click.stop="emit('delete', thumb)"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M9 3h6l1 1h4v2H4V4h4l1-1Zm-2 5h10l-1 13H8L7 8Zm2 2v9h1v-9H9Zm3 0v9h1v-9h-1Zm3 0v9h1v-9h-1Z"/>
-        </svg>
-      </button>
     </div>
+
+    <template v-if="canResize">
+      <span class="storyboard-tile__size-badge">{{ colSpan }} × {{ rowSpan }}</span>
+      <button
+        type="button"
+        class="storyboard-tile__handle storyboard-tile__handle--right"
+        draggable="false"
+        title="Resize width"
+        aria-label="Resize scene width"
+        @click.stop
+        @pointerdown.stop="emit('resize-start', { thumb, direction: 'right', event: $event })"
+      ></button>
+      <button
+        type="button"
+        class="storyboard-tile__handle storyboard-tile__handle--bottom"
+        draggable="false"
+        title="Resize height"
+        aria-label="Resize scene height"
+        @click.stop
+        @pointerdown.stop="emit('resize-start', { thumb, direction: 'bottom', event: $event })"
+      ></button>
+      <button
+        type="button"
+        class="storyboard-tile__handle storyboard-tile__handle--corner"
+        draggable="false"
+        title="Resize width and height"
+        aria-label="Resize scene width and height"
+        @click.stop
+        @pointerdown.stop="emit('resize-start', { thumb, direction: 'corner', event: $event })"
+      ></button>
+    </template>
   </article>
 </template>

@@ -9,7 +9,6 @@
         </div>
       </div>
 
-      <!-- Quick overview -->
       <div class="card-grid">
         <article class="card about-card">
           <span class="about-card__label">Why it exists</span>
@@ -24,7 +23,7 @@
           <span class="about-card__label">What it supports</span>
           <p class="text">
             Scenarios built from ordered image sequences, audio collected against
-            individual thumbnails and markers, language-centred metadata, and
+            individual thumbnails, language-centred metadata, and
             collaborative discussion around every layer of the documentation.
           </p>
         </article>
@@ -39,7 +38,6 @@
         </article>
       </div>
 
-      <!-- Origin -->
       <section class="card">
         <h2>Origin of the project</h2>
         <p class="text">
@@ -53,11 +51,10 @@
         </p>
       </section>
 
-      <!-- Main goal -->
       <section class="card">
         <h2>Main goal</h2>
         <p class="text">
-          The goal is to support a workflow where images, ordered thumbnails, markers and oral responses
+          The goal is to support a workflow where images, ordered thumbnails and oral responses
           make it easier to document language use in a more situated and less translation-driven way.
         </p>
         <p class="text">
@@ -66,7 +63,6 @@
         </p>
       </section>
 
-      <!-- Why it matters -->
       <div class="card-grid">
         <article class="card">
           <h3>Why multimedia matters</h3>
@@ -93,7 +89,6 @@
         </article>
       </div>
 
-      <!-- Platform support -->
       <section class="card">
         <h2>What the platform tries to support</h2>
         <p class="text">
@@ -101,8 +96,8 @@
           mirror real situations rather than isolated words or phrases.
         </p>
         <p class="text">
-          Audio collection is tied to individual thumbnails and markers, so responses are always anchored
-          to the exact moment or scene that prompted them.
+          Audio collection is tied to individual thumbnails, so responses are always anchored
+          to the exact scene that prompted them.
         </p>
         <p class="text">
           Language-centred metadata and navigation means everything stays organized around the language
@@ -118,7 +113,6 @@
         </p>
       </section>
 
-      <!-- Philosophy -->
       <section class="card">
         <h2>Practical philosophy</h2>
         <p class="text">
@@ -131,7 +125,6 @@
         </p>
       </section>
 
-      <!-- How it works -->
       <div class="section-heading">
         <div>
           <h2>How it works</h2>
@@ -157,7 +150,7 @@
         <article class="card">
           <h3>Attach oral responses</h3>
           <p class="text">
-            Record and organize audio directly against thumbnails and markers to preserve situated speech.
+            Record and organize audio directly against thumbnails to preserve situated speech.
           </p>
         </article>
 
@@ -183,7 +176,6 @@
         </article>
       </div>
 
-      <!-- Useful links -->
       <div class="section-heading">
         <div>
           <h2>Useful links</h2>

@@ -54,6 +54,9 @@ class AudioApiControllerWebMvcTest {
     @MockitoBean
     private ScenarioService scenarioService;
 
+    @MockitoBean
+    private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
+
     @TestConfiguration
     static class TestBeans {
         @Bean("scenarioSecurity")
@@ -217,6 +220,11 @@ class AudioApiControllerWebMvcTest {
 
     @Test
     void updateMarker_callsServiceWhenAuthenticatedWithCsrf() throws Exception {
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
         mvc.perform(patch("/api/audios/5/marker")
                         .with(user("alice").roles("USER"))
                         .with(csrf())
@@ -248,6 +256,11 @@ class AudioApiControllerWebMvcTest {
 
     @Test
     void delete_callsServiceWhenAuthenticatedWithCsrf() throws Exception {
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
         mvc.perform(delete("/api/audios/6")
                         .with(user("alice").roles("USER"))
                         .with(csrf()))

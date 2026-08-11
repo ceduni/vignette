@@ -94,6 +94,14 @@ public class UserService {
         return users.existsByEmail(email);
     }
 
+    public List<User> searchByUsername(String query, String excludeUsername) {
+        if (query == null || query.isBlank()) return List.of();
+        return users.findTop10ByUsernameContainingIgnoreCaseOrderByUsernameAsc(query.trim())
+                .stream()
+                .filter(u -> excludeUsername == null || !u.getUsername().equalsIgnoreCase(excludeUsername))
+                .toList();
+    }
+
     public User updateRoles(Long userId, Set<String> roleNames) {
         User user = users.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));

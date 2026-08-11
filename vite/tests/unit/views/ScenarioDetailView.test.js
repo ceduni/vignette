@@ -2,17 +2,38 @@ import {nextTick} from "vue";
 import {mountWithRouter} from "../../helpers/mountWithRouter";
 import ScenarioDetailView from "@/views/ScenarioDetailView.vue";
 
+Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => "blob:scenario-detail-test"),
+});
+
+Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(),
+});
+
 const apiMocks = vi.hoisted(() => ({
     loadMe: vi.fn(),
 
     fetchScenario: vi.fn(),
+    fetchScenarioBackgroundAudios: vi.fn(),
     fetchScenarioThumbnails: vi.fn(),
     fetchThumbnailAudios: vi.fn(),
+    fetchAccreditationRequests: vi.fn(),
     fetchLanguage: vi.fn(),
+    deleteAudio: vi.fn(),
+    deleteScenario: vi.fn(),
+    deleteThumbnail: vi.fn(),
     publishScenario: vi.fn(),
+    reorderScenarioThumbnails: vi.fn(),
+    updateAudioGloss: vi.fn(),
+    updateScenarioMetadata: vi.fn(),
     updateScenarioStoryboard: vi.fn(),
     updateThumbnailLayout: vi.fn(),
     uploadScenarioThumbnail: vi.fn(),
+    uploadScenarioBackgroundAudio: vi.fn(),
     uploadThumbnailAudio: vi.fn(),
 
     toastSuccess: vi.fn(),
@@ -57,14 +78,26 @@ vi.mock("@/api/languages", () => ({
 }));
 
 vi.mock("@/api/scenarios", () => ({
+    deleteAudio: apiMocks.deleteAudio,
+    deleteScenario: apiMocks.deleteScenario,
+    deleteThumbnail: apiMocks.deleteThumbnail,
     fetchScenario: apiMocks.fetchScenario,
+    fetchScenarioBackgroundAudios: apiMocks.fetchScenarioBackgroundAudios,
     fetchScenarioThumbnails: apiMocks.fetchScenarioThumbnails,
     fetchThumbnailAudios: apiMocks.fetchThumbnailAudios,
     publishScenario: apiMocks.publishScenario,
+    reorderScenarioThumbnails: apiMocks.reorderScenarioThumbnails,
+    updateAudioGloss: apiMocks.updateAudioGloss,
+    updateScenarioMetadata: apiMocks.updateScenarioMetadata,
     updateScenarioStoryboard: apiMocks.updateScenarioStoryboard,
     updateThumbnailLayout: apiMocks.updateThumbnailLayout,
+    uploadScenarioBackgroundAudio: apiMocks.uploadScenarioBackgroundAudio,
     uploadScenarioThumbnail: apiMocks.uploadScenarioThumbnail,
     uploadThumbnailAudio: apiMocks.uploadThumbnailAudio,
+}));
+
+vi.mock("@/api/community", () => ({
+    fetchAccreditationRequests: apiMocks.fetchAccreditationRequests,
 }));
 
 vi.mock("@/composables/useAuth", () => ({
@@ -75,6 +108,7 @@ vi.mock("@/composables/useAuth", () => ({
                 username: "ownerUser",
             },
         },
+        isAuthenticated: {value: true},
         loadMe: apiMocks.loadMe,
     }),
 }));
@@ -95,28 +129,34 @@ vi.mock("@/components/ThumbnailCard.vue", () => ({
     default: {
         name: "ThumbnailCard",
         props: ["thumb", "audios", "selected", "highlighted", "quickRecording"],
-        emits: ["select", "play", "quick-record"],
+        emits: ["select"],
         template: `
           <div class="thumbnail-card-stub-wrap">
             <button
                 class="thumbnail-card-stub"
                 :data-id="thumb.id"
+                :data-selected="selected ? 'true' : 'false'"
                 @click="$emit('select', thumb)"
             >
               {{ thumb.title || thumb.id }}
             </button>
-            <button
-                class="thumbnail-card-play"
-                @click="$emit('play', thumb)"
-            >
-              play
-            </button>
-            <button
-                class="thumbnail-card-quick-record"
-                @click="$emit('quick-record', thumb)"
-            >
-              quick-record
-            </button>
+          </div>
+        `,
+    },
+}));
+
+vi.mock("@/components/StudioRecorderPanel.vue", () => ({
+    default: {
+        name: "StudioRecorderPanel",
+        props: ["selectedThumb", "selectedAudios", "selectedVoiceId"],
+        emits: ["select-voice", "open-layout"],
+        template: `
+          <div class="studio-recorder-panel-stub">
+            <span class="studio-panel-thumb">{{ selectedThumb?.id ?? 'none' }}</span>
+            <span class="studio-panel-audios">{{ selectedAudios.length }}</span>
+            <span class="studio-panel-selected">{{ selectedVoiceId ?? 'none' }}</span>
+            <button class="studio-panel-select" @click="$emit('select-voice', selectedAudios[0] || null)">select</button>
+            <button class="studio-panel-layout" @click="$emit('open-layout')">layout</button>
           </div>
         `,
     },
@@ -286,6 +326,8 @@ async function mountScenarioView({
                                      audioMap = audioMapByThumb(),
                                  } = {}) {
     apiMocks.fetchScenario.mockResolvedValue(scenario);
+    apiMocks.fetchScenarioBackgroundAudios.mockResolvedValue([]);
+    apiMocks.fetchAccreditationRequests.mockResolvedValue([]);
     apiMocks.fetchLanguage.mockResolvedValue({id: 42, name: "Chuj"});
     apiMocks.fetchScenarioThumbnails.mockResolvedValue(thumbnails);
     apiMocks.fetchThumbnailAudios.mockImplementation(async (thumbId) => audioMap[thumbId] || []);
@@ -300,11 +342,19 @@ async function mountScenarioView({
         storyboardColumns: body.columns,
     }));
     apiMocks.updateThumbnailLayout.mockResolvedValue({});
+    apiMocks.updateAudioGloss.mockResolvedValue({});
+    apiMocks.updateScenarioMetadata.mockResolvedValue({});
+    apiMocks.reorderScenarioThumbnails.mockResolvedValue({});
     apiMocks.uploadScenarioThumbnail.mockResolvedValue({});
+    apiMocks.uploadScenarioBackgroundAudio.mockResolvedValue({});
     apiMocks.uploadThumbnailAudio.mockResolvedValue({});
 
     const {wrapper, router} = await mountWithRouter(ScenarioDetailView, {
         routes: [
+            {
+                path: "/scenarios",
+                component: {template: "<div />"},
+            },
             {
                 path: "/scenarios/:id",
                 component: ScenarioDetailView,
@@ -322,6 +372,15 @@ async function mountScenarioView({
     await flushPromises(10);
 
     return {wrapper, router};
+}
+
+async function clickButtonByText(wrapper, text) {
+    const button = wrapper.findAll("button").find((b) => b.text().includes(text));
+    expect(button).toBeTruthy();
+    await button.trigger("click");
+    await flushPromises();
+    await nextTick();
+    return button;
 }
 
 describe("ScenarioDetailView", () => {
@@ -344,11 +403,12 @@ describe("ScenarioDetailView", () => {
         expect(apiMocks.fetchLanguage).toHaveBeenCalledWith(42);
         expect(apiMocks.fetchScenarioThumbnails).toHaveBeenCalledWith("77");
         expect(apiMocks.fetchThumbnailAudios).toHaveBeenCalledTimes(2);
+        expect(apiMocks.fetchScenarioBackgroundAudios).toHaveBeenCalledWith("77");
 
         expect(wrapper.text()).toContain("Scenario Alpha");
-        expect(wrapper.text()).toContain("Owner view");
-        expect(wrapper.find(".audio-panel-thumb").text()).toBe("5");
-        expect(wrapper.find(".audio-panel-audios").text()).toBe("2");
+        expect(wrapper.text()).toContain("Vignette ambience");
+        expect(wrapper.find(".rec-panel-title").text()).toContain("Studio audio");
+        expect(wrapper.text()).toContain("First-thumb audio A");
     });
 
     it("falls back to Unknown language when language fetch fails", async () => {
@@ -357,7 +417,7 @@ describe("ScenarioDetailView", () => {
 
         expect(wrapper.text()).toContain("Scenario Alpha");
 
-        const infoButton = wrapper.find('button[aria-label="Open scenario information"]');
+        const infoButton = wrapper.find('button[title="Scenario info"]');
         await infoButton.trigger("click");
         await flushPromises();
         await nextTick();
@@ -368,7 +428,7 @@ describe("ScenarioDetailView", () => {
     it("shows scenario tags in the info dialog", async () => {
         const {wrapper} = await mountScenarioView();
 
-        const infoButton = wrapper.find('button[aria-label="Open scenario information"]');
+        const infoButton = wrapper.find('button[title="Scenario info"]');
         await infoButton.trigger("click");
         await flushPromises();
         await nextTick();
@@ -382,6 +442,10 @@ describe("ScenarioDetailView", () => {
 
         const {wrapper} = await mountWithRouter(ScenarioDetailView, {
             routes: [
+                {
+                    path: "/scenarios",
+                    component: {template: "<div />"},
+                },
                 {
                     path: "/scenarios/:id",
                     component: ScenarioDetailView,
@@ -403,6 +467,7 @@ describe("ScenarioDetailView", () => {
     it("selects another thumbnail when clicking a thumbnail card", async () => {
         const {wrapper} = await mountScenarioView();
 
+        await clickButtonByText(wrapper, "Storyboard");
         const buttons = wrapper.findAll(".thumbnail-card-stub");
         expect(buttons.map((b) => b.text())).toEqual(["First", "Second"]);
 
@@ -410,15 +475,15 @@ describe("ScenarioDetailView", () => {
         await flushPromises();
         await nextTick();
 
-        expect(wrapper.find(".audio-panel-thumb").text()).toBe("10");
-        expect(wrapper.find(".audio-panel-audios").text()).toBe("1");
+        const updatedButtons = wrapper.findAll(".thumbnail-card-stub");
+        expect(updatedButtons[1].attributes("data-selected")).toBe("true");
     });
 
     it("publishes the scenario and updates UI", async () => {
         const {wrapper} = await mountScenarioView();
 
         const publishButton = wrapper.findAll("button")
-            .find((b) => b.text().includes("Publish scenario"));
+            .find((b) => b.text().includes("Publish →"));
 
         expect(publishButton).toBeTruthy();
 
@@ -427,22 +492,22 @@ describe("ScenarioDetailView", () => {
 
         expect(apiMocks.publishScenario).toHaveBeenCalledWith("77");
         expect(apiMocks.toastSuccess).toHaveBeenCalledWith("Scenario published.");
-        expect(wrapper.text()).toContain("PUBLISHED");
+        expect(wrapper.text()).toContain("Published");
     });
 
     it("saves storyboard settings with normalized numeric columns", async () => {
         const {wrapper} = await mountScenarioView();
 
-        const openSettingsButton = wrapper.find('button[aria-label="Open storyboard settings"]');
+        await wrapper.find('.vg-tab').trigger("click");
+        await flushPromises();
+
+        const openSettingsButton = wrapper.find('button[title="Storyboard settings"]');
         await openSettingsButton.trigger("click");
         await flushPromises();
         await nextTick();
 
-        const columnsInput = wrapper.findAll('input[type="number"]')[0];
-        await columnsInput.setValue("99");
-
         const saveButton = wrapper.findAll("button")
-            .find((b) => b.text().includes("Save storyboard settings"));
+            .find((b) => b.text().includes("Save settings"));
 
         await saveButton.trigger("click");
         await flushPromises();
@@ -450,53 +515,47 @@ describe("ScenarioDetailView", () => {
         expect(apiMocks.updateScenarioStoryboard).toHaveBeenCalledWith("77", {
             layoutMode: "PRESET",
             preset: "GRID_3",
-            columns: 8,
+            columns: 3,
         });
         expect(apiMocks.toastSuccess).toHaveBeenCalledWith("Storyboard settings saved.");
     });
 
-    it("opens selected layout panel and saves selected thumbnail layout", async () => {
+    it("saves custom storyboard settings from the settings dialog", async () => {
         const {wrapper} = await mountScenarioView();
 
-        const toggleButton = wrapper.findAll("button")
-            .find((b) => b.text().includes("Selected thumbnail layout"));
+        await wrapper.find('.vg-tab').trigger("click");
+        await flushPromises();
 
-        await toggleButton.trigger("click");
+        const openSettingsButton = wrapper.find('button[title="Storyboard settings"]');
+        await openSettingsButton.trigger("click");
         await flushPromises();
         await nextTick();
 
-        const numberInputs = wrapper.findAll('input[type="number"]');
-        const layoutInputs = numberInputs.slice(-4);
-
-        await layoutInputs[0].setValue("4");
-        await layoutInputs[1].setValue("");
-        await layoutInputs[2].setValue("3");
-        await layoutInputs[3].setValue("2");
+        await clickButtonByText(wrapper, "Custom");
 
         const saveButton = wrapper.findAll("button")
-            .find((b) => b.text().includes("Save thumbnail layout"));
+            .find((b) => b.text().includes("Save settings"));
 
         await saveButton.trigger("click");
         await flushPromises();
 
-        expect(apiMocks.updateThumbnailLayout).toHaveBeenCalledWith(5, {
-            gridColumn: 4,
-            gridRow: null,
-            gridColumnSpan: 3,
-            gridRowSpan: 2,
+        expect(apiMocks.updateScenarioStoryboard).toHaveBeenCalledWith("77", {
+            layoutMode: "CUSTOM",
+            preset: "GRID_3",
+            columns: 3,
         });
-        expect(apiMocks.toastSuccess).toHaveBeenCalledWith("Thumbnail layout saved.");
+        expect(apiMocks.toastSuccess).toHaveBeenCalledWith("Storyboard settings saved.");
     });
 
     it("opens upload dialog and uploads an image successfully", async () => {
         const {wrapper} = await mountScenarioView();
 
-        const openUploadButton = wrapper.find('button[aria-label="Add a thumbnail"]');
+        const openUploadButton = wrapper.find('button[title="Add a scene"]');
         await openUploadButton.trigger("click");
         await flushPromises();
         await nextTick();
 
-        const fileInput = wrapper.find('input[type="file"][accept="image/*"]');
+        const fileInput = wrapper.find("input.ud-file-input");
         const file = new File(["fake-image"], "thumb.png", {type: "image/png"});
 
         Object.defineProperty(fileInput.element, "files", {
@@ -506,61 +565,63 @@ describe("ScenarioDetailView", () => {
 
         await fileInput.trigger("change");
 
-        const titleInput = wrapper.find('input[placeholder="Optional image title"]');
+        const titleInput = wrapper.find("input.ud-grid-title");
         await titleInput.setValue("New thumb");
 
         const uploadButton = wrapper.findAll("button")
-            .find((b) => b.text().includes("Upload image"));
+            .find((b) => b.text().includes("Add scene to storyboard"));
 
         await uploadButton.trigger("click");
         await flushPromises();
 
         expect(apiMocks.uploadScenarioThumbnail).toHaveBeenCalledTimes(1);
         expect(apiMocks.fetchScenarioThumbnails).toHaveBeenCalledTimes(2);
-        expect(apiMocks.toastSuccess).toHaveBeenCalledWith("Thumbnail uploaded successfully.");
+        expect(apiMocks.toastSuccess).toHaveBeenCalledWith("1 scene uploaded.");
     });
 
-    it("shows upload error if no image is selected", async () => {
+    it("keeps upload disabled when no image is selected", async () => {
         const {wrapper} = await mountScenarioView();
 
-        const openUploadButton = wrapper.find('button[aria-label="Add a thumbnail"]');
+        const openUploadButton = wrapper.find('button[title="Add a scene"]');
         await openUploadButton.trigger("click");
         await flushPromises();
         await nextTick();
 
         const uploadButton = wrapper.findAll("button")
-            .find((b) => b.text().includes("Upload image"));
+            .find((b) => b.text().includes("Add scene to storyboard"));
 
-        await uploadButton.trigger("click");
-        await flushPromises();
-
+        expect(uploadButton.attributes("disabled")).toBeDefined();
         expect(apiMocks.uploadScenarioThumbnail).not.toHaveBeenCalled();
-        expect(wrapper.text()).toContain("No image selected.");
-        expect(apiMocks.toastError).toHaveBeenCalled();
     });
 
-    it("refreshes audios when AudioPanel emits uploaded", async () => {
+    it("opens storyboard settings from the storyboard toolbar", async () => {
         const {wrapper} = await mountScenarioView();
 
-        expect(apiMocks.fetchScenarioThumbnails).toHaveBeenCalledTimes(1);
-
-        await wrapper.find(".audio-panel-uploaded").trigger("click");
+        await wrapper.find('.vg-tab').trigger("click");
         await flushPromises();
 
-        expect(apiMocks.fetchScenarioThumbnails).toHaveBeenCalledTimes(2);
+        await wrapper.find('button[title="Storyboard settings"]').trigger("click");
+        await flushPromises();
+
+        expect(wrapper.text()).toContain("Layout & Publication");
     });
 
-    it("delegates play-audio from AudioPanel to autoplay starting at the matching item", async () => {
+    it("selects another take from the studio audio panel", async () => {
         const {wrapper} = await mountScenarioView();
 
-        await wrapper.find(".audio-panel-play").trigger("click");
+        const voiceButtons = wrapper.findAll(".rec-speakers button");
+        const takeBButton = voiceButtons.find((button) => button.text().includes("B"));
+        expect(takeBButton).toBeTruthy();
+        await takeBButton.trigger("click");
         await flushPromises();
 
-        expect(autoplayApi.playFromIndex).toHaveBeenCalledWith(0);
+        expect(takeBButton.classes()).toContain("active");
     });
 
     it("handles audio fetch failure for a thumbnail without crashing", async () => {
         apiMocks.fetchScenario.mockResolvedValue(baseScenario());
+        apiMocks.fetchScenarioBackgroundAudios.mockResolvedValue([]);
+        apiMocks.fetchAccreditationRequests.mockResolvedValue([]);
         apiMocks.fetchLanguage.mockResolvedValue({id: 42, name: "Chuj"});
         apiMocks.fetchScenarioThumbnails.mockResolvedValue(baseThumbnails());
         apiMocks.fetchThumbnailAudios
@@ -572,6 +633,10 @@ describe("ScenarioDetailView", () => {
 
         const {wrapper} = await mountWithRouter(ScenarioDetailView, {
             routes: [
+                {
+                    path: "/scenarios",
+                    component: {template: "<div />"},
+                },
                 {
                     path: "/scenarios/:id",
                     component: ScenarioDetailView,

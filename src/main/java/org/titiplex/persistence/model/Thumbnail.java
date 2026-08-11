@@ -5,7 +5,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "thumbnail")
+@Table(name = "thumbnail", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_thumbnail_scenario_sha256", columnNames = {"scenario_id", "image_sha256"}),
+        @UniqueConstraint(name = "uk_thumbnail_scenario_title", columnNames = {"scenario_id", "title"})
+})
 @Getter
 @Setter
 public class Thumbnail {
@@ -15,7 +18,7 @@ public class Thumbnail {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
-    @Column(name = "title", nullable = false, unique = true)
+    @Column(name = "title", nullable = false)
     private String title;
 
     @Column(name = "idx", nullable = false)
@@ -39,7 +42,7 @@ public class Thumbnail {
     @Column(name = "original_filename")
     private String originalFilename;
 
-    @Column(name = "image_sha256", nullable = false, unique = true, length = 64)
+    @Column(name = "image_sha256", nullable = false, length = 64)
     private String imageSha256;
 
     @ManyToOne(fetch = FetchType.LAZY)

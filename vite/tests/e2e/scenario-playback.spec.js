@@ -1,6 +1,26 @@
 import {expect, test} from "@playwright/test";
 
-test("scenario page loads, selects thumbnails, and opens audio workspace", async ({page}) => {
+function wavBuffer() {
+    const sampleRate = 8000;
+    const samples = 160;
+    const buffer = Buffer.alloc(44 + samples * 2);
+    buffer.write("RIFF", 0);
+    buffer.writeUInt32LE(36 + samples * 2, 4);
+    buffer.write("WAVE", 8);
+    buffer.write("fmt ", 12);
+    buffer.writeUInt32LE(16, 16);
+    buffer.writeUInt16LE(1, 20);
+    buffer.writeUInt16LE(1, 22);
+    buffer.writeUInt32LE(sampleRate, 24);
+    buffer.writeUInt32LE(sampleRate * 2, 28);
+    buffer.writeUInt16LE(2, 32);
+    buffer.writeUInt16LE(16, 34);
+    buffer.write("data", 36);
+    buffer.writeUInt32LE(samples * 2, 40);
+    return buffer;
+}
+
+test("scenario page loads, selects scenes, and opens the studio player", async ({page}) => {
     await page.route("**/api/auth/me", async (route) => {
         await route.fulfill({
             status: 200,
@@ -8,6 +28,16 @@ test("scenario page loads, selects thumbnails, and opens audio workspace", async
             body: JSON.stringify({
                 id: 1,
                 username: "ownerUser",
+            }),
+        });
+    });
+
+    await page.route("**/api/auth/refresh", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                accessToken: "test-token",
             }),
         });
     });
@@ -38,6 +68,22 @@ test("scenario page loads, selects thumbnails, and opens audio workspace", async
                 id: 42,
                 name: "Chuj",
             }),
+        });
+    });
+
+    await page.route("**/api/community/accreditation-requests**", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify([]),
+        });
+    });
+
+    await page.route("**/api/scenarios/77/background-audios", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify([]),
         });
     });
 
@@ -106,16 +152,24 @@ test("scenario page loads, selects thumbnails, and opens audio workspace", async
         });
     });
 
+    await page.route("**/api/audios/*/content", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "audio/wav",
+            body: wavBuffer(),
+        });
+    });
+
     await page.goto("/scenarios/77");
 
-    await expect(page.getByText("Scenario Alpha")).toBeVisible();
-    await expect(page.getByText("Owner view")).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Scenario Alpha"})).toBeVisible();
+    await expect(page.locator(".fiche-card")).toHaveCount(2);
+    await expect(page.locator(".studio-recorder")).toContainText("First");
 
-    await page.getByRole("button", {name: /selected thumbnail/i}).click();
-    await expect(page.getByText(/First/)).toBeVisible();
+    await page.locator(".fiche-card").nth(1).click();
+    await expect(page.locator(".studio-recorder")).toContainText("Second");
 
-    await page.getByRole("button", {name: /audio workspace/i}).click();
-    await expect(page.getByText("Existing audio clips")).toBeVisible();
-
-    await page.getByRole("button", {name: "Play"}).first().click();
+    await expect(page.locator('button[title="Preview scenario"]')).toBeEnabled();
+    await page.locator('button[title="Preview scenario"]').click();
+    await expect(page.locator(".reader-grid")).toBeVisible();
 });

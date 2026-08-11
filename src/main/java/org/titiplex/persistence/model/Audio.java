@@ -7,7 +7,9 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@Table(name = "audio")
+@Table(name = "audio", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_audio_scenario_sha256", columnNames = {"scenario_id", "audio_sha256"})
+})
 public class Audio {
 
     @Id
@@ -24,7 +26,7 @@ public class Audio {
     @Column(name = "original_filename")
     private String originalFilename;
 
-    @Column(name = "audio_sha256", nullable = false, unique = true, length = 64)
+    @Column(name = "audio_sha256", nullable = false, length = 64)
     private String audioSha256;
 
     @Column(name = "title", nullable = false)
@@ -36,6 +38,10 @@ public class Audio {
     @Column(name = "mime", nullable = false, length = 64)
     private String mime; //audio/webm
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scope", nullable = false, length = 32, columnDefinition = "varchar(32) default 'SCENE'")
+    private AudioScope scope = AudioScope.SCENE;
+
     @Column(name = "author_id", nullable = false)
     private Long authorId;
 
@@ -45,8 +51,14 @@ public class Audio {
     @Column(name = "language_id", nullable = false)
     private String languageId;
 
-    @Column(name = "thumbnail_id", nullable = false)
+    @Column(name = "thumbnail_id")
     private Long thumbnailId;
+
+    @Column(name = "source_label", length = 180)
+    private String sourceLabel;
+
+    @Column(name = "source_url", length = 512)
+    private String sourceUrl;
 
     @Column(name = "marker_x")
     private Double markerX;

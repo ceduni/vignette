@@ -1,6 +1,7 @@
 <script setup>
 import {computed, onMounted, ref} from "vue";
 import {RouterLink} from "vue-router";
+import AdminWorkspaceShell from "../components/admin/AdminWorkspaceShell.vue";
 import {fetchAdminScenarios, updateAdminScenarioVisibility} from "../api/admin";
 
 const loading = ref(false);
@@ -84,11 +85,13 @@ onMounted(loadScenarios);
 </script>
 
 <template>
-  <main class="page">
-    <section class="section">
+  <AdminWorkspaceShell
+      title="Scenarios"
+      subtitle="Manage visibility and moderation."
+  >
       <div class="section-heading">
         <div>
-          <h1>Admin scenarios</h1>
+          <h2>Scenarios</h2>
           <p class="muted">
             Review all scenarios and adjust visibility with a cleaner administration workflow.
           </p>
@@ -190,8 +193,7 @@ onMounted(loadScenarios);
         <h3>No scenario found</h3>
         <p class="muted">Try another search term.</p>
       </div>
-    </section>
-  </main>
+  </AdminWorkspaceShell>
 </template>
 
 <style scoped>
@@ -208,7 +210,7 @@ onMounted(loadScenarios);
 .admin-scenario-card {
   border-radius: 22px;
   padding: 24px 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 240, 0.96));
+  background: var(--surface);
   box-shadow: var(--shadow);
 }
 
@@ -238,12 +240,14 @@ onMounted(loadScenarios);
 
 .badge--success {
   background: var(--accent-green);
-  border-color: rgba(6, 118, 71, 0.22);
+  border-color: rgba(64, 92, 50, 0.2);
+  color: var(--vignette-success-text);
 }
 
 .badge--muted {
-  background: var(--accent-warm);
-  border-color: rgba(180, 35, 24, 0.12);
+  background: var(--vignette-primary-soft);
+  border-color: var(--border);
+  color: var(--primary);
 }
 
 .admin-scenario-card__description {
@@ -260,7 +264,7 @@ onMounted(loadScenarios);
 .meta-box {
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--surface-alt);
   padding: 12px 14px;
 }
 

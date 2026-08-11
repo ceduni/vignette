@@ -22,5 +22,15 @@ import EmergencyAudioRecorder from "../components/EmergencyAudioRecorder.vue";
 
 const route = useRoute();
 const isStudio = computed(() => route.name === "scenario-detail");
-const hideFooter = computed(() => route.name === "languages" || route.name === "languages-map");
+const isAdminRoute = computed(() => {
+  const path = String(route.path || "");
+  const name = String(route.name || "");
+  return path.startsWith("/admin") || name.startsWith("admin");
+});
+const hideFooter = computed(
+    () =>
+        route.name === "languages" ||
+        route.name === "languages-map" ||
+        isAdminRoute.value
+);
 </script>

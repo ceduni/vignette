@@ -32,8 +32,16 @@ public class FileStorageService {
             Map.entry("audio/mp4", ".mp4"),
             Map.entry("audio/aac", ".aac"),
             Map.entry("audio/mpeg", ".mp3"),
+            Map.entry("audio/mp3", ".mp3"),
             Map.entry("audio/wav", ".wav"),
-            Map.entry("audio/x-wav", ".wav")
+            Map.entry("audio/x-wav", ".wav"),
+            Map.entry("audio/wave", ".wav"),
+            Map.entry("audio/flac", ".flac"),
+            Map.entry("audio/x-flac", ".flac"),
+            Map.entry("audio/x-m4a", ".m4a"),
+            Map.entry("audio/opus", ".opus"),
+            Map.entry("audio/aiff", ".aiff"),
+            Map.entry("audio/x-aiff", ".aiff")
     );
 
     private final StorageProperties properties;
@@ -55,6 +63,10 @@ public class FileStorageService {
 
     public StoredFile storeAudio(MultipartFile file, long scenarioId, long thumbnailId) throws Exception {
         return store(file, "audios/scenario-" + scenarioId + "/thumbnail-" + thumbnailId);
+    }
+
+    public StoredFile storeScenarioAudio(MultipartFile file, long scenarioId) throws Exception {
+        return store(file, "audios/scenario-" + scenarioId + "/background");
     }
 
     private StoredFile store(MultipartFile file, String logicalDir) throws Exception {

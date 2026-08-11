@@ -13,5 +13,6 @@ import WorldLanguageMap from "@/components/maps/WorldLanguageMap.vue";
 <style scoped>
 .language-world-page {
   max-width: 1400px;
+  background: transparent;
 }
 </style>

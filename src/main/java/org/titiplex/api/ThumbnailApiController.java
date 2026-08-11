@@ -24,8 +24,10 @@ import org.titiplex.api.security.OwnerOrAdminOperation;
 import org.titiplex.api.security.ProtectedResource;
 import org.titiplex.api.security.PublicOperation;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
@@ -43,11 +45,18 @@ public class ThumbnailApiController {
     private final ThumbnailService thumbnailService;
     private final UserService userService;
     private final ScenarioService scenarioService;
+    private final ScenarioHistoryService scenarioHistoryService;
 
-    public ThumbnailApiController(ThumbnailService thumbnailService, UserService userService, ScenarioService scenarioService) {
+    public ThumbnailApiController(
+            ThumbnailService thumbnailService,
+            UserService userService,
+            ScenarioService scenarioService,
+            ScenarioHistoryService scenarioHistoryService
+    ) {
         this.thumbnailService = thumbnailService;
         this.userService = userService;
         this.scenarioService = scenarioService;
+        this.scenarioHistoryService = scenarioHistoryService;
     }
 
     /**
@@ -216,6 +225,12 @@ public class ThumbnailApiController {
         scenarioService.assertCanEditScenario(scenario, auth);
 
         Thumbnail saved = thumbnailService.save(title, image, scenario, user);
+
+        String historySummary = (saved.getTitle() != null && !saved.getTitle().isBlank())
+                ? "Added thumbnail \"" + saved.getTitle() + "\""
+                : "Added a thumbnail";
+        scenarioHistoryService.record(scenario.getId(), user.getId(), ScenarioHistoryAction.THUMBNAIL_ADDED, historySummary);
+
         return new UploadResponse(saved.getId());
     }
 
@@ -263,19 +278,6 @@ public class ThumbnailApiController {
                 .eTag(media.etag())
                 .header("Cache-Control", "public, max-age=3600")
                 .body(media.resource());
-    }
-
-    @Operation(summary = "Delete a thumbnail")
-    @DeleteMapping("/thumbnails/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(
-            @PathVariable Long id,
-            @Parameter(hidden = true) Authentication auth
-    ) {
-        Thumbnail thumbnail = thumbnailService.getThumbnailById(id);
-        Scenario scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
-        scenarioService.assertCanEditScenario(scenario, auth);
-        thumbnailService.delete(id);
     }
 
     @Operation(
@@ -363,6 +365,9 @@ public class ThumbnailApiController {
 
         Thumbnail saved = thumbnailService.updateLayout(id, req);
 
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenario.getId(), actorId, ScenarioHistoryAction.THUMBNAIL_UPDATED, "Repositioned a thumbnail");
+
         return new ThumbnailRowDto(
                 saved.getId(),
                 saved.getTitle(),
@@ -374,5 +379,36 @@ public class ThumbnailApiController {
                 saved.getImageWidth(),
                 saved.getImageHeight()
         );
+    }
+
+    @Operation(
+            summary = "Delete a thumbnail",
+            description = "Deletes a thumbnail and its associated audio clips. Requires scenario ownership or admin privileges."
+    )
+    @OwnerOrAdminOperation(
+            resource = ProtectedResource.THUMBNAIL
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Thumbnail successfully deleted"),
+            @ApiResponse(responseCode = "401", description = "Authentication required", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden : not the scenario owner or admin", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "404", description = "Thumbnail not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    @DeleteMapping("/thumbnails/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @Parameter(description = "ID of the thumbnail to delete", required = true)
+            @PathVariable Long id,
+
+            @Parameter(hidden = true)
+            Authentication auth
+    ) {
+        Thumbnail thumbnail = thumbnailService.getThumbnailById(id);
+        Long scenarioId = thumbnail.getScenarioId();
+
+        thumbnailService.delete(id);
+
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.THUMBNAIL_DELETED, "Deleted a thumbnail");
     }
 }

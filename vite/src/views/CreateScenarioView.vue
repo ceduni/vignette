@@ -1,16 +1,19 @@
 <script setup>
 import {computed, onMounted, onUnmounted, ref} from "vue";
-import {RouterLink, useRouter} from "vue-router";
+import {RouterLink, useRoute, useRouter} from "vue-router";
 import {fetchLanguageOptions} from "../api/languages";
 import {createScenario} from "../api/scenarios";
 import BaseAlert from "../components/ui/BaseAlert.vue";
 import {useToast} from "../composables/useToast";
 import TagAutocompleteInput from "@/components/TagAutocompleteInput.vue";
 
+const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 
-const form = ref({title: "", description: "", languageId: "", tags: [], audience: "community", allowComments: true, allowTranscription: true, allowDownload: false});
+const pendingDraftAudioId = route.query.draftAudio ? String(route.query.draftAudio) : "";
+
+const form = ref({title: route.query.draftTitle ? String(route.query.draftTitle) : "", description: "", languageId: "", tags: [], audience: "community", allowComments: true, allowTranscription: true, allowDownload: false});
 const languages = ref([]);
 const langQuery = ref("");
 const selectedLanguage = ref(null);
@@ -90,7 +93,11 @@ async function submit() {
       allowDownload: form.value.allowDownload,
     });
     toast.success("Scenario created!");
-    router.push(`/scenarios/${created.id}`);
+    router.push(
+        pendingDraftAudioId
+            ? `/scenarios/${created.id}?draftAudio=${pendingDraftAudioId}`
+            : `/scenarios/${created.id}`
+    );
   } catch (e) {
     const msg = e.message || "";
     error.value = msg.toLowerCase().includes("unique") || msg.includes("23505") || msg.includes("duplicate")
@@ -136,8 +143,12 @@ onUnmounted(() => {
     <div class="cs-hero">
       <div class="cs-hero__eyebrow">New scenario</div>
       <h1 class="cs-hero__title">What story are<br>you documenting?</h1>
-      <p class="cs-hero__sub">Fill in the basics — you'll land straight in the studio to add scenes and audio.</p>
+      <p class="cs-hero__sub">Fill in the basics, then you'll land straight in the studio to add scenes and audio.</p>
     </div>
+
+    <BaseAlert v-if="pendingDraftAudioId" type="info" class="cs-draft-notice">
+      Your emergency recording is saved. Pick a language below and it'll be waiting for you in the studio.
+    </BaseAlert>
 
     <div class="cs-body">
 
@@ -437,6 +448,12 @@ onUnmounted(() => {
   color: var(--text-soft);
   font-size: 1rem;
   max-width: 520px;
+}
+
+.cs-draft-notice {
+  max-width: 1100px;
+  margin: 0 auto 24px;
+  padding: 0 24px;
 }
 
 .cs-body {

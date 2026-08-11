@@ -18,6 +18,7 @@ import org.titiplex.api.dto.UploadResponse;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
@@ -43,6 +44,9 @@ class ThumbnailApiControllerTest {
 
     @Mock
     private ScenarioService scenarioService;
+
+    @Mock
+    private ScenarioHistoryService scenarioHistoryService;
 
     @InjectMocks
     private ThumbnailApiController controller;
@@ -162,9 +166,14 @@ class ThumbnailApiControllerTest {
 
         UpdateThumbnailLayoutRequest request = new UpdateThumbnailLayoutRequest(2, 3, 2, 1);
 
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+
         when(thumbnailService.getThumbnailById(8L)).thenReturn(existing);
         when(scenarioService.getRequiredScenario(9L)).thenReturn(scenario);
         when(thumbnailService.updateLayout(8L, request)).thenReturn(saved);
+        when(userService.getUserByUsername("alice")).thenReturn(user);
 
         ThumbnailRowDto result = controller.updateLayout(8L, request, auth);
 
@@ -174,6 +183,27 @@ class ThumbnailApiControllerTest {
         assertEquals(3, result.gridRow());
         assertEquals(2, result.gridColumnSpan());
         assertEquals(1, result.gridRowSpan());
+    }
+
+    @Test
+    void delete_removesThumbnailAndRecordsHistory() {
+        Authentication auth = auth("alice", "ROLE_USER");
+
+        Thumbnail existing = new Thumbnail();
+        existing.setId(8L);
+        existing.setScenarioId(9L);
+
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+
+        when(thumbnailService.getThumbnailById(8L)).thenReturn(existing);
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
+        controller.delete(8L, auth);
+
+        verify(thumbnailService).delete(8L);
+        verify(scenarioHistoryService).record(9L, 12L, org.titiplex.persistence.model.ScenarioHistoryAction.THUMBNAIL_DELETED, "Deleted a thumbnail");
     }
 
     private Authentication auth(String username, String... authorities) {

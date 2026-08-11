@@ -60,6 +60,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/languages/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/countries/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/scenarios/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/scenarios/*/thumbnails").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/thumbnails/**").permitAll()

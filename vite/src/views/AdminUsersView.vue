@@ -1,5 +1,6 @@
 <script setup>
 import {computed, onMounted, ref} from "vue";
+import AdminWorkspaceShell from "../components/admin/AdminWorkspaceShell.vue";
 import {fetchAdminUsers, updateAdminUserRoles} from "../api/admin";
 
 const loading = ref(false);
@@ -159,11 +160,13 @@ onMounted(loadUsers);
 </script>
 
 <template>
-  <main class="page">
-    <section class="section">
+  <AdminWorkspaceShell
+      title="Users"
+      subtitle="Manage accounts and roles."
+  >
       <div class="section-heading">
         <div>
-          <h1>Admin users</h1>
+          <h2>Users</h2>
           <p class="muted">
             Review accounts and update editable roles. Sensitive roles remain visible but locked.
           </p>
@@ -247,8 +250,7 @@ onMounted(loadUsers);
         <h3>No user found</h3>
         <p class="muted">Try another search term.</p>
       </div>
-    </section>
-  </main>
+  </AdminWorkspaceShell>
 </template>
 
 <style scoped>
@@ -265,7 +267,7 @@ onMounted(loadUsers);
 .admin-user-card {
   border-radius: 22px;
   padding: 24px 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 240, 0.96));
+  background: var(--surface);
   box-shadow: var(--shadow);
 }
 
@@ -294,8 +296,9 @@ onMounted(loadUsers);
 }
 
 .badge--accent {
-  background: var(--accent-cool);
-  border-color: rgba(91, 25, 40, 0.18);
+  background: var(--vignette-primary-soft);
+  border-color: var(--border);
+  color: var(--primary);
 }
 
 .admin-user-card__roles {
@@ -309,7 +312,7 @@ onMounted(loadUsers);
   appearance: none;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
   padding: 0.8rem 1rem;
   min-width: 180px;
@@ -323,18 +326,18 @@ onMounted(loadUsers);
 
 .role-pill:hover:not(:disabled) {
   transform: translateY(-1px);
-  border-color: rgba(91, 25, 40, 0.28);
-  background: #fbfefe;
+  border-color: rgba(109, 31, 52, 0.28);
+  background: var(--surface-alt);
 }
 
 .role-pill.is-active {
-  background: linear-gradient(180deg, #DFE8DA 0%, #F5E7E4 100%);
-  border-color: rgba(91, 25, 40, 0.35);
+  background: linear-gradient(180deg, var(--vignette-success-bg) 0%, var(--vignette-surface-soft) 100%);
+  border-color: rgba(109, 31, 52, 0.35);
 }
 
 .role-pill.is-locked {
-  background: #f3f4f6;
-  border-color: #d4d8de;
+  background: var(--surface-alt);
+  border-color: var(--border);
   color: var(--text-soft);
   cursor: not-allowed;
   opacity: 0.88;

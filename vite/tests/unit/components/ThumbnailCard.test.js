@@ -1,13 +1,6 @@
 import {mount} from "@vue/test-utils";
 import ThumbnailCard from "@/components/ThumbnailCard.vue";
 
-vi.mock("@/components/ui/BaseBadge.vue", () => ({
-    default: {
-        name: "BaseBadge",
-        template: "<span><slot /></span>",
-    },
-}));
-
 describe("ThumbnailCard", () => {
     const thumb = {
         id: 12,
@@ -28,40 +21,63 @@ describe("ThumbnailCard", () => {
         expect(wrapper.emitted("select")).toEqual([[thumb]]);
     });
 
-    it("emits select and play when play button is clicked", async () => {
+    it("asks for confirmation and emits delete when confirmed", async () => {
+        const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
         const wrapper = mount(ThumbnailCard, {
             props: {
                 thumb,
                 audios: [],
+                canDelete: true,
             },
         });
 
-        await wrapper.find(".storyboard-tile__play").trigger("click");
+        await wrapper.find(".storyboard-tile__delete").trigger("click");
 
-        expect(wrapper.emitted("select")).toEqual([[thumb]]);
-        expect(wrapper.emitted("play")).toEqual([[thumb]]);
+        expect(confirmSpy).toHaveBeenCalled();
+        expect(wrapper.emitted("delete")).toEqual([[thumb]]);
+
+        confirmSpy.mockRestore();
     });
 
-    it("renders only valid markers and clamps coordinates", () => {
+    it("does not emit delete when confirmation is declined", async () => {
+        const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
         const wrapper = mount(ThumbnailCard, {
             props: {
                 thumb,
-                audios: [
-                    {id: 1, markerX: 25, markerY: 50, title: "ok"},
-                    {id: 2, markerX: 120, markerY: -10, title: "clamped"},
-                    {id: 3, markerX: null, markerY: 40, title: "invalid"},
-                    {id: 4, markerX: "", markerY: "", title: "invalid-2"},
-                ],
+                audios: [],
+                canDelete: true,
             },
         });
 
-        const markers = wrapper.findAll(".storyboard-tile__marker");
-        expect(markers).toHaveLength(2);
+        await wrapper.find(".storyboard-tile__delete").trigger("click");
 
-        expect(markers[0].attributes("style")).toContain("left: 25%");
-        expect(markers[0].attributes("style")).toContain("top: 50%");
+        expect(confirmSpy).toHaveBeenCalled();
+        expect(wrapper.emitted("delete")).toBeUndefined();
 
-        expect(markers[1].attributes("style")).toContain("left: 100%");
-        expect(markers[1].attributes("style")).toContain("top: 0%");
+        confirmSpy.mockRestore();
+    });
+
+    it("shows direct move and resize controls for editable storyboards", async () => {
+        const wrapper = mount(ThumbnailCard, {
+            props: {
+                thumb,
+                audios: [{id: 8}],
+                canReorder: true,
+                canResize: true,
+                colSpan: 6,
+                rowSpan: 4,
+            },
+        });
+
+        expect(wrapper.find(".storyboard-tile__drag-handle").attributes("title")).toContain("move");
+        expect(wrapper.find(".storyboard-tile__size-badge").text()).toBe("6 × 4");
+        expect(wrapper.findAll(".storyboard-tile__handle")).toHaveLength(3);
+        expect(wrapper.find(".storyboard-tile__caption").text()).toContain("1 take");
+
+        await wrapper.find(".storyboard-tile__handle--corner").trigger("pointerdown");
+        expect(wrapper.emitted("resize-start")).toHaveLength(1);
+        expect(wrapper.emitted("resize-start")[0][0].direction).toBe("corner");
     });
 });

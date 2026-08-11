@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -46,6 +47,9 @@ class ThumbnailApiControllerWebMvcTest {
 
     @MockitoBean
     private ScenarioService scenarioService;
+
+    @MockitoBean
+    private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
@@ -173,5 +177,32 @@ class ThumbnailApiControllerWebMvcTest {
                 .andExpect(jsonPath("$.id").value(55));
 
         verify(thumbnailService).save("Intro", image, scenario, user);
+    }
+
+    @Test
+    void delete_requiresAuthentication() throws Exception {
+        mvc.perform(delete("/api/thumbnails/8").with(csrf()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void delete_allowsOwnerAndReturnsNoContent() throws Exception {
+        Thumbnail existing = new Thumbnail();
+        existing.setId(8L);
+        existing.setScenarioId(9L);
+
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+
+        when(thumbnailService.getThumbnailById(8L)).thenReturn(existing);
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
+        mvc.perform(delete("/api/thumbnails/8")
+                        .with(user("alice").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        verify(thumbnailService).delete(8L);
     }
 }

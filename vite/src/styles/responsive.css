@@ -82,6 +82,11 @@
         grid-template-columns: repeat(2, 1fr);
     }
 
+    .home-feed--scroll {
+        grid-template-columns: none;
+        grid-auto-columns: minmax(250px, calc((100% - 10px) / 2));
+    }
+
     .hero-globe {
         max-width: 340px;
         margin: 0 auto;
@@ -105,6 +110,24 @@
 @media (max-width: 560px) {
     .home-feed {
         grid-template-columns: 1fr;
+    }
+
+    .home-feed--scroll {
+        grid-template-columns: none;
+        grid-auto-columns: minmax(82vw, 1fr);
+    }
+
+    .home-community__head {
+        align-items: flex-start;
+    }
+
+    .home-community__actions {
+        align-items: flex-end;
+        flex-direction: column-reverse;
+    }
+
+    .home-community__btn {
+        padding-inline: 10px;
     }
 
     .home-title {

@@ -26,6 +26,7 @@ public class OwnershipSecurityServiceImpl implements OwnershipSecurityService {
 
         return switch (resource) {
             case SCENARIO -> scenarioSecurity.isOwner(id, username);
+            case SCENARIO_AUTHOR_ONLY -> scenarioSecurity.isAuthor(id, username);
             case THUMBNAIL -> thumbnailSecurity.isOwner(id, username);
             case AUDIO -> audioSecurity.isOwner(id, username);
         };

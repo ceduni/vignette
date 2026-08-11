@@ -13,29 +13,6 @@ export function nullableInt(value) {
     return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
-export function normalizeMarkers(audios) {
-    return (audios || [])
-        .filter((audio) =>
-            audio?.markerX !== null &&
-            audio?.markerX !== undefined &&
-            audio?.markerY !== null &&
-            audio?.markerY !== undefined &&
-            audio?.markerX !== "" &&
-            audio?.markerY !== ""
-        )
-        .map((audio) => {
-            const x = Number(audio.markerX);
-            const y = Number(audio.markerY);
-
-            return {
-                ...audio,
-                _x: Number.isFinite(x) ? clamp(x, 0, 100) : null,
-                _y: Number.isFinite(y) ? clamp(y, 0, 100) : null,
-            };
-        })
-        .filter((audio) => audio._x !== null && audio._y !== null);
-}
-
 export function sortByIdxThenId(items) {
     return [...(items || [])].sort((a, b) => {
         const aIdx = safeNumber(a?.idx, Number.MAX_SAFE_INTEGER);
@@ -62,9 +39,6 @@ export function buildPlaybackQueue(thumbnails, audioMap, buildAudioUrl) {
             audioIdx: audio.idx ?? null,
             audioTitle: audio.title ?? "",
             audioUrl: buildAudioUrl(audio),
-            markerX: audio.markerX,
-            markerY: audio.markerY,
-            markerLabel: audio.markerLabel,
         }));
     });
 }

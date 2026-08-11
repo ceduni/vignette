@@ -49,11 +49,12 @@ const panelDrag = ref({
 const visibleLevels = ref({
   language: true,
   dialect: false,
-  family: false,
 });
+const audioPreviewUi = ref(null);
 
 let previewAudioPlayer = null;
 let previewAudioStopTimer = null;
+let audioPreviewEmptyTimer = null;
 
 const {source: search, debounced} = useDebouncedRef(route.query.q ?? "", 350);
 const languageStore = useLanguageStore();
@@ -86,18 +87,13 @@ function normalizeCatalogRows(rows) {
 const filterOptions = computed(() => ([
   {
     key: "language",
-    label: "Langues",
+    label: "Languages",
     count: languages.value.filter((item) => item?.levelKey === "language").length,
   },
   {
     key: "dialect",
-    label: "Dialectes",
+    label: "Dialects",
     count: languages.value.filter((item) => item?.levelKey === "dialect").length,
-  },
-  {
-    key: "family",
-    label: "Familles",
-    count: languages.value.filter((item) => item?.levelKey === "family").length,
   },
 ]));
 
@@ -108,11 +104,14 @@ const filteredByLevel = computed(() => {
 
   if (!activeKeys.length) return [];
 
-  return languages.value.filter((item) => activeKeys.includes(item?.levelKey || "language"));
+  return languages.value.filter((item) => {
+    const key = item?.levelKey || "language";
+    if (key === "family") return false;
+    return activeKeys.includes(key);
+  });
 });
 
 const filteredLanguages = computed(() => {
-  // Important: catalogue stays independent from map click.
   return filteredByLevel.value;
 });
 const canPrevPage = computed(() => page.value > 0);
@@ -171,12 +170,47 @@ function bubbleNext() {
   bubbleOffset.value += BUBBLE_PAGE_SIZE;
 }
 
+function clearAudioPreviewEmptyTimer() {
+  if (audioPreviewEmptyTimer) {
+    window.clearTimeout(audioPreviewEmptyTimer);
+    audioPreviewEmptyTimer = null;
+  }
+}
+
+function hideAudioPreviewUi() {
+  clearAudioPreviewEmptyTimer();
+  audioPreviewUi.value = null;
+}
+
+function showPlayingPreviewUi(languageName) {
+  clearAudioPreviewEmptyTimer();
+  audioPreviewUi.value = {
+    mode: "playing",
+    languageName: String(languageName || "this language").trim() || "this language",
+  };
+}
+
+function showEmptyPreviewUi(languageName) {
+  clearAudioPreviewEmptyTimer();
+  audioPreviewUi.value = {
+    mode: "empty",
+    languageName: String(languageName || "").trim(),
+  };
+  audioPreviewEmptyTimer = window.setTimeout(() => {
+    if (audioPreviewUi.value?.mode === "empty") {
+      audioPreviewUi.value = null;
+    }
+    audioPreviewEmptyTimer = null;
+  }, 2800);
+}
+
 function previewLanguageAudio(item) {
   const languageId = String(item?.id ?? "");
   if (!languageId) return;
 
+  const languageName = String(item?.name ?? "").trim() || languageId;
   stopPreviewAudio();
-  console.info("Language selected for preview audio", {languageId, languageName: item?.name ?? ""});
+  console.info("Language selected for preview audio", {languageId, languageName});
 
   fetchLanguagePreviewAudio(languageId)
       .then(async (preview) => {
@@ -201,7 +235,7 @@ function previewLanguageAudio(item) {
         player.addEventListener("ended", stopPreviewAudio, {once: true});
 
         await player.play();
-        toast.info(`Lecture de 10 secondes : ${preview.title || item?.name || languageId}`);
+        showPlayingPreviewUi(languageName);
 
         previewAudioStopTimer = window.setTimeout(() => {
           if (previewAudioPlayer !== player) return;
@@ -211,9 +245,19 @@ function previewLanguageAudio(item) {
         }, 10000);
       })
       .catch((e) => {
-        const message = e?.message || "Aucun audio disponible pour cette langue.";
-        console.info("No preview audio available", {languageId, message});
-        toast.info(message);
+        console.info("No preview audio available", {
+          languageId,
+          message: e?.message || "",
+        });
+        if (previewAudioPlayer) {
+          previewAudioPlayer.pause();
+          previewAudioPlayer = null;
+        }
+        if (previewAudioStopTimer) {
+          window.clearTimeout(previewAudioStopTimer);
+          previewAudioStopTimer = null;
+        }
+        showEmptyPreviewUi(languageName);
       });
 }
 
@@ -249,6 +293,10 @@ function stopPreviewAudio() {
     previewAudioPlayer.pause();
     previewAudioPlayer.currentTime = 0;
     previewAudioPlayer = null;
+  }
+
+  if (audioPreviewUi.value?.mode === "playing") {
+    hideAudioPreviewUi();
   }
 }
 
@@ -480,13 +528,14 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopPreviewAudio();
+  hideAudioPreviewUi();
   stopPanelDrag();
   document.body.classList.remove("languages-fullscreen");
 });
 </script>
 
 <template>
-  <main class="page page--map">
+  <main class="page">
     <section class="section catalog-immersive">
       <div class="map-background">
         <WorldMap/>
@@ -516,7 +565,6 @@ onBeforeUnmount(() => {
       >
         <header class="bubble-header">
           <div>
-            <p class="bubble-label">Selected country</p>
             <h2>{{ selectedCountryBubble.name }}</h2>
           </div>
           <span class="bubble-iso">{{ selectedCountryBubble.isoA3 }}</span>
@@ -524,7 +572,7 @@ onBeforeUnmount(() => {
 
         <div v-if="selectedCountryBubble.languages.length" class="bubble-languages">
           <div class="bubble-toolbar">
-            <p class="bubble-meta">{{ bubbleFilteredLanguages.length }} langue(s)</p>
+            <p class="bubble-meta">{{ bubbleFilteredLanguages.length }} language(s)</p>
             <div class="bubble-nav">
               <button
                   type="button"
@@ -576,7 +624,7 @@ onBeforeUnmount(() => {
                 <button
                     type="button"
                     class="bubble-action bubble-action--muted"
-                    aria-label="Audio preview coming soon"
+                    aria-label="Play language preview audio"
                     @click.stop="previewLanguageAudio(language)"
                 >
                   <Volume2 :size="15"/>
@@ -660,21 +708,21 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="results-meta">
-                <span class="results-count">{{ filteredLanguages.length }} résultat(s)</span>
+                <span class="results-count">{{ filteredLanguages.length }} result(s)</span>
 
-                <div class="catalog-pager-inline" aria-label="Pagination langues">
+                <div class="catalog-pager-inline" aria-label="Language pagination">
                   <button
                       type="button"
                       class="catalog-pager-btn"
                       :disabled="!canPrevPage"
                       @click="goPrevPage"
-                      aria-label="Page précédente"
+                      aria-label="Previous page"
                   >
                     <ChevronLeft :size="18"/>
                   </button>
 
                   <span class="catalog-pager-label">
-                    {{ totalPages > 0 ? `Page ${page + 1} / ${totalPages}` : "Aucune page" }}
+                    {{ totalPages > 0 ? `Page ${page + 1} of ${totalPages}` : "No pages" }}
                   </span>
 
                   <button
@@ -682,7 +730,7 @@ onBeforeUnmount(() => {
                       class="catalog-pager-btn"
                       :disabled="!canNextPage"
                       @click="goNextPage"
-                      aria-label="Page suivante"
+                      aria-label="Next page"
                   >
                     <ChevronRight :size="18"/>
                   </button>
@@ -703,6 +751,29 @@ onBeforeUnmount(() => {
             </template>
           </div>
         </section>
+      </div>
+
+      <div
+          v-if="audioPreviewUi"
+          class="audio-preview-overlay"
+          :class="`audio-preview-overlay--${audioPreviewUi.mode}`"
+          role="status"
+          aria-live="polite"
+      >
+        <div class="audio-preview-stack">
+          <div class="audio-preview-visual" aria-hidden="true">
+            <Volume2 :size="36" stroke-width="1.7" class="audio-preview-icon"/>
+            <span v-if="audioPreviewUi.mode === 'playing'" class="audio-eq">
+              <i/><i/><i/><i/>
+            </span>
+          </div>
+          <p v-if="audioPreviewUi.mode === 'playing'" class="audio-preview-copy">
+            playing {{ audioPreviewUi.languageName }}...
+          </p>
+          <p v-else class="audio-preview-copy">
+            no scenario for this language for now
+          </p>
+        </div>
       </div>
 
       <div
@@ -796,6 +867,7 @@ onBeforeUnmount(() => {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background: #c56a3a;
 }
 
 .section {
@@ -821,7 +893,8 @@ onBeforeUnmount(() => {
   --ink-700: #4f3123;
   --ink-800: #3c2318;
   position: relative;
-  min-height: calc(100vh - 80px);
+  height: 100%;
+  min-height: 0;
   width: 100%;
   margin-left: 0;
   transform: none;
@@ -836,6 +909,7 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: 0;
   pointer-events: auto;
+  background: #c56a3a;
 }
 
 .catalog-foreground {
@@ -958,17 +1032,8 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
-.bubble-label {
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.69rem;
-  font-weight: 700;
-  color: #785068;
-}
-
 .bubble-header h2 {
-  margin: 0.24rem 0 0;
+  margin: 0;
   font-size: 1.08rem;
   color: #1E0812;
 }
@@ -1163,6 +1228,98 @@ onBeforeUnmount(() => {
   place-items: center;
   padding: 1rem;
   pointer-events: auto;
+}
+
+.audio-preview-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.audio-preview-stack {
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  animation: audio-preview-in 320ms ease;
+}
+
+.audio-preview-visual {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(255, 247, 241, 0.92);
+  filter: drop-shadow(0 3px 14px rgba(40, 16, 10, 0.4));
+}
+
+.audio-preview-icon {
+  opacity: 0.9;
+}
+
+.audio-preview-overlay--playing .audio-preview-icon {
+  animation: audio-icon-breathe 2.4s ease-in-out infinite;
+}
+
+.audio-eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 28px;
+}
+
+.audio-eq i {
+  display: block;
+  width: 3.5px;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255, 247, 241, 0.9);
+  animation: audio-eq-bar 1.35s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.audio-eq i:nth-child(1) { animation-delay: 0ms; }
+.audio-eq i:nth-child(2) { animation-delay: 160ms; }
+.audio-eq i:nth-child(3) { animation-delay: 80ms; }
+.audio-eq i:nth-child(4) { animation-delay: 220ms; }
+
+.audio-preview-copy {
+  margin: 0;
+  text-align: center;
+  max-width: min(380px, calc(100vw - 2.5rem));
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 248, 242, 0.94);
+  text-shadow: 0 2px 16px rgba(40, 16, 10, 0.5);
+}
+
+.audio-preview-overlay--empty .audio-preview-visual,
+.audio-preview-overlay--empty .audio-preview-copy {
+  opacity: 0.78;
+}
+
+@keyframes audio-preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes audio-icon-breathe {
+  0%, 100% { opacity: 0.82; }
+  50% { opacity: 1; }
+}
+
+@keyframes audio-eq-bar {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
+  50% { transform: scaleY(1); opacity: 0.95; }
 }
 
 .language-info-modal {

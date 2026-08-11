@@ -86,22 +86,6 @@ class LanguageApiControllerTest {
 
     @Test
     void getOneScenarios_mapsLanguageScenariosToDtos() {
-        User author = new User();
-        author.setId(7L);
-        author.setUsername("alice");
-
-        Scenario scenario = new Scenario();
-        scenario.setId(15L);
-        scenario.setTitle("Story 1");
-        scenario.setDescription("Intro story");
-        scenario.setLanguage_id("chuj");
-        scenario.setAuthor(author);
-        scenario.setCreatedAt(Instant.parse("2026-03-20T10:15:30Z"));
-
-        Language language = new Language();
-        language.setId("chuj");
-        language.setScenarios(Set.of(scenario));
-
         ScenarioDto dto = new ScenarioDto(
                 15L,
                 "Story 1",
@@ -115,11 +99,14 @@ class LanguageApiControllerTest {
                 null,
                 null,
                 List.of(),
-                null
+                null,
+                "NONE",
+                null,
+                null,
+                null, false
         );
 
-        when(languageService.getLanguage("chuj")).thenReturn(language);
-        when(scenarioService.toDto(scenario)).thenReturn(dto);
+        when(scenarioService.listScenariosByLanguageId("chuj")).thenReturn(List.of(dto));
 
         List<ScenarioDto> result = controller.getOneScenarios("chuj");
 

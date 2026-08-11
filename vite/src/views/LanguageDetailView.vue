@@ -1,202 +1,115 @@
 <script setup>
 import {computed, ref, watch} from "vue";
 import {RouterLink} from "vue-router";
-import {fetchLanguage, fetchLanguageScenarios, fetchMyLanguagePermissions, updateLanguage} from "../api/languages";
-import {fetchDiscussionMessages} from "../api/community";
+import {fetchLanguage, fetchLanguageScenarios, fetchMyLanguagePermissions} from "../api/languages";
 import {fetchScenarioThumbnails} from "../api/scenarios";
-import {buildApiUrl} from "../api/rest";
+import {buildApiUrl, apiFetch} from "../api/rest";
 import {useAuth} from "../composables/useAuth";
 import {useToast} from "../composables/useToast";
 import {useLanguageFollows} from "../composables/useLanguageFollows";
+import {useScenarioInteractions} from "../composables/useScenarioInteractions";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
+import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 import {useScenarioReader} from "../composables/useScenarioReader";
 import BaseLoader from "../components/ui/BaseLoader.vue";
 import BaseAlert from "../components/ui/BaseAlert.vue";
-import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import BaseBadge from "../components/ui/BaseBadge.vue";
-import DiscussionThread from "../components/community/DiscussionThread.vue";
 
-const props = defineProps({
-  id: {type: String, required: true},
-});
+const props = defineProps({ id: { type: String, required: true } });
 
-const {loadMe, isAuthenticated} = useAuth();
+const { loadMe, isAuthenticated, currentUser } = useAuth();
 const toast = useToast();
 const { openReader, activeScenario, closeReader } = useScenarioReader();
+const { isLiked, toggleLike, isBookmarked, toggleBookmark } = useScenarioInteractions();
 
-const language = ref(null);
-const scenarios = ref([]);
-const permissions = ref({canEdit: false});
-const messages = ref([]);
-const error = ref("");
-const loading = ref(false);
-const saving = ref(false);
-const saveError = ref("");
-const saveSuccess = ref("");
-const activeTab = ref("overview");
+const language   = ref(null);
+const scenarios  = ref([]);
+const error      = ref("");
+const loading    = ref(false);
 
-// --- Suivre ---
 const { isFollowing: isFollowingFn, toggleFollow: toggleFollowFn, followedIdsArray } = useLanguageFollows();
-
-// ref local synchronisé — garantit la réactivité dans ce composant
-const isFollowing = ref(isFollowingFn(props.id));
-
-// Re-sync quand followedIdsArray change (ex: toggle depuis un autre composant)
-watch(followedIdsArray, () => {
-  isFollowing.value = isFollowingFn(props.id);
-}, { deep: false });
-
-function loadFollowState(id) {
-  isFollowing.value = isFollowingFn(id);
-}
+const isFollowing = ref(false);
+watch(followedIdsArray, () => { isFollowing.value = isFollowingFn(props.id); });
 
 async function toggleFollow() {
   if (!isAuthenticated.value) return;
-  const wasFollowing = isFollowing.value;
+  const was = isFollowing.value;
   await toggleFollowFn(props.id, language.value?.name ?? null);
-  // Sync local après le toggle
   isFollowing.value = isFollowingFn(props.id);
-  toast.success(!wasFollowing
-    ? `Following ${language.value?.name ?? "this language"}.`
-    : `Unfollowed ${language.value?.name ?? "this language"}.`
+  toast.success(was
+    ? `Unfollowed ${language.value?.name ?? "this language"}.`
+    : `Following ${language.value?.name ?? "this language"}.`
   );
 }
 
-// --- Placeholders démo ---
-const DEMO_DISCUSSIONS = [
-  { id: "d1", authorUsername: "linguist_sara", content: "Does this language have a tonal system? I noticed some patterns in the recordings that suggest pitch distinctions.", parentMessageId: null, createdAt: new Date(Date.now() - 3600000 * 2).toISOString() },
-  { id: "d2", authorUsername: "prof_martinez", content: "The phonological inventory is fascinating — especially the click consonants documented in scenario 3.", parentMessageId: null, createdAt: new Date(Date.now() - 3600000 * 5).toISOString() },
-  { id: "d3", authorUsername: "community_nana", content: "My grandmother speaks this language natively. Happy to contribute recordings if needed!", parentMessageId: null, createdAt: new Date(Date.now() - 3600000 * 24).toISOString() },
-  { id: "d4", authorUsername: "linguist_sara", content: "Reply to the tonal question", parentMessageId: "d1", createdAt: new Date(Date.now() - 3600000).toISOString() },
-  { id: "d5", authorUsername: "prof_martinez", content: "Another reply", parentMessageId: "d1", createdAt: new Date(Date.now() - 1800000).toISOString() },
-];
+const thumbnailUrls = ref({});
+const likeCounts    = ref({}); // { scenarioId: number }
 
-const DEMO_SCENARIOS = [
-  { id: "s1", title: "Market conversation", authorUsername: "prof_martinez", visibilityStatus: "PUBLISHED", createdAt: new Date(Date.now() - 3600000 * 48).toISOString(), description: "A typical exchange at a local market, covering greetings, numbers and basic transactions." },
-  { id: "s2", title: "Family gathering", authorUsername: "community_nana", visibilityStatus: "PUBLISHED", createdAt: new Date(Date.now() - 3600000 * 72).toISOString(), description: "Vocabulary and phrases used during a traditional family gathering." },
-  { id: "s3", title: "Nature and seasons", authorUsername: "linguist_sara", visibilityStatus: "PUBLISHED", createdAt: new Date(Date.now() - 3600000 * 96).toISOString(), description: "Environmental vocabulary and seasonal expressions." },
-];
-
-const DEMO_CONTRIBUTORS = ["linguist_sara", "prof_martinez", "community_nana", "ariane_l", "researcher_ko"];
-
-// --- Données dérivées ---
-const effectiveMessages = computed(() =>
-  messages.value.length > 0 ? messages.value : DEMO_DISCUSSIONS
-);
-
-const effectiveScenarios = computed(() =>
-  scenarios.value.length > 0 ? scenarios.value : DEMO_SCENARIOS
-);
-
-const isDemoMode = computed(() =>
-  messages.value.length === 0 && scenarios.value.length === 0
-);
-
-const rootMessages = computed(() =>
-  effectiveMessages.value.filter((m) => m.parentMessageId == null)
-);
-
-const replyCountById = computed(() => {
+async function loadThumbnails(list) {
+  const urls   = {};
   const counts = {};
-  for (const m of effectiveMessages.value) {
-    if (m.parentMessageId != null) {
-      const pid = String(m.parentMessageId);
-      counts[pid] = (counts[pid] ?? 0) + 1;
-    }
-  }
-  return counts;
-});
-
-const popularDiscussions = computed(() =>
-  [...rootMessages.value]
-    .sort((a, b) => (replyCountById.value[String(b.id)] ?? 0) - (replyCountById.value[String(a.id)] ?? 0))
-    .slice(0, 3)
-);
-
-const recentScenarios = computed(() =>
-  [...effectiveScenarios.value]
-    .filter((s) => s.visibilityStatus === "PUBLISHED")
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5)
-);
-
-const activeContributors = computed(() => {
-  if (isDemoMode.value) return DEMO_CONTRIBUTORS;
-  const seen = new Set();
-  const contributors = [];
-  for (const m of [...messages.value].reverse()) {
-    if (m.authorUsername && !seen.has(m.authorUsername)) {
-      seen.add(m.authorUsername);
-      contributors.push(m.authorUsername);
-    }
-    if (contributors.length >= 6) break;
-  }
-  return contributors;
-});
-
-// --- Carousel ---
-const carouselIndex = ref(0);
-const CARD_WIDTH = 220;
-const CARD_GAP = 14;
-const PEEK = 28;
-
-const carouselOffset = computed(() =>
-  -(carouselIndex.value * (CARD_WIDTH + CARD_GAP)) + PEEK
-);
-
-function carouselScroll(dir) {
-  const next = carouselIndex.value + dir;
-  if (next < 0 || next >= recentScenarios.value.length) return;
-  carouselIndex.value = next;
+  await Promise.all(list.map(async (s) => {
+    try {
+      const thumbs = await fetchScenarioThumbnails(s.id);
+      if (thumbs?.length) {
+        const sorted = [...thumbs].sort((a, b) => (a.idx ?? a.id) - (b.idx ?? b.id));
+        urls[s.id] = buildApiUrl(`/api/thumbnails/${sorted[0].id}/content`);
+      }
+    } catch {}
+    try {
+      const status = await apiFetch(`/api/scenarios/${s.id}/interactions`);
+      counts[s.id] = status?.likeCount ?? 0;
+    } catch { counts[s.id] = 0; }
+  }));
+  thumbnailUrls.value = urls;
+  likeCounts.value    = counts;
+  likeCountMap.value  = { ...counts };
 }
 
-function carouselGoTo(i) {
-  carouselIndex.value = i;
-}
+const search      = ref("");
+const activeTag   = ref("");
+const sortBy      = ref("recent"); // "recent" | "title"
+const sortOpen    = ref(false);
+const infoOpen      = ref(false);
+const discussionScenario = ref(null);
+function openDiscussion(s) { discussionScenario.value = s; }
+function closeDiscussion() { discussionScenario.value = null; }
+const likeCountMap  = ref({}); // reactive local like counts { scenarioId: number }
+const viewMode    = ref("grid");   // "grid" | "single"
 
-const scenarioThumbnailUrls = ref({});
+const allTags = computed(() => {
+  const set = new Set();
+  for (const s of scenarios.value) {
+    for (const t of (s.tags ?? [])) set.add(t);
+  }
+  return [...set].sort();
+});
 
-async function loadCarouselThumbnails(scenarioList) {
-  const urls = {};
-  await Promise.all(
-    scenarioList.map(async (s) => {
-      try {
-        const thumbs = await fetchScenarioThumbnails(s.id);
-        if (thumbs?.length) {
-          const sorted = [...thumbs].sort((a, b) => (a.idx ?? a.id) - (b.idx ?? b.id));
-          urls[s.id] = buildApiUrl(`/api/thumbnails/${sorted[0].id}/content`);
-        }
-      } catch { /* silencieux */ }
-    })
+const published = computed(() =>
+  scenarios.value.filter(s => s.visibilityStatus === "PUBLISHED")
+);
+
+const filtered = computed(() => {
+  let list = published.value;
+  const q = search.value.trim().toLowerCase();
+  if (q) list = list.filter(s =>
+    [s.title ?? "", s.authorUsername ?? "", s.description ?? "", ...(s.tags ?? [])]
+      .some(v => v.toLowerCase().includes(q))
   );
-  scenarioThumbnailUrls.value = urls;
-}
-
-function avatarColor(username) {
-  const colors = ["#C04A08", "#982800", "#7A3812", "#D4580A", "#b45309", "#065f46", "#6d28d9", "#1e40af"];
-  if (!username) return colors[0];
-  return colors[username.charCodeAt(0) % colors.length];
-}
-
-function authorInitials(username) {
-  if (!username) return "?";
-  return username.slice(0, 2).toUpperCase();
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
-
-// --- Formulaire d'édition ---
-const editForm = ref({
-  name: "", level: "", bookkeeping: false, iso639P3code: "",
-  latitude: "", longitude: "", countryIds: "", familyId: "",
-  parentId: "", description: "", markupDescription: "",
+  if (activeTag.value) list = list.filter(s => (s.tags ?? []).includes(activeTag.value));
+  if (sortBy.value === "title") list = [...list].sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
+  else list = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return list;
 });
-const isEditing = ref(false);
+
+const singleIndex = ref(0);
+watch(filtered, () => { singleIndex.value = 0; infoOpen.value = false; });
+watch(singleIndex, () => {
+  infoOpen.value = false;
+});
+const currentScenario = computed(() => filtered.value[singleIndex.value] ?? null);
+function prevScenario() { if (singleIndex.value > 0) singleIndex.value--; }
+function nextScenario() { if (singleIndex.value < filtered.value.length - 1) singleIndex.value++; }
 
 function levelVariant(level) {
   if (!level) return "neutral";
@@ -207,150 +120,104 @@ function levelVariant(level) {
   return "neutral";
 }
 
-function hydrateForm(lang) {
-  editForm.value = {
-    name: lang?.name ?? "", level: lang?.level ?? "",
-    bookkeeping: !!lang?.bookkeeping, iso639P3code: lang?.iso639P3code ?? "",
-    latitude: lang?.latitude ?? "", longitude: lang?.longitude ?? "",
-    countryIds: lang?.countryIds ?? "", familyId: lang?.familyId ?? "",
-    parentId: lang?.parentId ?? "", description: lang?.description ?? "",
-    markupDescription: lang?.markupDescription ?? "",
-  };
+function formatDate(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
-const canEditLanguage = computed(() => !!permissions.value?.canEdit);
+function handleToggleLike(scenarioId) {
+  const id = String(scenarioId);
+  const wasLiked = isLiked(id);
+  const current = likeCountMap.value[id] ?? 0;
+  likeCountMap.value = { ...likeCountMap.value, [id]: current + (wasLiked ? -1 : 1) };
+  toggleLike(id);
+}
+
+function avatarColor(username) {
+  const colors = ["#C04A08","#982800","#7A3812","#D4580A","#b45309","#065f46","#6d28d9","#1e40af"];
+  return username ? colors[username.charCodeAt(0) % colors.length] : colors[0];
+}
+
+const TILE_GRADIENTS = [
+  "linear-gradient(135deg,#D4E5CA,#c5d9b8)",
+  "linear-gradient(135deg,#FFE0C0,#FFF0EE)",
+  "linear-gradient(135deg,#c5d9b8,#afc8a0)",
+  "linear-gradient(135deg,#ddd4f5,#c8bde8)",
+  "linear-gradient(135deg,#A8C498,#8fb87f)",
+];
+function placeholderGradient(i) { return TILE_GRADIENTS[i % TILE_GRADIENTS.length]; }
 
 async function load(id) {
   loading.value = true;
-  error.value = "";
+  error.value   = "";
   language.value = null;
   scenarios.value = [];
-  messages.value = [];
-  permissions.value = {canEdit: false};
+  search.value = "";
+  activeTag.value = "";
+  singleIndex.value = 0;
 
   try {
     await loadMe();
-    const baseCalls = [fetchLanguage(id), fetchLanguageScenarios(id)];
-    if (isAuthenticated.value) baseCalls.push(fetchMyLanguagePermissions(id));
-    const results = await Promise.all(baseCalls);
-    language.value = results[0];
-    scenarios.value = results[1];
-    permissions.value = isAuthenticated.value ? results[2] : {canEdit: false};
-    hydrateForm(language.value);
-    messages.value = await fetchDiscussionMessages("LANGUAGE", id);
-    await loadCarouselThumbnails(
-      [...scenarios.value]
-        .filter((s) => s.visibilityStatus === "PUBLISHED")
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5)
-    );
+    const [lang, scens] = await Promise.all([
+      fetchLanguage(id),
+      fetchLanguageScenarios(id),
+    ]);
+    language.value  = lang;
+    scenarios.value = scens;
+    isFollowing.value = isFollowingFn(id);
+    await loadThumbnails(scens.filter(s => s.visibilityStatus === "PUBLISHED"));
   } catch (e) {
-    error.value = e.message || "Failed to load language details.";
+    error.value = e.message || "Failed to load.";
   } finally {
     loading.value = false;
   }
 }
 
-async function saveLanguage() {
-  if (!language.value) return;
-  saving.value = true;
-  saveError.value = "";
-  saveSuccess.value = "";
-  try {
-    const payload = {
-      name: editForm.value.name, level: editForm.value.level,
-      bookkeeping: editForm.value.bookkeeping, iso639P3code: editForm.value.iso639P3code,
-      latitude: editForm.value.latitude === "" ? null : Number(editForm.value.latitude),
-      longitude: editForm.value.longitude === "" ? null : Number(editForm.value.longitude),
-      countryIds: editForm.value.countryIds, familyId: editForm.value.familyId,
-      parentId: editForm.value.parentId, description: editForm.value.description,
-      markupDescription: editForm.value.markupDescription,
-    };
-    language.value = await updateLanguage(language.value.id, payload);
-    hydrateForm(language.value);
-    isEditing.value = false;
-    saveSuccess.value = "Language updated successfully.";
-    toast.success(saveSuccess.value);
-  } catch (e) {
-    saveError.value = e.message || "Failed to update language.";
-    toast.error(saveError.value);
-  } finally {
-    saving.value = false;
-  }
-}
-
-function cancelEdit() {
-  hydrateForm(language.value);
-  isEditing.value = false;
-  saveError.value = "";
-  saveSuccess.value = "";
-}
-
-watch(
-  () => props.id,
-  (id) => {
-    load(id);
-    loadFollowState(id);
-    activeTab.value = "overview";
-    carouselIndex.value = 0;
-  },
-  { immediate: true }
-);
+watch(() => props.id, (id) => load(id), { immediate: true });
 </script>
 
 <template>
-  <main class="page lang-page">
-    <BaseLoader v-if="loading">Loading language details...</BaseLoader>
+  <main class="lv-root">
+    <BaseLoader v-if="loading">Loading…</BaseLoader>
     <BaseAlert v-else-if="error" type="error">{{ error }}</BaseAlert>
 
     <template v-else-if="language">
-      <div class="lang-content">
 
-      <!-- Badge démo -->
-      <div v-if="isDemoMode" class="demo-banner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-        Preview mode — showing sample data to illustrate community features
-      </div>
-
-      <!-- Hero -->
-      <div class="lang-hero">
-        <div class="lang-hero__left">
-          <div class="lang-hero__icon">
+      <div class="lv-hero">
+        <div class="lv-hero__left">
+          <div class="lv-hero__icon" :style="{ background: `linear-gradient(135deg, ${avatarColor(language.name)} 0%, #1E0812 100%)` }">
             {{ (language.name ?? "?").slice(0, 2).toUpperCase() }}
           </div>
-          <div class="lang-hero__info">
-            <div class="lang-hero__badges">
+          <div class="lv-hero__info">
+            <div class="lv-hero__badges">
               <BaseBadge :variant="levelVariant(language.level)">{{ language.level ?? "Language" }}</BaseBadge>
-              <BaseBadge v-if="canEditLanguage" variant="success">Can edit</BaseBadge>
+              <BaseBadge v-if="language.iso639P3code" variant="neutral">
+                <code>{{ language.iso639P3code }}</code>
+              </BaseBadge>
             </div>
-            <h1 class="lang-hero__title">{{ language.name ?? "Language" }}</h1>
-            <p class="lang-hero__meta">
+            <h1 class="lv-hero__title">{{ language.name }}</h1>
+            <p class="lv-hero__meta">
               <span v-if="language.familyName">{{ language.familyName }}</span>
-              <span v-if="language.familyName && language.iso639P3code"> · </span>
-              <span v-if="language.iso639P3code">ISO: <code>{{ language.iso639P3code }}</code></span>
               <span v-if="language.countryIds"> · {{ language.countryIds }}</span>
             </p>
           </div>
         </div>
 
-        <div class="lang-hero__right">
-          <div class="lang-hero__stats">
-            <div class="lang-stat">
-              <span class="lang-stat__value">{{ activeContributors.length }}</span>
-              <span class="lang-stat__label">Members</span>
-            </div>
-            <div class="lang-stat">
-              <span class="lang-stat__value">{{ rootMessages.length }}</span>
-              <span class="lang-stat__label">Discussions</span>
-            </div>
-            <div class="lang-stat">
-              <span class="lang-stat__value">{{ effectiveScenarios.length }}</span>
-              <span class="lang-stat__label">Storyboards</span>
+        <div class="lv-hero__right">
+          <div class="lv-hero__stats">
+            <div class="lv-stat">
+              <span class="lv-stat__num">{{ published.length }}</span>
+              <span class="lv-stat__lbl">Scenarios</span>
             </div>
           </div>
-
-          <button v-if="isAuthenticated" type="button" class="follow-btn" :class="{ 'follow-btn--active': isFollowing }" @click="toggleFollow">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button
+            v-if="isAuthenticated"
+            type="button"
+            class="lv-follow-btn"
+            :class="{ 'lv-follow-btn--active': isFollowing }"
+            @click="toggleFollow"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
               <circle v-if="isFollowing" cx="19" cy="5" r="3" fill="currentColor" stroke="none"/>
@@ -360,729 +227,555 @@ watch(
         </div>
       </div>
 
-      <!-- Onglets -->
-      <nav class="lang-tabs">
-        <button class="lang-tab" :class="{ 'lang-tab--active': activeTab === 'overview' }" @click="activeTab = 'overview'">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-          Overview
-        </button>
-        <button class="lang-tab" :class="{ 'lang-tab--active': activeTab === 'discussion' }" @click="activeTab = 'discussion'">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Discussion
-          <span class="lang-tab__count">{{ rootMessages.length }}</span>
-        </button>
-        <button class="lang-tab" :class="{ 'lang-tab--active': activeTab === 'storyboards' }" @click="activeTab = 'storyboards'">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Storyboards
-          <span class="lang-tab__count">{{ effectiveScenarios.length }}</span>
-        </button>
-      </nav>
+      <div class="lv-toolbar">
 
-      <!-- Contenu -->
-      <div class="lang-body">
+        <div class="lv-search">
+          <svg class="lv-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input v-model="search" class="lv-search__input" placeholder="Search scenarios…"/>
+          <button v-if="search" type="button" class="lv-search__clear" @click="search = ''">×</button>
+        </div>
 
-        <!-- Overview -->
-        <div v-if="activeTab === 'overview'" class="lang-overview">
-
-          <!-- Métadonnées -->
-          <div class="lang-meta-grid">
-            <div class="lang-meta-card">
-              <span class="lang-meta-card__label">Family</span>
-              <RouterLink v-if="language.familyId" :to="`/languages/${language.familyId}`" class="lang-meta-card__value lang-meta-card__value--link">
-                {{ language.familyName ?? language.familyId }}
-              </RouterLink>
-              <span v-else class="lang-meta-card__value">—</span>
-            </div>
-            <div class="lang-meta-card">
-              <span class="lang-meta-card__label">Parent</span>
-              <RouterLink v-if="language.parentId" :to="`/languages/${language.parentId}`" class="lang-meta-card__value lang-meta-card__value--link">
-                {{ language.parentName ?? language.parentId }}
-              </RouterLink>
-              <span v-else class="lang-meta-card__value">—</span>
-            </div>
-            <div class="lang-meta-card">
-              <span class="lang-meta-card__label">Level</span>
-              <span class="lang-meta-card__value">{{ language.level ?? "—" }}</span>
-            </div>
+        <div class="lv-dropdown" :class="{ 'lv-dropdown--open': sortOpen }">
+          <button type="button" class="lv-dropdown__trigger" @click="sortOpen = !sortOpen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18M7 12h10M11 18h2"/>
+            </svg>
+            {{ sortBy === 'recent' ? 'Most recent' : 'Title A–Z' }}
+            <svg class="lv-dropdown__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </button>
+          <div v-if="sortOpen" class="lv-dropdown__menu">
+            <button type="button" class="lv-dropdown__item" :class="{ 'lv-dropdown__item--active': sortBy === 'recent' }" @click="sortBy = 'recent'; sortOpen = false">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Most recent
+            </button>
+            <button type="button" class="lv-dropdown__item" :class="{ 'lv-dropdown__item--active': sortBy === 'title' }" @click="sortBy = 'title'; sortOpen = false">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18M7 12h10M11 18h2"/>
+              </svg>
+              Title A–Z
+            </button>
           </div>
+        </div>
 
-          <!-- Description -->
-          <section class="card lang-description">
-            <div class="lang-description__header">
-              <h2>Description</h2>
-              <button v-if="canEditLanguage && !isEditing" type="button" class="btn btn--ghost" @click="isEditing = true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                Edit
+        <div class="lv-view-toggle">
+          <button
+            type="button"
+            class="lv-view-btn"
+            :class="{ 'lv-view-btn--active': viewMode === 'grid' }"
+            title="Grid view"
+            @click="viewMode = 'grid'"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="lv-view-btn"
+            :class="{ 'lv-view-btn--active': viewMode === 'single' }"
+            title="Single view"
+            @click="viewMode = 'single'"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div v-if="allTags.length" class="lv-tags">
+        <button
+          type="button"
+          class="lv-tag"
+          :class="{ 'lv-tag--active': activeTag === '' }"
+          @click="activeTag = ''"
+        >All</button>
+        <button
+          v-for="tag in allTags"
+          :key="tag"
+          type="button"
+          class="lv-tag"
+          :class="{ 'lv-tag--active': activeTag === tag }"
+          @click="activeTag = activeTag === tag ? '' : tag"
+        >#{{ tag }}</button>
+      </div>
+
+      <p class="lv-count">
+        {{ filtered.length }} scenario{{ filtered.length !== 1 ? 's' : '' }}
+        <span v-if="activeTag || search" class="lv-count__filtered">· filtered</span>
+      </p>
+
+      <div v-if="viewMode === 'grid'" class="lv-grid">
+        <div
+          v-for="(s, index) in filtered"
+          :key="s.id"
+          class="lv-card"
+        >
+          <button type="button" class="lv-card__thumb" @click="openReader(s)">
+            <img v-if="thumbnailUrls[s.id]" :src="thumbnailUrls[s.id]" :alt="s.title" class="lv-card__img"/>
+            <div v-else class="lv-card__placeholder" :style="{ background: placeholderGradient(index) }">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="lv-card__placeholder-icon">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </div>
+            <div class="lv-card__overlay"><span>Read →</span></div>
+          </button>
+
+          <div class="lv-card__body">
+            <button type="button" class="lv-card__title-btn" @click="openReader(s)">
+              {{ s.title || "Untitled" }}
+            </button>
+            <div class="lv-card__meta">
+              <span class="lv-card__author">{{ s.authorUsername ?? "Unknown" }}</span>
+            </div>
+            <div v-if="s.tags?.length" class="lv-card__tags">
+              <span v-for="tag in s.tags.slice(0, 3)" :key="tag" class="lv-card__tag">#{{ tag }}</span>
+            </div>
+            <div class="lv-card__actions">
+              <button type="button" class="lv-card__read-btn" @click="openReader(s)">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="12" height="12">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Read
+              </button>
+              <button
+                v-if="isAuthenticated"
+                type="button"
+                class="lv-card__icon-btn"
+                :class="{ 'lv-card__icon-btn--active': isLiked(s.id) }"
+                :title="isLiked(s.id) ? 'Unlike' : 'Like'"
+                @click="toggleLike(s.id)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" :fill="isLiked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </button>
+              <button
+                v-if="isAuthenticated"
+                type="button"
+                class="lv-card__icon-btn"
+                :class="{ 'lv-card__icon-btn--active': isBookmarked(s.id) }"
+                :title="isBookmarked(s.id) ? 'Remove bookmark' : 'Bookmark'"
+                @click="toggleBookmark(s.id)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" :fill="isBookmarked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </button>
+              <button
+                  type="button"
+                  class="lv-card__icon-btn"
+                  title="Discussion"
+                  @click="openDiscussion(s)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
               </button>
             </div>
-            <template v-if="isEditing">
-              <div class="form-grid">
-                <label>Name<input v-model="editForm.name"/></label>
-                <label>Level<input v-model="editForm.level"/></label>
-                <label>ISO 639-3<input v-model="editForm.iso639P3code"/></label>
-                <label>Country IDs<input v-model="editForm.countryIds"/></label>
-                <label>Family ID<input v-model="editForm.familyId"/></label>
-                <label>Parent ID<input v-model="editForm.parentId"/></label>
-                <label>Latitude<input v-model="editForm.latitude" type="number" step="any"/></label>
-                <label>Longitude<input v-model="editForm.longitude" type="number" step="any"/></label>
-                <label class="checkbox-row"><input v-model="editForm.bookkeeping" type="checkbox"/><span>Bookkeeping</span></label>
-                <label class="form-grid__full">Description<textarea v-model="editForm.description" rows="6"/></label>
-                <label class="form-grid__full">Markup description<textarea v-model="editForm.markupDescription" rows="6"/></label>
-              </div>
-              <div class="toolbar">
-                <button class="btn btn--primary" :disabled="saving" @click="saveLanguage">{{ saving ? "Saving..." : "Save changes" }}</button>
-                <button class="btn btn--ghost" :disabled="saving" @click="cancelEdit">Cancel</button>
-              </div>
-              <BaseAlert v-if="saveSuccess" type="success">{{ saveSuccess }}</BaseAlert>
-              <BaseAlert v-if="saveError" type="error">{{ saveError }}</BaseAlert>
-            </template>
-            <template v-else>
-              <p class="text lang-description__text">{{ language.description ?? "No description available for this language." }}</p>
-            </template>
-          </section>
-
-          <!-- Grille overview -->
-          <div class="overview-grid">
-
-            <!-- Discussions populaires -->
-            <section class="card overview-section">
-              <div class="overview-section__header">
-                <h3>Popular discussions</h3>
-                <button type="button" class="overview-section__link" @click="activeTab = 'discussion'">View all →</button>
-              </div>
-              <div v-if="popularDiscussions.length" class="overview-discussions">
-                <button v-for="msg in popularDiscussions" :key="msg.id" type="button" class="overview-discussion-item" @click="activeTab = 'discussion'">
-                  <div class="overview-discussion-item__avatar" :style="{ background: avatarColor(msg.authorUsername) }">
-                    {{ authorInitials(msg.authorUsername) }}
-                  </div>
-                  <div class="overview-discussion-item__body">
-                    <p class="overview-discussion-item__content">{{ msg.content.slice(0, 80) }}{{ msg.content.length > 80 ? "…" : "" }}</p>
-                    <p class="overview-discussion-item__meta">
-                      {{ msg.authorUsername ?? "Unknown" }} ·
-                      <span>{{ replyCountById[String(msg.id)] ?? 0 }} repl{{ (replyCountById[String(msg.id)] ?? 0) === 1 ? "y" : "ies" }}</span>
-                    </p>
-                  </div>
-                </button>
-              </div>
-              <p v-else class="overview-section__empty">No discussions yet. Be the first to start one!</p>
-            </section>
-
-            <!-- Nouveaux storyboards — carousel -->
-            <section class="card overview-section">
-              <div class="overview-section__header">
-                <h3>New storyboards</h3>
-                <button type="button" class="overview-section__link" @click="activeTab = 'storyboards'">View all →</button>
-              </div>
-
-              <div v-if="recentScenarios.length" class="carousel-wrapper">
-                <button type="button" class="carousel-btn" :disabled="carouselIndex === 0" @click="carouselScroll(-1)" aria-label="Previous">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-
-                <div class="carousel-track-outer">
-                  <div class="carousel-track" :style="{ transform: `translateX(${carouselOffset}px)` }">
-                    <component
-                      :is="isDemoMode ? 'div' : RouterLink"
-                      v-for="(s, i) in recentScenarios"
-                      :key="s.id"
-                      v-bind="isDemoMode ? {} : { to: `/scenarios/${s.id}` }"
-                      class="carousel-card"
-                      :class="{ 'carousel-card--active': i === carouselIndex }"
-                    >
-                      <div class="carousel-card__image">
-                        <img v-if="scenarioThumbnailUrls[s.id]" :src="scenarioThumbnailUrls[s.id]" :alt="s.title" class="carousel-card__img"/>
-                        <div v-else class="carousel-card__img-placeholder">
-                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                        </div>
-                        <div class="carousel-card__image-badge">
-                          <BaseBadge :variant="s.visibilityStatus === 'PUBLISHED' ? 'success' : 'warning'">{{ s.visibilityStatus ?? "DRAFT" }}</BaseBadge>
-                        </div>
-                        <button
-                          v-if="!isDemoMode && s.visibilityStatus === 'PUBLISHED'"
-                          type="button"
-                          class="carousel-card__read-btn"
-                          title="Read scenario"
-                          @click.prevent.stop="openReader(s)"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                            <polygon points="5 3 19 12 5 21 5 3"/>
-                          </svg>
-                          Read
-                        </button>
-                      </div>
-                      <div class="carousel-card__body">
-                        <p class="carousel-card__title">{{ s.title ?? "Untitled scenario" }}</p>
-                        <div class="carousel-card__footer">
-                          <span class="carousel-card__author">By {{ s.authorUsername ?? "Unknown" }}</span>
-                          <span class="carousel-card__date" v-if="s.createdAt">{{ formatDate(s.createdAt) }}</span>
-                        </div>
-                      </div>
-                    </component>
-                  </div>
-                </div>
-
-                <button type="button" class="carousel-btn" :disabled="carouselIndex >= recentScenarios.length - 1" @click="carouselScroll(1)" aria-label="Next">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                </button>
-              </div>
-
-              <div v-if="recentScenarios.length > 1" class="carousel-dots">
-                <button v-for="(_, i) in recentScenarios" :key="i" type="button" class="carousel-dot" :class="{ 'carousel-dot--active': i === carouselIndex }" @click="carouselGoTo(i)"/>
-              </div>
-
-              <p v-if="!recentScenarios.length" class="overview-section__empty">No published storyboards yet.</p>
-            </section>
           </div>
-
-          <!-- Contributeurs actifs -->
-          <section class="card overview-section">
-            <div class="overview-section__header">
-              <h3>Active contributors</h3>
-              <span class="overview-section__sub">Based on recent discussions</span>
-            </div>
-            <div v-if="activeContributors.length" class="contributors-row">
-              <div v-for="username in activeContributors" :key="username" class="contributor-avatar" :style="{ background: avatarColor(username) }" :title="username">
-                {{ authorInitials(username) }}
-              </div>
-              <span class="contributors-row__label">{{ activeContributors.length }} active contributor{{ activeContributors.length > 1 ? "s" : "" }}</span>
-            </div>
-            <p v-else class="overview-section__empty">No contributors yet.</p>
-          </section>
         </div>
 
-        <!-- Discussion -->
-        <div v-else-if="activeTab === 'discussion'" class="lang-tab-panel">
-          <DiscussionThread
-            title="Community discussion"
-            :subtitle="language.name"
-            target-type="LANGUAGE"
-            :target-id="props.id"
-            empty-title="No messages yet"
-            empty-message="Be the first to start a discussion about this language."
-          />
+        <div v-if="!filtered.length" class="lv-empty">
+          <template v-if="!published.length">
+            <div class="lv-empty__tiles" aria-hidden="true">
+              <div class="lv-empty__tile lv-empty__tile--1"></div>
+              <div class="lv-empty__tile lv-empty__tile--2"></div>
+              <div class="lv-empty__tile lv-empty__tile--3"></div>
+            </div>
+            <p class="lv-empty__eyebrow">Nothing here yet</p>
+            <h2 class="lv-empty__title">No scenarios for this language</h2>
+            <p class="lv-empty__sub">Be the first to create and publish a scenario for {{ language?.name ?? "this language" }}.</p>
+            <RouterLink to="/create-scenario" class="lv-empty__cta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Create a scenario
+            </RouterLink>
+          </template>
+          <template v-else>
+            <p class="lv-empty__title">No scenarios match your filters</p>
+            <button type="button" class="lv-empty__reset" @click="search = ''; activeTag = ''">Clear filters</button>
+          </template>
         </div>
+      </div>
 
-        <!-- Storyboards -->
-        <div v-else-if="activeTab === 'storyboards'" class="lang-tab-panel">
-          <div v-if="effectiveScenarios.length" class="lang-scenarios">
-            <component
-              :is="isDemoMode ? 'div' : RouterLink"
-              v-for="s in effectiveScenarios"
-              :key="s.id"
-              v-bind="isDemoMode ? {} : { to: `/scenarios/${s.id}` }"
-              class="lang-scenario-card"
-            >
-              <div class="lang-scenario-card__left">
-                <div class="lang-scenario-card__icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                </div>
-                <div>
-                  <p class="lang-scenario-card__title">{{ s.title ?? "Untitled scenario" }}</p>
-                  <p class="lang-scenario-card__meta">By {{ s.authorUsername ?? "Unknown" }}<span v-if="s.createdAt"> · {{ formatDate(s.createdAt) }}</span></p>
-                </div>
+      <div v-else class="lv-single">
+        <template v-if="filtered.length">
+          <div class="lv-single__card">
+            <div class="lv-single__img-wrap">
+              <img
+                v-if="thumbnailUrls[currentScenario.id]"
+                :src="thumbnailUrls[currentScenario.id]"
+                :alt="currentScenario.title"
+                class="lv-single__img"
+              />
+              <div
+                v-else
+                class="lv-single__img-placeholder"
+                :style="{ background: placeholderGradient(singleIndex) }"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" class="lv-single__placeholder-icon">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
               </div>
-              <div class="lang-scenario-card__right">
-                <BaseBadge :variant="s.visibilityStatus === 'PUBLISHED' ? 'success' : 'warning'">{{ s.visibilityStatus ?? "DRAFT" }}</BaseBadge>
-                <button
-                  v-if="!isDemoMode && s.visibilityStatus === 'PUBLISHED'"
-                  type="button"
-                  class="lang-scenario-card__read-btn"
-                  title="Read scenario"
-                  @click.prevent.stop="openReader(s)"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <div class="lv-single__img-overlay">
+                <button type="button" class="lv-single__play-btn" @click="openReader(currentScenario)">
+                  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="22" height="22">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Read scenario
+                </button>
+              </div>
+            </div>
+
+            <div class="lv-single__info">
+              <div class="lv-single__counter">
+                {{ singleIndex + 1 }} / {{ filtered.length }}
+              </div>
+              <h2 class="lv-single__title">{{ currentScenario.title || "Untitled" }}</h2>
+              <div class="lv-single__meta">
+                <div class="lv-single__avatar" :style="{ background: avatarColor(currentScenario.authorUsername) }">
+                  {{ (currentScenario.authorUsername ?? "?").slice(0, 2).toUpperCase() }}
+                </div>
+                <span>{{ currentScenario.authorUsername ?? "Unknown" }}</span>
+              </div>
+              <p v-if="currentScenario.description?.trim()" class="lv-single__desc">
+                {{ currentScenario.description.trim() }}
+              </p>
+              <div v-if="currentScenario.tags?.length" class="lv-single__tags">
+                <span v-for="tag in currentScenario.tags" :key="tag" class="lv-card__tag">#{{ tag }}</span>
+              </div>
+
+              <div class="lv-single__actions">
+                <button type="button" class="lv-single__read-btn" @click="openReader(currentScenario)">
+                  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14">
                     <polygon points="5 3 19 12 5 21 5 3"/>
                   </svg>
                   Read
                 </button>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-soft)"><path d="m9 18 6-6-6-6"/></svg>
+                <button
+                  v-if="isAuthenticated"
+                  type="button"
+                  class="lv-card__icon-btn"
+                  :class="{ 'lv-card__icon-btn--active': isLiked(currentScenario.id) }"
+                  @click="handleToggleLike(currentScenario.id)"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" :fill="isLiked(currentScenario.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </button>
+                <button
+                  v-if="isAuthenticated"
+                  type="button"
+                  class="lv-card__icon-btn"
+                  :class="{ 'lv-card__icon-btn--active': isBookmarked(currentScenario.id) }"
+                  @click="toggleBookmark(currentScenario.id)"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" :fill="isBookmarked(currentScenario.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
+                <button
+                    type="button"
+                    class="lv-card__icon-btn"
+                    title="Discussion"
+                    @click="openDiscussion(currentScenario)"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
               </div>
-            </component>
+
+              <div class="lv-single__stats">
+                <span class="lv-single__like-count">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                  {{ likeCountMap[currentScenario.id] ?? 0 }} like{{ (likeCountMap[currentScenario.id] ?? 0) !== 1 ? 's' : '' }}
+                </span>
+                <button type="button" class="lv-single__info-btn" :class="{ 'lv-single__info-btn--active': infoOpen }" @click="infoOpen = !infoOpen" title="Scenario info">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+                  </svg>
+                  Info
+                </button>
+              </div>
+
+
+
+              <div class="lv-single__nav">
+                <button type="button" class="lv-single__nav-btn" :disabled="singleIndex === 0" @click="prevScenario">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  Previous
+                </button>
+                <div class="lv-single__dots">
+                  <button
+                    v-for="(_, i) in filtered.slice(0, 7)"
+                    :key="i"
+                    type="button"
+                    class="lv-single__dot"
+                    :class="{ 'lv-single__dot--active': i === singleIndex }"
+                    @click="singleIndex = i"
+                  />
+                  <span v-if="filtered.length > 7" class="lv-single__dots-more">+{{ filtered.length - 7 }}</span>
+                </div>
+                <button type="button" class="lv-single__nav-btn" :disabled="singleIndex >= filtered.length - 1" @click="nextScenario">
+                  Next
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
-          <BaseEmptyState v-else title="No storyboards yet" message="No scenarios have been created for this language." />
+        </template>
+
+        <div v-else class="lv-empty">
+          <template v-if="!published.length">
+            <div class="lv-empty__tiles" aria-hidden="true">
+              <div class="lv-empty__tile lv-empty__tile--1"></div>
+              <div class="lv-empty__tile lv-empty__tile--2"></div>
+              <div class="lv-empty__tile lv-empty__tile--3"></div>
+            </div>
+            <p class="lv-empty__eyebrow">Nothing here yet</p>
+            <h2 class="lv-empty__title">No scenarios for this language</h2>
+            <p class="lv-empty__sub">Be the first to create and publish a scenario for {{ language?.name ?? "this language" }}.</p>
+            <RouterLink to="/create-scenario" class="lv-empty__cta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Create a scenario
+            </RouterLink>
+          </template>
+          <template v-else>
+            <p class="lv-empty__title">No scenarios match your filters</p>
+            <button type="button" class="lv-empty__reset" @click="search = ''; activeTag = ''">Clear filters</button>
+          </template>
         </div>
       </div>
-      </div>
+
     </template>
+
+    <Teleport to="body">
+      <Transition name="lv-popup">
+        <div v-if="infoOpen && currentScenario" class="lv-info-backdrop" @click.self="infoOpen = false">
+          <div class="lv-info-popup" role="dialog" aria-modal="true" aria-label="Scenario info">
+            <div class="lv-info-popup__head">
+              <h3 class="lv-info-popup__title">{{ currentScenario.title || "Untitled" }}</h3>
+              <button type="button" class="lv-info-popup__close" @click="infoOpen = false">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            <div class="lv-info-popup__body">
+              <div class="lv-info-popup__row">
+                <span class="lv-info-popup__label">Author</span>
+                <span class="lv-info-popup__value">{{ currentScenario.authorUsername ?? "Unknown" }}</span>
+              </div>
+              <div class="lv-info-popup__row">
+                <span class="lv-info-popup__label">Published</span>
+                <span class="lv-info-popup__value">{{ formatDate(currentScenario.createdAt) || "Unknown" }}</span>
+              </div>
+              <div class="lv-info-popup__row">
+                <span class="lv-info-popup__label">Language</span>
+                <span class="lv-info-popup__value">{{ language?.name ?? "Unknown" }}</span>
+              </div>
+              <div v-if="currentScenario.tags?.length" class="lv-info-popup__row">
+                <span class="lv-info-popup__label">Tags</span>
+                <span class="lv-info-popup__value">{{ currentScenario.tags.join(", ") }}</span>
+              </div>
+              <div class="lv-info-popup__row">
+                <span class="lv-info-popup__label">Likes</span>
+                <span class="lv-info-popup__value">{{ likeCountMap[currentScenario.id] ?? 0 }}</span>
+              </div>
+              <div class="lv-info-popup__row">
+                <span class="lv-info-popup__label">Status</span>
+                <span class="lv-info-popup__value lv-info-popup__value--pub">Published</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
+    <ScenarioDiscussionModal :scenario="discussionScenario" @close="closeDiscussion" />
   </main>
-  <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
 </template>
 
 <style scoped>
-/* ── Page layout ── */
-.lang-page {
-  max-width: 100%;
-  padding: 1.5rem 2rem;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* Banner démo */
-.demo-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: 10px;
-  background: rgba(255, 248, 240, 0.96);
-  border: 1px solid rgba(192, 74, 8, 0.3);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--primary);
-  margin-bottom: 0.5rem;
-}
-
-/* Hero */
-.lang-hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 2rem;
-  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
-  border: 1px solid rgba(192, 74, 8, 0.3);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 24px rgba(42, 21, 0, 0.08);
-  margin-bottom: 0.25rem;
-  flex-wrap: wrap;
-}
-
-.lang-hero__left {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.lang-hero__icon {
-  width: 80px;
-  height: 80px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(192, 74, 8, 0.25);
-}
-
-.lang-hero__badges { display: flex; gap: 6px; margin-bottom: 0.4rem; flex-wrap: wrap; }
-
-.lang-hero__title {
-  margin: 0 0 0.3rem;
-  font-size: 2rem;
-  font-weight: 800;
-  line-height: 1.15;
-  color: var(--text);
-}
-
-.lang-hero__meta {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-soft);
-}
-
-.lang-hero__right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1rem;
-  flex-shrink: 0;
-}
-
-.lang-hero__stats { display: flex; gap: 0.75rem; }
-
-.lang-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 0.65rem 1rem;
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  min-width: 70px;
-}
-
-.lang-stat__value { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1; }
-.lang-stat__label { font-size: 0.72rem; color: var(--text-soft); font-weight: 600; white-space: nowrap; }
-
-/* Bouton suivre */
-.follow-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0.5rem 1.25rem;
-  border-radius: 999px;
-  border: 1.5px solid var(--border);
-  background: #FFFCF7;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--primary);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.follow-btn:hover { border-color: var(--primary); background: rgba(192, 74, 8, 0.08); }
-.follow-btn--active { background: var(--primary); border-color: var(--primary); color: #fff; }
-.follow-btn--active:hover { background: var(--primary-strong); border-color: var(--primary-strong); }
-
-/* Onglets */
-.lang-tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--accent-warm);
-  margin-bottom: 1.5rem;
-}
-
-.lang-tab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  gap: 6px;
-  padding: 0.7rem 1.1rem;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-soft);
-  transition: color 0.15s, border-color 0.15s;
-  margin-bottom: -2px;
-  white-space: nowrap;
-}
-
-.lang-tab:hover { color: var(--text); }
-.lang-tab--active { color: var(--primary); border-bottom-color: var(--primary); }
-
-.lang-tab__count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--accent-warm);
-  border: 1px solid rgba(192, 74, 8, 0.25);
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-soft);
-}
-
-/* Corps */
-.lang-body { min-height: 400px; flex: 1; display: flex; flex-direction: column; }
-.lang-tab-panel { display: flex; flex-direction: column; gap: 1rem; flex: 1; }
-
-/* Overview */
-.lang-overview { display: flex; flex-direction: column; gap: 1.5rem; flex: 1; }
-
-.lang-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.75rem;
-}
-
-.lang-meta-card {
-  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.9rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 2px 8px rgba(42, 21, 0, 0.06);
-}
-
-.lang-meta-card__label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-soft);
-}
-
-.lang-meta-card__value { font-size: 0.95rem; font-weight: 600; color: var(--text); }
-.lang-meta-card__value--link { color: var(--primary); text-decoration: none; }
-.lang-meta-card__value--link:hover { color: var(--primary-strong); text-decoration: underline; }
-.lang-meta-card__value--mono { font-family: ui-monospace, monospace; font-size: 0.85rem; }
-
-/* Description */
-.lang-description {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
-  border-color: rgba(192, 74, 8, 0.2);
-}
-
-.lang-description__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
-.lang-description__header h2 { margin: 0; color: var(--text); }
-.lang-description__text { line-height: 1.75; font-size: 0.95rem; color: var(--text); }
-
-/* Grille overview */
-.overview-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-}
-
-@media (max-width: 780px) { .overview-grid { grid-template-columns: 1fr; } }
-
-.overview-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
-  border-color: rgba(192, 74, 8, 0.2);
-}
-
-.overview-section__header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-.overview-section__header h3 { margin: 0; font-size: 1rem; color: var(--text); }
-.overview-section__sub { font-size: 0.78rem; color: var(--text-soft); }
-
-.overview-section__link {
-  background: none; border: none; font-size: 0.82rem; font-weight: 600;
-  color: var(--primary); cursor: pointer; padding: 0; white-space: nowrap;
-}
-.overview-section__link:hover { color: var(--primary-strong); text-decoration: underline; }
-.overview-section__empty { font-size: 0.85rem; color: var(--text-soft); }
-
-/* Discussions */
-.overview-discussions { display: flex; flex-direction: column; gap: 0.5rem; }
-
-.overview-discussion-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  padding: 0.7rem 0.85rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-alt);
-  text-align: left;
-  cursor: pointer;
-  width: 100%;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.overview-discussion-item:hover {
-  background: rgba(255, 224, 192, 0.5);
-  border-color: rgba(192, 74, 8, 0.35);
-}
-
-.overview-discussion-item__avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.72rem; font-weight: 800; color: #fff; flex-shrink: 0;
-}
-
-.overview-discussion-item__body { flex: 1; min-width: 0; }
-
-.overview-discussion-item__content {
-  margin: 0; font-size: 0.86rem; font-weight: 500; color: var(--text); line-height: 1.4;
-  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-}
-
-.overview-discussion-item__meta { margin: 0.2rem 0 0; font-size: 0.75rem; color: var(--text-soft); }
-
-/* Carousel */
-.carousel-wrapper { position: relative; display: flex; align-items: center; gap: 6px; }
-
-.carousel-track-outer {
-  flex: 1; overflow: hidden; border-radius: 14px;
-  mask-image: linear-gradient(to right, transparent 0px, black 28px, black calc(100% - 28px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0px, black 28px, black calc(100% - 28px), transparent 100%);
-}
-
-.carousel-track {
-  display: flex; gap: 14px;
-  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform; padding: 6px 2px 10px;
-}
-
-.carousel-card {
-  flex-shrink: 0; width: 220px;
-  background: #FFFCF7;
-  border: 1.5px solid var(--border);
-  border-radius: 14px; overflow: hidden;
-  text-decoration: none; color: inherit;
-  display: flex; flex-direction: column;
-  box-shadow: 0 4px 16px rgba(42, 21, 0, 0.07);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s;
-  transform: scale(0.93); opacity: 0.65;
-  cursor: pointer;
-}
-
-.carousel-card--active { transform: scale(1); opacity: 1; border-color: var(--primary); box-shadow: 0 8px 28px rgba(192, 74, 8, 0.18); }
-.carousel-card:hover { border-color: var(--primary); box-shadow: 0 10px 32px rgba(192, 74, 8, 0.16); }
-
-.carousel-card__image { position: relative; width: 100%; height: 130px; background: var(--bg); overflow: hidden; }
-.carousel-card__img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; }
-.carousel-card:hover .carousel-card__img { transform: scale(1.04); }
-
-.carousel-card__img-placeholder {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--accent-warm); color: var(--primary); opacity: 0.7;
-}
-
-.carousel-card__image-badge { position: absolute; top: 8px; right: 8px; }
-
-.carousel-card__body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
-
-.carousel-card__title {
-  margin: 0; font-weight: 700; font-size: 0.88rem; color: var(--text); line-height: 1.3;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-
-.carousel-card__footer {
-  display: flex; justify-content: space-between; align-items: center; gap: 4px;
-  margin-top: auto; padding-top: 0.35rem;
-  border-top: 1px solid rgba(192, 74, 8, 0.12);
-}
-
-.carousel-card__author, .carousel-card__date {
-  font-size: 0.72rem; color: var(--text-soft);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-
-.carousel-btn {
-  width: 32px; height: 32px; border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: #FFFCF7;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--text-soft); flex-shrink: 0;
-  transition: all 0.15s; box-shadow: 0 2px 8px rgba(42, 21, 0, 0.07);
-}
-
-.carousel-btn:hover:not(:disabled) { background: var(--accent-warm); border-color: var(--primary); color: var(--primary); }
-.carousel-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-.carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 4px; }
-
-.carousel-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  border: none; background: var(--accent-warm);
-  cursor: pointer; padding: 0; transition: all 0.2s;
-}
-
-.carousel-dot--active { background: var(--primary); width: 18px; border-radius: 3px; }
-
-/* Contributeurs */
-.contributors-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-
-.contributor-avatar {
-  width: 40px; height: 40px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.78rem; font-weight: 800; color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 2px 8px rgba(42, 21, 0, 0.15);
-  cursor: default; transition: transform 0.15s;
-}
-
-.contributor-avatar:hover { transform: scale(1.12); z-index: 1; }
-.contributors-row__label { font-size: 0.85rem; color: var(--text-soft); margin-left: 0.25rem; }
-
-/* Storyboards */
-.lang-scenarios { display: flex; flex-direction: column; gap: 0.75rem; }
-
-.lang-scenario-card {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  padding: 1.1rem 1.35rem;
-  background: linear-gradient(180deg, #FFFCF7 0%, #FFF7EF 100%);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 2px 10px rgba(42, 21, 0, 0.06);
-  text-decoration: none; color: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  cursor: pointer;
-}
-
-.lang-scenario-card:hover { border-color: var(--primary); box-shadow: 0 8px 24px rgba(192, 74, 8, 0.14); }
-
-.lang-scenario-card__left { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
-
-.lang-scenario-card__icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: rgba(192, 74, 8, 0.10);
-  border: 1px solid rgba(192, 74, 8, 0.22);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--primary); flex-shrink: 0;
-}
-
-.lang-scenario-card__title { margin: 0; font-weight: 700; font-size: 0.95rem; color: var(--text); }
-.lang-scenario-card__meta { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--text-soft); }
-.lang-scenario-card__right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-
-.lang-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: 1.25rem;
-}
-
-@media (max-width: 600px) {
-  .lang-page { padding: 1rem; }
-  .lang-hero { flex-direction: column; }
-  .lang-hero__right { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
-  .lang-hero__icon { width: 60px; height: 60px; font-size: 1.2rem; }
-  .lang-tabs { overflow-x: auto; }
-}
-
-/* Read buttons */
-.carousel-card__read-btn {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: rgba(20, 8, 4, 0.55);
-  backdrop-filter: blur(6px);
-  color: #fff;
-  font: inherit;
-  font-size: 0.7rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.carousel-card__read-btn:hover {
-  background: var(--primary);
-  border-color: var(--primary);
-}
-
-.lang-scenario-card__read-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  border: 1.5px solid rgba(192, 74, 8, 0.3);
-  background: rgba(192, 74, 8, 0.06);
-  color: var(--primary);
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-
-.lang-scenario-card__read-btn:hover {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+.lv-root { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; display: flex; flex-direction: column; gap: 20px; }
+
+.lv-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 28px; background: linear-gradient(180deg,#FFFCF7 0%,#FFF0EE 100%); border: 1.5px solid rgba(192,74,8,0.2); border-radius: 20px; box-shadow: 0 4px 24px rgba(42,21,0,0.07); }
+.lv-hero__left { display: flex; align-items: center; gap: 18px; flex: 1; min-width: 0; }
+.lv-hero__icon { width: 72px; height: 72px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: #fff; flex-shrink: 0; box-shadow: 0 4px 16px rgba(30,8,18,0.25); }
+.lv-hero__badges { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.lv-hero__title { margin: 0 0 4px; font-size: clamp(1.6rem,4vw,2.4rem); font-weight: 950; letter-spacing: -0.025em; color: var(--text); line-height: 1.05; }
+.lv-hero__meta { margin: 0; font-size: 0.88rem; color: var(--text-soft); }
+.lv-hero__right { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.lv-hero__stats { display: flex; gap: 10px; }
+.lv-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 18px; background: rgba(255,255,255,0.7); border: 1px solid var(--border); border-radius: 14px; }
+.lv-stat__num { font-size: 1.6rem; font-weight: 950; color: var(--text); line-height: 1; }
+.lv-stat__lbl { font-size: 0.68rem; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.08em; }
+.lv-follow-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 999px; border: 1.5px solid var(--border); background: #fff; color: var(--primary); font: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.lv-follow-btn:hover { border-color: var(--primary); background: rgba(192,74,8,0.06); }
+.lv-follow-btn--active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.lv-follow-btn--active:hover { background: var(--primary-strong); }
+
+.lv-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.lv-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--border); border-radius: 12px; padding: 0 14px; background: #fff; transition: border-color 160ms, box-shadow 160ms; }
+.lv-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(192,74,8,0.08); }
+.lv-search__icon { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-soft); }
+.lv-search__input { flex: 1; border: 0; outline: none; padding: 11px 0; font: inherit; font-size: 0.88rem; color: var(--text); background: transparent; }
+.lv-search__input::placeholder { color: var(--text-soft); }
+.lv-search__clear { border: 0; background: transparent; color: var(--text-soft); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; }
+.lv-dropdown { position: relative; flex-shrink: 0; }
+.lv-dropdown__trigger { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 12px; background: #fff; color: var(--text); font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: border-color 160ms, box-shadow 160ms; white-space: nowrap; }
+.lv-dropdown__trigger:hover { border-color: var(--primary); }
+.lv-dropdown--open .lv-dropdown__trigger { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(192,74,8,0.1); }
+.lv-dropdown__chevron { transition: transform 200ms ease; flex-shrink: 0; color: var(--text-soft); }
+.lv-dropdown--open .lv-dropdown__chevron { transform: rotate(180deg); }
+.lv-dropdown__menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; background: #fff; border: 1.5px solid var(--border); border-radius: 14px; box-shadow: 0 8px 24px rgba(42,21,0,0.12); padding: 5px; min-width: 170px; display: flex; flex-direction: column; gap: 2px; }
+.lv-dropdown__item { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--text); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: left; transition: background 120ms, color 120ms; }
+.lv-dropdown__item:hover { background: var(--surface-alt); color: var(--primary); }
+.lv-dropdown__item--active { background: rgba(192,74,8,0.08); color: var(--primary); font-weight: 800; }
+.lv-view-toggle { display: flex; gap: 2px; padding: 3px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface-alt); flex-shrink: 0; }
+.lv-view-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+.lv-view-btn:hover { color: var(--text); background: rgba(30,8,18,0.06); }
+.lv-view-btn--active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(30,8,18,0.1); }
+
+.lv-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.lv-tag { display: inline-flex; align-items: center; padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--border); background: #fff; color: var(--text-soft); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.lv-tag:hover { border-color: var(--primary); color: var(--primary); }
+.lv-tag--active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.lv-count { font-size: 0.82rem; color: var(--text-soft); margin: 0; }
+.lv-count__filtered { opacity: 0.7; }
+
+.lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; align-items: start; }
+.lv-card { display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: #fff; border: 1.5px solid var(--border); box-shadow: 0 2px 8px rgba(42,21,0,0.05); transition: transform 200ms ease, box-shadow 200ms ease; }
+.lv-card:hover { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(42,21,0,0.11); }
+.lv-card__thumb { position: relative; aspect-ratio: 4/3; overflow: hidden; background: var(--surface-alt); display: block; border: 0; padding: 0; cursor: pointer; width: 100%; }
+.lv-card__img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 300ms ease; }
+.lv-card:hover .lv-card__img { transform: scale(1.04); }
+.lv-card__placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.lv-card__placeholder-icon { width: 36px; height: 36px; color: rgba(42,21,0,0.2); }
+.lv-card__overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(42,21,0,0.42); opacity: 0; transition: opacity 200ms; backdrop-filter: blur(2px); color: #fff; font-size: 0.9rem; font-weight: 800; }
+.lv-card:hover .lv-card__overlay { opacity: 1; }
+.lv-card__body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 5px; }
+.lv-card__title-btn { border: 0; background: transparent; padding: 0; text-align: left; font: inherit; font-size: 0.95rem; font-weight: 800; color: var(--text); cursor: pointer; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+.lv-card__title-btn:hover { color: var(--primary); }
+.lv-card__meta { display: flex; align-items: center; gap: 6px; }
+.lv-card__author { font-size: 0.76rem; font-weight: 600; color: var(--text-soft); }
+.lv-card__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.lv-card__tag { font-size: 0.7rem; font-weight: 700; color: var(--primary); background: rgba(192,74,8,0.08); border-radius: 6px; padding: 2px 7px; }
+.lv-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
+.lv-card__read-btn { display: inline-flex; align-items: center; gap: 5px; flex: 1; justify-content: center; border: 0; border-radius: 10px; padding: 7px 12px; background: var(--primary); color: #fff; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: background 140ms; }
+.lv-card__read-btn:hover { background: var(--primary-strong); }
+.lv-card__icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0; border: 1.5px solid var(--border); border-radius: 10px; background: transparent; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
+.lv-card__icon-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.05); }
+.lv-card__icon-btn--active { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.08); }
+.lv-card__open-btn { display: inline-flex; align-items: center; gap: 5px; border: 1.5px solid var(--border); border-radius: 10px; padding: 7px 12px; background: transparent; color: var(--text-soft); font: inherit; font-size: 0.78rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: all 0.15s; }
+.lv-card__open-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.05); }
+.lv-single__open-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: 1.5px solid var(--border); border-radius: 12px; background: transparent; color: var(--text); font: inherit; font-size: 0.9rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: all 0.15s; }
+.lv-single__open-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.05); transform: translateY(-1px); }
+
+.lv-single { display: flex; flex-direction: column; gap: 20px; }
+.lv-single__card { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; background: #fff; border: 1.5px solid var(--border); border-radius: 22px; overflow: hidden; box-shadow: 0 4px 24px rgba(42,21,0,0.08); }
+.lv-single__img-wrap { position: relative; aspect-ratio: 4/3; background: var(--surface-alt); overflow: hidden; }
+.lv-single__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lv-single__img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.lv-single__placeholder-icon { width: 64px; height: 64px; color: rgba(42,21,0,0.15); }
+.lv-single__img-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(42,21,0,0.35); opacity: 0; transition: opacity 200ms; backdrop-filter: blur(2px); }
+.lv-single__card:hover .lv-single__img-overlay { opacity: 1; }
+.lv-single__play-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.7); background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); color: #fff; font: inherit; font-size: 1rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
+.lv-single__play-btn:hover { background: var(--primary); border-color: var(--primary); }
+.lv-single__info { padding: 32px 32px 32px 0; display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+.lv-single__counter { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--primary); }
+.lv-single__title { margin: 0; font-size: clamp(1.4rem,3vw,2rem); font-weight: 950; letter-spacing: -0.025em; color: var(--text); line-height: 1.1; }
+.lv-single__meta { display: flex; align-items: center; gap: 10px; }
+.lv-single__avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; color: #fff; flex-shrink: 0; }
+.lv-single__meta span { font-size: 0.88rem; font-weight: 600; color: var(--text-soft); }
+.lv-single__desc { margin: 0; font-size: 0.9rem; color: var(--text-soft); line-height: 1.6; }
+.lv-single__tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.lv-single__actions { display: flex; gap: 8px; align-items: center; }
+.lv-single__read-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; border: 0; border-radius: 12px; background: var(--primary); color: #fff; font: inherit; font-size: 0.9rem; font-weight: 800; cursor: pointer; transition: background 140ms, transform 120ms; }
+.lv-single__read-btn:hover { background: var(--primary-strong); transform: translateY(-1px); }
+.lv-single__nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); margin-top: auto; }
+.lv-single__nav-btn { display: inline-flex; align-items: center; gap: 4px; border: 1.5px solid var(--border); border-radius: 10px; padding: 7px 14px; background: #fff; color: var(--text-soft); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.lv-single__nav-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.lv-single__nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.lv-single__dots { display: flex; align-items: center; gap: 5px; }
+.lv-single__dot { width: 7px; height: 7px; border-radius: 50%; border: 0; background: var(--border); cursor: pointer; padding: 0; transition: all 0.2s; }
+.lv-single__dot--active { background: var(--primary); width: 20px; border-radius: 3px; }
+.lv-single__dots-more { font-size: 0.72rem; color: var(--text-soft); font-weight: 700; }
+
+.lv-single__stats { display: flex; align-items: center; gap: 10px; }
+.lv-single__like-count { display: inline-flex; align-items: center; gap: 5px; font-size: 0.82rem; font-weight: 700; color: var(--primary); }
+.lv-single__info-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 999px; background: #fff; color: var(--text-soft); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.lv-single__info-btn:hover { border-color: var(--primary); color: var(--primary); }
+.lv-single__info-btn--active { border-color: var(--primary); background: rgba(192,74,8,0.06); color: var(--primary); }
+
+.lv-single__info-panel { background: var(--surface-alt); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.lv-single__info-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.83rem; }
+.lv-single__info-label { font-weight: 700; color: var(--text-soft); white-space: nowrap; }
+.lv-single__info-value { font-weight: 600; color: var(--text); text-align: right; }
+.lv-single__info-value--pub { color: #4A6741; font-weight: 800; }
+
+.lv-info-slide-enter-active, .lv-info-slide-leave-active { transition: opacity 160ms ease, transform 160ms ease; }
+.lv-info-slide-enter-from, .lv-info-slide-leave-to { opacity: 0; transform: translateY(-6px); }
+
+.lv-info-backdrop { position: fixed; inset: 0; z-index: 1200; background: rgba(30,8,18,0.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.lv-info-popup { background: #fff; border: 1.5px solid var(--border); border-radius: 20px; box-shadow: 0 16px 48px rgba(30,8,18,0.18); width: min(400px, 100%); overflow: hidden; }
+.lv-info-popup__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.lv-info-popup__title { margin: 0; font-size: 1rem; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-info-popup__close { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border: 0; border-radius: 8px; background: transparent; color: var(--text-soft); cursor: pointer; transition: background 140ms; }
+.lv-info-popup__close:hover { background: var(--surface-alt); color: var(--text); }
+.lv-info-popup__body { display: flex; flex-direction: column; gap: 0; padding: 6px 0; }
+.lv-info-popup__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 20px; transition: background 120ms; }
+.lv-info-popup__row:hover { background: var(--surface-alt); }
+.lv-info-popup__label { font-size: 0.82rem; font-weight: 700; color: var(--text-soft); }
+.lv-info-popup__value { font-size: 0.85rem; font-weight: 600; color: var(--text); text-align: right; }
+.lv-info-popup__value--pub { color: #4A6741; font-weight: 800; }
+.lv-popup-enter-active, .lv-popup-leave-active { transition: opacity 180ms ease, transform 180ms ease; }
+.lv-popup-enter-from, .lv-popup-leave-to { opacity: 0; transform: scale(0.96); }
+
+.lv-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 60px 20px 80px; text-align: center; grid-column: 1 / -1; }
+.lv-empty__tiles { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 8px; }
+.lv-empty__tile { border: 2.5px solid #1E0812; border-radius: 12px; box-shadow: 3px 3px 0 #1E0812; opacity: 0.4; }
+.lv-empty__tile--1 { width: 110px; height: 100px; background: linear-gradient(135deg,#D4E5CA,#c5d9b8); }
+.lv-empty__tile--2 { width: 80px; height: 130px; background: linear-gradient(135deg,#FFF0EE,#D4E5CA); }
+.lv-empty__tile--3 { width: 100px; height: 88px; background: linear-gradient(135deg,#c5d9b8,#afc8a0); }
+.lv-empty__eyebrow { margin: 0; font-size: 0.68rem; font-weight: 900; color: var(--text-soft); letter-spacing: 0.14em; text-transform: uppercase; }
+.lv-empty__title { margin: 0; font-size: clamp(1.2rem,3vw,1.6rem); font-weight: 950; color: var(--text); letter-spacing: -0.02em; }
+.lv-empty__sub { margin: 0; font-size: 0.9rem; color: var(--text-soft); line-height: 1.6; max-width: 380px; }
+.lv-empty__cta { display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px; border: 0; border-radius: 14px; background: var(--text); color: #fff; font: inherit; font-size: 0.9rem; font-weight: 800; text-decoration: none; cursor: pointer; transition: background 160ms, transform 120ms; }
+.lv-empty__cta:hover { background: var(--primary); transform: translateY(-1px); }
+.lv-empty__cta svg { width: 14px; height: 14px; }
+.lv-empty__reset { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 18px; background: #fff; color: var(--text); font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: border-color 140ms; }
+.lv-empty__reset:hover { border-color: var(--primary); color: var(--primary); }
+
+@media (max-width: 700px) {
+  .lv-single__card { grid-template-columns: 1fr; }
+  .lv-single__info { padding: 20px; }
+  .lv-hero { flex-direction: column; align-items: flex-start; }
+  .lv-hero__right { flex-direction: row; flex-wrap: wrap; align-items: center; }
 }
 </style>

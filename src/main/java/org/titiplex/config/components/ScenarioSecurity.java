@@ -16,6 +16,10 @@ public class ScenarioSecurity {
     }
 
     public boolean isOwner(Long scenarioId, String username) {
+        return scenarioService.hasEditAccess(scenarioId, username);
+    }
+
+    public boolean isAuthor(Long scenarioId, String username) {
         return scenarioService.existsByIdAndAuthorUsername(scenarioId, username);
     }
 

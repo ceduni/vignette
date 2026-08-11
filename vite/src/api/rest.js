@@ -141,13 +141,19 @@ export async function apiFetch(path, options = {}, meta = {}) {
 
     if (
         res.status === 401
-        && allowRefresh
         && !!accessToken
         && !isSessionAuthPath(path)
     ) {
-        const refreshed = await requestAccessTokenRefresh();
-        if (refreshed) {
-            return apiFetch(path, options, {allowRefresh: false});
+        if (allowRefresh) {
+            const refreshed = await requestAccessTokenRefresh();
+            if (refreshed) {
+                return apiFetch(path, options, {allowRefresh: false});
+            }
+        }
+
+        if (meta.allowAnonymousRetry ?? true) {
+            setAccessToken(null);
+            return apiFetch(path, options, {allowRefresh: false, allowAnonymousRetry: false});
         }
     }
 
