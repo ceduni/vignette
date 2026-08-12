@@ -28,9 +28,13 @@ public class VignetteSceneService {
 
     @Transactional
     public VignetteSceneDto create(Long userId, String name, String sceneJson) {
+        String normalizedName = normalizedName(name);
+        if (sceneJson == null || sceneJson.isBlank()) {
+            throw new IllegalArgumentException("Scene data is required");
+        }
         VignetteScene scene = new VignetteScene();
         scene.setUserId(userId);
-        scene.setName(name == null || name.isBlank() ? "Untitled Scene" : name.trim());
+        scene.setName(normalizedName);
         scene.setSceneJson(sceneJson);
         return toDto(repo.save(scene));
     }
@@ -39,8 +43,13 @@ public class VignetteSceneService {
     public VignetteSceneDto update(Long sceneId, Long userId, String name, String sceneJson) {
         VignetteScene scene = repo.findByIdAndUserId(sceneId, userId)
                 .orElseThrow(() -> new NoSuchElementException("Scene not found"));
-        if (name != null && !name.isBlank()) scene.setName(name.trim());
-        if (sceneJson != null) scene.setSceneJson(sceneJson);
+        if (name != null) scene.setName(normalizedName(name));
+        if (sceneJson != null) {
+            if (sceneJson.isBlank()) {
+                throw new IllegalArgumentException("Scene data is required");
+            }
+            scene.setSceneJson(sceneJson);
+        }
         scene.setUpdatedAt(Instant.now());
         return toDto(repo.save(scene));
     }
@@ -50,6 +59,14 @@ public class VignetteSceneService {
         VignetteScene scene = repo.findByIdAndUserId(sceneId, userId)
                 .orElseThrow(() -> new NoSuchElementException("Scene not found"));
         repo.delete(scene);
+    }
+
+    private String normalizedName(String name) {
+        String normalized = name == null || name.isBlank() ? "Untitled Scene" : name.trim();
+        if (normalized.length() > 200) {
+            throw new IllegalArgumentException("Scene name must be 200 characters or fewer");
+        }
+        return normalized;
     }
 
     private VignetteSceneDto toDto(VignetteScene s) {

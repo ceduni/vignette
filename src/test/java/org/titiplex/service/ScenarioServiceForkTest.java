@@ -299,7 +299,8 @@ class ScenarioServiceForkTest {
 
         assertEquals(99L, fork.getId());
         verify(thumbnailRepository, never()).save(any());
-        verifyNoInteractions(audioRepository);
+        verify(audioRepository).findByScenarioIdAndScopeOrderByIdxAscIdAsc(1L, AudioScope.BACKGROUND);
+        verify(audioRepository, never()).save(any());
     }
 
     @Test

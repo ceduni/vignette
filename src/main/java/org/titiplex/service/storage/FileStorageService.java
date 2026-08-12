@@ -4,6 +4,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.config.StorageProperties;
 
@@ -119,7 +121,7 @@ public class FileStorageService {
                 sha256,
                 size,
                 contentType,
-                file.getOriginalFilename()
+                normalizedOriginalFilename(file.getOriginalFilename())
         );
     }
 
@@ -145,6 +147,19 @@ public class FileStorageService {
         }
     }
 
+    public void deleteAfterCommit(String relativePath) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteQuietly(relativePath);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteQuietly(relativePath);
+            }
+        });
+    }
+
     private Path resolve(String relativePath) {
         Path resolved = root.resolve(relativePath).normalize();
         if (!resolved.startsWith(root)) {
@@ -164,5 +179,13 @@ public class FileStorageService {
             normalized = normalized.substring(0, semicolon).trim();
         }
         return normalized;
+    }
+
+    private String normalizedOriginalFilename(String originalFilename) {
+        if (originalFilename == null) {
+            return null;
+        }
+        String normalized = originalFilename.trim();
+        return normalized.length() <= 255 ? normalized : normalized.substring(0, 255);
     }
 }

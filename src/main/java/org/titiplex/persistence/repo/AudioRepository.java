@@ -17,6 +17,8 @@ public interface AudioRepository extends JpaRepository<Audio, Long> {
 
     boolean existsByThumbnailIdAndIdxAndScope(Long thumbnailId, Integer idx, AudioScope scope);
 
+    boolean existsByStoragePathAndIdNot(String storagePath, Long id);
+
     default boolean existsByThumbnailIdAndIdx(Long thumbnailId, Integer idx) {
         return existsByThumbnailIdAndIdxAndScope(thumbnailId, idx, AudioScope.SCENE);
     }

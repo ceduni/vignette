@@ -55,7 +55,7 @@ export function useAudioFileImport(options = {}) {
         toast,
         studioSandboxMode,
         getScenarioId,
-        deleteAudio,
+        replaceAudioContent,
         uploadThumbnailAudio,
         fetchThumbnailAudios,
         fileBaseName,
@@ -68,8 +68,6 @@ export function useAudioFileImport(options = {}) {
         takeLabel,
         addLocalAudioClip,
         isLocalAudioId,
-        firstVoiceForThumb,
-        nextSpeakerForThumb,
         selectedVoiceId,
     } = options;
 
@@ -126,57 +124,38 @@ export function useAudioFileImport(options = {}) {
 
         const thumbId = targetThumb.id;
         const replacingExistingAudio = !!voice && !voice.isDraft && !isLocalAudioId(voice.id);
-        let deletedForReplace = false;
         const previousAudioIds = new Set(
             (audioMap.value[thumbId] || [])
                 .filter((audio) => !audio.isDraft)
                 .map((audio) => String(audio.id))
         );
 
-        try {
-            if (replacingExistingAudio) {
-                await deleteAudio(voice.id);
-                deletedForReplace = true;
-                previousAudioIds.delete(String(voice.id));
+        const fd = new FormData();
+        fd.append("title", title || voice?.title || "");
+        if (!replacingExistingAudio && voice?.idx) fd.append("idx", String(voice.idx));
+        fd.append("audio", audioFile, fileName);
+
+        const response = replacingExistingAudio
+            ? await replaceAudioContent(voice.id, fd)
+            : await uploadThumbnailAudio(thumbId, fd);
+        const freshAudios = await fetchThumbnailAudios(thumbId);
+        audioMap.value = {...audioMap.value, [thumbId]: freshAudios};
+
+        const newAudio =
+            freshAudios.find((audio) => String(audio.id) === String(response?.id)) ??
+            freshAudios.find((audio) => !previousAudioIds.has(String(audio.id))) ??
+            freshAudios[freshAudios.length - 1] ??
+            null;
+
+        if (newAudio) {
+            if (String(selectedThumb.value?.id ?? "") !== String(thumbId)) {
+                selectedThumb.value = targetThumb;
             }
-
-            const fd = new FormData();
-            fd.append("title", title || voice?.title || "");
-            if (voice?.idx) fd.append("idx", String(voice.idx));
-            fd.append("audio", audioFile, fileName);
-
-            const response = await uploadThumbnailAudio(thumbId, fd);
-            const freshAudios = await fetchThumbnailAudios(thumbId);
-            audioMap.value = {...audioMap.value, [thumbId]: freshAudios};
-
-            const newAudio =
-                freshAudios.find((audio) => String(audio.id) === String(response?.id)) ??
-                freshAudios.find((audio) => !previousAudioIds.has(String(audio.id))) ??
-                freshAudios[freshAudios.length - 1] ??
-                null;
-
-            if (newAudio) {
-                if (String(selectedThumb.value?.id ?? "") !== String(thumbId)) {
-                    selectedThumb.value = targetThumb;
-                }
-                selectedVoiceId.value = newAudio.id;
-                selectedSpeaker.value = speakerForVoice(newAudio, targetThumb) || selectedSpeaker.value;
-            }
-
-            return newAudio;
-        } catch (e) {
-            if (deletedForReplace) {
-                try {
-                    const freshAudios = await fetchThumbnailAudios(thumbId);
-                    audioMap.value = {...audioMap.value, [thumbId]: freshAudios};
-                    const fallback = firstVoiceForThumb(targetThumb);
-                    selectedVoiceId.value = fallback?.id ?? null;
-                    selectedSpeaker.value = fallback ? speakerForVoice(fallback, targetThumb) : nextSpeakerForThumb(targetThumb);
-                } catch {
-                }
-            }
-            throw e;
+            selectedVoiceId.value = newAudio.id;
+            selectedSpeaker.value = speakerForVoice(newAudio, targetThumb) || selectedSpeaker.value;
         }
+
+        return newAudio;
     }
 
     return {

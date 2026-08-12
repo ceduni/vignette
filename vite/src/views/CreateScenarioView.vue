@@ -27,6 +27,7 @@ let debounceTimer = null;
 const titleError = computed(() => {
   if (!form.value.title.trim()) return "A title is required.";
   if (form.value.title.trim().length < 3) return "Title is too short (3 chars min).";
+  if (form.value.title.trim().length > 200) return "Title is too long (200 chars max).";
   return "";
 });
 
@@ -163,6 +164,7 @@ onUnmounted(() => {
               v-model="form.title"
               class="cs-input cs-input--hero"
               placeholder="e.g. Market scene, morning greetings"
+              maxlength="200"
               autocomplete="off"
           />
           <span v-if="form.title && titleError" class="cs-field-err">{{ titleError }}</span>

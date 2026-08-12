@@ -45,6 +45,8 @@ import java.util.NoSuchElementException;
 public class ScenarioService {
 
     public static final int DISCOVERY_SCENARIO_LIMIT = 15;
+    private static final int TITLE_MAX_LENGTH = 200;
+    private static final int DESCRIPTION_MAX_LENGTH = 500;
 
     private final ScenarioRepository repo;
     private final UserService userService;
@@ -105,9 +107,11 @@ public class ScenarioService {
     }
 
     public Scenario createScenario(String title, String description, Long authorId, String languageId, List<String> tags) {
+        String normalizedTitle = validatedTitle(title);
+        String normalizedDescription = validatedDescription(description);
         Scenario scenario = new Scenario();
-        scenario.setTitle(title);
-        scenario.setDescription(description);
+        scenario.setTitle(normalizedTitle);
+        scenario.setDescription(normalizedDescription);
         scenario.setAuthor_id(authorId);
         scenario.setLanguage_id(languageId);
         scenario.setCreatedAt(Instant.now());
@@ -310,16 +314,21 @@ public class ScenarioService {
         List<String> changedFields = new ArrayList<>();
 
         if (request.title() != null) {
-            String title = request.title().trim();
-            if (title.isBlank()) {
-                throw new IllegalArgumentException("Title is required");
+            String title = validatedTitle(request.title());
+            if (!title.equals(scenario.getTitle())
+                    && repo.existsByTitleAndAuthorUsernameAndLanguageId(
+                    title,
+                    authentication.getName(),
+                    scenario.getLanguage_id()
+            )) {
+                throw new IllegalArgumentException("Scenario already exists for this user and language");
             }
             scenario.setTitle(title);
             changedFields.add("title");
         }
 
         if (request.description() != null) {
-            scenario.setDescription(request.description().trim());
+            scenario.setDescription(validatedDescription(request.description()));
             changedFields.add("description");
         }
 
@@ -339,6 +348,28 @@ public class ScenarioService {
         return saved;
     }
 
+    private String validatedTitle(String title) {
+        String normalized = title == null ? "" : title.trim();
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("Title is required");
+        }
+        if (normalized.length() > TITLE_MAX_LENGTH) {
+            throw new IllegalArgumentException("Title must be 200 characters or fewer");
+        }
+        return normalized;
+    }
+
+    private String validatedDescription(String description) {
+        if (description == null) {
+            return null;
+        }
+        String normalized = description.trim();
+        if (normalized.length() > DESCRIPTION_MAX_LENGTH) {
+            throw new IllegalArgumentException("Description must be 500 characters or fewer");
+        }
+        return normalized;
+    }
+
     @Transactional
     public void deleteScenario(Long id, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
@@ -355,7 +386,9 @@ public class ScenarioService {
         }
 
         for (Audio audio : audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(id, AudioScope.BACKGROUND)) {
-            storage.deleteQuietly(audio.getStoragePath());
+            if (!audioRepo.existsByStoragePathAndIdNot(audio.getStoragePath(), audio.getId())) {
+                storage.deleteAfterCommit(audio.getStoragePath());
+            }
             audioRepo.delete(audio);
         }
 
@@ -595,7 +628,7 @@ public class ScenarioService {
 
         String title;
         if (requestedTitle != null && !requestedTitle.isBlank()) {
-            title = requestedTitle.trim();
+            title = validatedTitle(requestedTitle);
             if (repo.existsByTitleAndAuthorUsernameAndLanguageId(title, username, original.getLanguage_id())) {
                 throw new IllegalArgumentException("Scenario already exists for this user and language");
             }
@@ -671,6 +704,27 @@ public class ScenarioService {
             }
         }
 
+        for (Audio originalAudio : audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(
+                original.getId(),
+                AudioScope.BACKGROUND
+        )) {
+            Audio audioCopy = new Audio();
+            audioCopy.setStoragePath(originalAudio.getStoragePath());
+            audioCopy.setSizeBytes(originalAudio.getSizeBytes());
+            audioCopy.setOriginalFilename(originalAudio.getOriginalFilename());
+            audioCopy.setAudioSha256(originalAudio.getAudioSha256());
+            audioCopy.setTitle(originalAudio.getTitle());
+            audioCopy.setIdx(originalAudio.getIdx());
+            audioCopy.setMime(originalAudio.getMime());
+            audioCopy.setScope(AudioScope.BACKGROUND);
+            audioCopy.setAuthorId(userId);
+            audioCopy.setScenarioId(saved.getId());
+            audioCopy.setLanguageId(originalAudio.getLanguageId());
+            audioCopy.setSourceLabel(originalAudio.getSourceLabel());
+            audioCopy.setSourceUrl(originalAudio.getSourceUrl());
+            audioRepo.save(audioCopy);
+        }
+
         if (saved.getReviewStatus() == ReviewStatus.PENDING) {
             notificationService.notifyForkReviewRequested(original.getAuthor_id(), saved, original, userId);
         }
@@ -704,7 +758,11 @@ public class ScenarioService {
         fork.setReviewStatus(approve ? ReviewStatus.APPROVED : ReviewStatus.REJECTED);
         fork.setReviewedById(reviewerId);
         fork.setReviewedAt(Instant.now());
-        fork.setReviewComment(comment);
+        String normalizedComment = comment == null ? null : comment.trim();
+        if (normalizedComment != null && normalizedComment.length() > 255) {
+            throw new IllegalArgumentException("Review comment must be 255 characters or fewer");
+        }
+        fork.setReviewComment(normalizedComment == null || normalizedComment.isBlank() ? null : normalizedComment);
 
         Scenario saved = repo.save(fork);
         notificationService.notifyForkReviewed(saved.getAuthor_id(), saved, approve);
@@ -712,12 +770,21 @@ public class ScenarioService {
     }
 
     private String generateUniqueScenarioTitle(String baseTitle, String username, String languageId) {
-        String candidate = "Copy of " + baseTitle;
+        String normalizedBase = baseTitle == null ? "Untitled scenario" : baseTitle.trim();
+        String candidate = copyTitle(normalizedBase, null);
         int counter = 2;
         while (repo.existsByTitleAndAuthorUsernameAndLanguageId(candidate, username, languageId)) {
-            candidate = "Copy of " + baseTitle + " #" + counter;
+            candidate = copyTitle(normalizedBase, counter);
             counter++;
         }
         return candidate;
+    }
+
+    private String copyTitle(String baseTitle, Integer counter) {
+        String suffix = counter == null ? "" : " #" + counter;
+        String prefix = "Copy of ";
+        int available = TITLE_MAX_LENGTH - prefix.length() - suffix.length();
+        String truncatedBase = baseTitle.length() <= available ? baseTitle : baseTitle.substring(0, available).trim();
+        return prefix + truncatedBase + suffix;
     }
 }

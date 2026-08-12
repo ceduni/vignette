@@ -75,7 +75,16 @@ export function useSceneImageUpload(options = {}) {
         const ts = Date.now();
         const file = new File([blob], `vignette-illustration-${ts}.png`, {type: "image/png"});
         const previewUrl = URL.createObjectURL(file);
-        const defaultTitle = scenario.value?.title ? `${scenario.value.title} – scene` : `Vignette scene ${ts}`;
+        const baseTitle = scenario.value?.title ? `${scenario.value.title} – scene` : "Vignette scene";
+        const usedTitles = new Set(
+            [...thumbnails.value, ...uploadFiles.value]
+                .map((entry) => String(entry?.title || "").trim().toLocaleLowerCase())
+        );
+        let sequence = thumbnails.value.length + uploadFiles.value.length + 1;
+        while (usedTitles.has(`${baseTitle} ${sequence}`.toLocaleLowerCase())) {
+            sequence += 1;
+        }
+        const defaultTitle = `${baseTitle} ${sequence}`;
         uploadFiles.value = [...uploadFiles.value, {file, title: defaultTitle, previewUrl}];
     }
 

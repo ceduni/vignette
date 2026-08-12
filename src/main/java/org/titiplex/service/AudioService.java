@@ -140,6 +140,7 @@ public class AudioService {
         if ((markerX == null) != (markerY == null)) {
             throw new IllegalArgumentException("markerX and markerY must be both set or both empty");
         }
+        String normalizedMarkerLabel = normalizeOptional(markerLabel, 120, "Marker label");
 
         Thumbnail t = thumbnailService.getThumbnailById(thumbnailId);
         Long scenarioId = t.getScenarioId();
@@ -150,6 +151,7 @@ public class AudioService {
             throw new IllegalArgumentException("idx already used for this thumbnail");
         }
 
+        String effectiveTitle = resolveAudioTitle(title, audioFile.getOriginalFilename(), "Audio " + effectiveIdx);
         StoredFile stored = storage.storeAudio(audioFile, scenarioId, thumbnailId);
 
         Audio a = new Audio();
@@ -161,20 +163,12 @@ public class AudioService {
         a.setSizeBytes(stored.sizeBytes());
         a.setOriginalFilename(stored.originalFilename());
 
-        String effectiveTitle;
-        if (title != null && !title.isBlank()) {
-            effectiveTitle = title.trim();
-        } else if (audioFile.getOriginalFilename() != null && !audioFile.getOriginalFilename().isBlank()) {
-            effectiveTitle = audioFile.getOriginalFilename().trim();
-        } else {
-            effectiveTitle = "Audio " + effectiveIdx;
-        }
         a.setTitle(effectiveTitle);
 
         a.setIdx(effectiveIdx);
         a.setMarkerX(markerX);
         a.setMarkerY(markerY);
-        a.setMarkerLabel((markerLabel == null || markerLabel.isBlank()) ? null : markerLabel.trim());
+        a.setMarkerLabel(normalizedMarkerLabel);
         a.setAuthorId(authorId);
         a.setScenarioId(scenarioId);
         a.setLanguageId(s.getLanguage_id());
@@ -196,6 +190,13 @@ public class AudioService {
 
         Scenario s = scenarioService.getRequiredScenario(scenarioId);
         int effectiveIdx = audios.maxBackgroundIdx(scenarioId) + 1;
+        String effectiveTitle = resolveAudioTitle(
+                title,
+                audioFile.getOriginalFilename(),
+                "Background audio " + effectiveIdx
+        );
+        String normalizedSourceLabel = normalizeOptional(sourceLabel, 180, "Audio credit");
+        String normalizedSourceUrl = normalizeOptional(sourceUrl, 512, "Audio source URL");
         StoredFile stored = storage.storeScenarioAudio(audioFile, scenarioId);
 
         Audio a = new Audio();
@@ -207,21 +208,13 @@ public class AudioService {
         a.setSizeBytes(stored.sizeBytes());
         a.setOriginalFilename(stored.originalFilename());
 
-        String effectiveTitle;
-        if (title != null && !title.isBlank()) {
-            effectiveTitle = title.trim();
-        } else if (audioFile.getOriginalFilename() != null && !audioFile.getOriginalFilename().isBlank()) {
-            effectiveTitle = audioFile.getOriginalFilename().trim();
-        } else {
-            effectiveTitle = "Background audio " + effectiveIdx;
-        }
         a.setTitle(effectiveTitle);
         a.setIdx(effectiveIdx);
         a.setAuthorId(authorId);
         a.setScenarioId(scenarioId);
         a.setLanguageId(s.getLanguage_id());
-        a.setSourceLabel((sourceLabel == null || sourceLabel.isBlank()) ? null : sourceLabel.trim());
-        a.setSourceUrl((sourceUrl == null || sourceUrl.isBlank()) ? null : sourceUrl.trim());
+        a.setSourceLabel(normalizedSourceLabel);
+        a.setSourceUrl(normalizedSourceUrl);
 
         audios.save(a);
         return a.getId();
@@ -230,6 +223,34 @@ public class AudioService {
     public MediaContent loadContent(Long audioId) {
         Audio a = getAudioOrThrow(audioId);
         return storage.load(a.getStoragePath(), a.getMime(), a.getAudioSha256());
+    }
+
+    @Transactional
+    public Long replaceAudio(Long audioId, String title, MultipartFile audioFile) throws Exception {
+        if (audioFile == null || audioFile.isEmpty()) {
+            throw new IllegalArgumentException("audio is empty");
+        }
+
+        Audio audio = getAudioOrThrow(audioId);
+        String effectiveTitle = resolveAudioTitle(title, audioFile.getOriginalFilename(), audio.getTitle());
+        String previousPath = audio.getStoragePath();
+        StoredFile stored = audio.getScope() == AudioScope.BACKGROUND
+                ? storage.storeScenarioAudio(audioFile, audio.getScenarioId())
+                : storage.storeAudio(audioFile, audio.getScenarioId(), audio.getThumbnailId());
+
+        audio.setTitle(effectiveTitle);
+        audio.setMime(stored.contentType());
+        audio.setAudioSha256(stored.sha256());
+        audio.setStoragePath(stored.relativePath());
+        audio.setSizeBytes(stored.sizeBytes());
+        audio.setOriginalFilename(stored.originalFilename());
+        audios.save(audio);
+
+        if (!previousPath.equals(stored.relativePath())
+                && !audios.existsByStoragePathAndIdNot(previousPath, audioId)) {
+            storage.deleteAfterCommit(previousPath);
+        }
+        return audio.getId();
     }
 
     @Transactional
@@ -247,15 +268,44 @@ public class AudioService {
         Audio a = getAudioOrThrow(audioId);
         a.setMarkerX(markerX);
         a.setMarkerY(markerY);
-        a.setMarkerLabel((markerLabel == null || markerLabel.isBlank()) ? null : markerLabel.trim());
+        a.setMarkerLabel(normalizeOptional(markerLabel, 120, "Marker label"));
         audios.save(a);
     }
 
     @Transactional
     public void deleteAudio(Long audioId) {
         Audio a = getAudioOrThrow(audioId);
-        storage.deleteQuietly(a.getStoragePath());
+        boolean fileIsShared = audios.existsByStoragePathAndIdNot(a.getStoragePath(), audioId);
+        if (!fileIsShared) {
+            storage.deleteAfterCommit(a.getStoragePath());
+        }
         audios.delete(a);
+    }
+
+    private String resolveAudioTitle(String title, String originalFilename, String fallback) {
+        String effectiveTitle;
+        if (title != null && !title.isBlank()) {
+            effectiveTitle = title.trim();
+        } else if (originalFilename != null && !originalFilename.isBlank()) {
+            effectiveTitle = originalFilename.trim();
+        } else {
+            effectiveTitle = fallback;
+        }
+        if (effectiveTitle.length() > 255) {
+            throw new IllegalArgumentException("Audio title must be 255 characters or fewer");
+        }
+        return effectiveTitle;
+    }
+
+    private String normalizeOptional(String value, int maxLength, String fieldName) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String normalized = value.trim();
+        if (normalized.length() > maxLength) {
+            throw new IllegalArgumentException(fieldName + " must be " + maxLength + " characters or fewer");
+        }
+        return normalized;
     }
 
     private AudioRowDto toAudioRowDto(Audio a) {

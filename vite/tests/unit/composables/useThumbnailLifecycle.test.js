@@ -25,6 +25,7 @@ function setup(overrides = {}) {
         sortedThumbnails,
         getScenarioId: () => 42,
         deleteThumbnail: vi.fn(async () => {}),
+        updateThumbnailTitle: vi.fn(async (id, body) => ({id, idx: 1, title: body.title.trim()})),
         reorderScenarioThumbnails: vi.fn(async () => []),
         toast: makeToast(),
         openRecorderForSelection: vi.fn(),
@@ -77,6 +78,28 @@ describe("useThumbnailLifecycle", () => {
 
         expect(thumbnails.value[0].title).toBe("New title");
         expect(selectedThumb.value.title).toBe("New title");
+    });
+
+    it("persistThumbTitle saves the edited title and uses the returned row", async () => {
+        const {api, deps, thumbnails, selectedThumb} = setup();
+        selectedThumb.value = thumbnails.value[0];
+        api.updateThumbTitle(thumbnails.value[0], {target: {value: "  New title  "}});
+
+        await api.persistThumbTitle(thumbnails.value[0]);
+
+        expect(deps.updateThumbnailTitle).toHaveBeenCalledWith(1, {title: "  New title  "});
+        expect(thumbnails.value[0].title).toBe("New title");
+        expect(selectedThumb.value.title).toBe("New title");
+    });
+
+    it("persistThumbTitle keeps local-only titles out of the API", async () => {
+        const {api, deps, thumbnails} = setup({studioSandboxMode: ref(true)});
+        api.updateThumbTitle(thumbnails.value[0], {target: {value: "Local title"}});
+
+        await api.persistThumbTitle(thumbnails.value[0]);
+
+        expect(deps.updateThumbnailTitle).not.toHaveBeenCalled();
+        expect(thumbnails.value[0].title).toBe("Local title");
     });
 
     it("deleteThumb calls the API, removes the thumb, and reassigns selection", async () => {

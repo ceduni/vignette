@@ -55,6 +55,7 @@ function setup(overrides = {}) {
         studioSandboxMode: ref(false),
         getScenarioId: () => 42,
         deleteAudio: vi.fn(async () => {}),
+        replaceAudioContent: vi.fn(async (audioId) => ({id: audioId})),
         uploadThumbnailAudio: vi.fn(async () => ({id: 99})),
         fetchThumbnailAudios: vi.fn(async () => []),
         glossTranscription,
@@ -196,6 +197,52 @@ describe("useVoiceTakes", () => {
         expect(deps.audioMap.value[1]).toHaveLength(1);
         expect(deps.audioMap.value[1][0].title).toBe("My take");
         expect(api.selectedVoiceId.value).toBe(deps.audioMap.value[1][0].id);
+    });
+
+    it("replaces a saved take without deleting it first", async () => {
+        const refreshedTake = {id: 12, idx: 1, title: "New take", speaker: "A"};
+        const {api, deps} = setup({
+            fetchThumbnailAudios: vi.fn(async () => [refreshedTake]),
+        });
+        const thumb = {id: 1};
+        const savedTake = {id: 12, idx: 1, title: "Old take", speaker: "A"};
+        deps.selectedThumb.value = thumb;
+        deps.audioMap.value = {1: [savedTake]};
+
+        const result = await api.uploadVoiceAudioFile(
+            thumb,
+            savedTake,
+            new File(["audio"], "replacement.webm", {type: "audio/webm"}),
+            "New take"
+        );
+
+        expect(deps.replaceAudioContent).toHaveBeenCalledWith(12, expect.any(FormData));
+        expect(deps.uploadThumbnailAudio).not.toHaveBeenCalled();
+        expect(deps.deleteAudio).not.toHaveBeenCalled();
+        expect(deps.audioMap.value[1]).toEqual([refreshedTake]);
+        expect(result).toEqual(refreshedTake);
+    });
+
+    it("keeps a saved take when its replacement upload fails", async () => {
+        const {api, deps} = setup({
+            replaceAudioContent: vi.fn(async () => {
+                throw new Error("upload failed");
+            }),
+        });
+        const thumb = {id: 1};
+        const savedTake = {id: 12, idx: 1, title: "Old take", speaker: "A"};
+        deps.selectedThumb.value = thumb;
+        deps.audioMap.value = {1: [savedTake]};
+
+        await expect(api.uploadVoiceAudioFile(
+            thumb,
+            savedTake,
+            new File(["audio"], "replacement.webm", {type: "audio/webm"}),
+            "New take"
+        )).rejects.toThrow("upload failed");
+
+        expect(deps.deleteAudio).not.toHaveBeenCalled();
+        expect(deps.audioMap.value[1]).toEqual([savedTake]);
     });
 
     it("quick recording: start, stop, and confirm upload a take in normal mode", async () => {

@@ -60,7 +60,7 @@ class ScenarioApiControllerTest {
 
         when(languageService.existsById("chuj")).thenReturn(true);
         when(userService.getUserByUsername("alice")).thenReturn(user);
-        when(scenarioService.existsByTitleAndAuthorNameAndLanguageId("  Story  ", "alice", "chuj"))
+        when(scenarioService.existsByTitleAndAuthorNameAndLanguageId("Story", "alice", "chuj"))
                 .thenReturn(false);
         when(scenarioService.createScenario("Story", "A desc", 12L, "chuj", List.of()))
                 .thenReturn(created);

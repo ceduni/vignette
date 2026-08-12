@@ -2323,6 +2323,10 @@
     background: rgba(72,91,56,0.06);
 }
 
+.studio-ambience-main--empty strong {
+    color: var(--terra);
+}
+
 .studio-ambience-play,
 .studio-ambience-manage {
     display: grid;

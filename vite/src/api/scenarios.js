@@ -73,6 +73,12 @@ return apiFetch(`/api/thumbnails/${id}/layout`, {
 body,
 });
 }
+export function updateThumbnailTitle(id, body) {
+return apiFetch(`/api/thumbnails/${id}/title`, {
+        method: "PATCH",
+body,
+});
+}
 export function fetchThumbnailAudios(id) {
 return apiFetch(`/api/thumbnails/${id}/audios`);
 }
@@ -82,6 +88,12 @@ return apiFetch(`/api/scenarios/${id}/background-audios`);
 export function uploadThumbnailAudio(id, formData) {
 return apiFetch(`/api/thumbnails/${id}/audios`, {
         method: "POST",
+        body: formData,
+});
+}
+export function replaceAudioContent(id, formData) {
+return apiFetch(`/api/audios/${id}/content`, {
+        method: "PUT",
         body: formData,
 });
 }

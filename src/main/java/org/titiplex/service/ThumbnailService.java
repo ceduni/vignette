@@ -35,15 +35,20 @@ public class ThumbnailService {
 
     @Transactional
     public Thumbnail save(String title, MultipartFile image, Scenario scenario, User user) throws Exception {
+        int nextIdx = repo.maxIdx(scenario.getId()) + 1;
+        String effectiveTitle = (title == null || title.isBlank()) ? "Image " + nextIdx : title.trim();
+        if (effectiveTitle.length() > 255) {
+            throw new IllegalArgumentException("Scene title must be 255 characters or fewer");
+        }
         StoredFile stored = storage.storeThumbnail(image, scenario.getId());
 
         Thumbnail thumbnail = new Thumbnail();
-        thumbnail.setTitle((title == null || title.isBlank()) ? "Image " + (repo.maxIdx(scenario.getId()) + 1) : title.trim());
+        thumbnail.setTitle(effectiveTitle);
         thumbnail.setScenarioId(scenario.getId());
         thumbnail.setScenario(scenario);
         thumbnail.setAuthorId(user.getId());
         thumbnail.setAuthor(user);
-        thumbnail.setIdx(repo.maxIdx(scenario.getId()) + 1);
+        thumbnail.setIdx(nextIdx);
         thumbnail.setContentType(stored.contentType());
         thumbnail.setImageSha256(stored.sha256());
         thumbnail.setStoragePath(stored.relativePath());
@@ -80,11 +85,16 @@ public class ThumbnailService {
     @Transactional
     public void delete(Long id) {
         Thumbnail thumbnail = getThumbnailById(id);
+        boolean imageIsShared = repo.existsByStoragePathAndIdNot(thumbnail.getStoragePath(), id);
         for (Audio audio : audioRepo.findByThumbnailIdOrderByIdxAsc(id)) {
-            storage.deleteQuietly(audio.getStoragePath());
+            if (!audioRepo.existsByStoragePathAndIdNot(audio.getStoragePath(), audio.getId())) {
+                storage.deleteAfterCommit(audio.getStoragePath());
+            }
             audioRepo.delete(audio);
         }
-        storage.deleteQuietly(thumbnail.getStoragePath());
+        if (!imageIsShared) {
+            storage.deleteAfterCommit(thumbnail.getStoragePath());
+        }
         repo.delete(thumbnail);
     }
 
@@ -110,6 +120,20 @@ public class ThumbnailService {
         thumbnail.setGridColumnSpan(request.gridColumnSpan() == null ? 1 : request.gridColumnSpan());
         thumbnail.setGridRowSpan(request.gridRowSpan() == null ? 1 : request.gridRowSpan());
 
+        return repo.save(thumbnail);
+    }
+
+    @Transactional
+    public Thumbnail updateTitle(Long id, String title) {
+        Thumbnail thumbnail = getThumbnailById(id);
+        String normalized = title == null ? "" : title.trim();
+        if (normalized.isBlank()) {
+            normalized = "Image " + thumbnail.getIdx();
+        }
+        if (normalized.length() > 255) {
+            throw new IllegalArgumentException("Scene title must be 255 characters or fewer");
+        }
+        thumbnail.setTitle(normalized);
         return repo.save(thumbnail);
     }
 }

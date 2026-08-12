@@ -13,11 +13,13 @@ import {
   fetchThumbnailAudios,
   publishScenario,
   rejectFork,
+  replaceAudioContent as apiReplaceAudioContent,
   reorderScenarioThumbnails as apiReorderScenarioThumbnails,
   updateAudioGloss as apiUpdateAudioGloss,
   updateScenarioMetadata as apiUpdateScenarioMetadata,
   updateScenarioStoryboard as apiUpdateScenarioStoryboard,
   updateThumbnailLayout as apiUpdateThumbnailLayout,
+  updateThumbnailTitle as apiUpdateThumbnailTitle,
   uploadScenarioThumbnail as apiUploadScenarioThumbnail,
   uploadScenarioBackgroundAudio as apiUploadScenarioBackgroundAudio,
   uploadThumbnailAudio as apiUploadThumbnailAudio,
@@ -451,6 +453,7 @@ const {
   studioSandboxMode,
   getScenarioId: () => props.id,
   deleteAudio: (...args) => deleteAudio(...args),
+  replaceAudioContent: (...args) => replaceAudioContent(...args),
   uploadThumbnailAudio: (...args) => uploadThumbnailAudio(...args),
   fetchThumbnailAudios,
   glossTranscription,
@@ -474,6 +477,7 @@ const {
   selectThumb,
   selectGlobalThumb,
   updateThumbTitle,
+  persistThumbTitle,
   deleteThumb,
   syncSelectedThumbnailFromList,
   setOrderedThumbnails,
@@ -496,6 +500,7 @@ const {
   sortedThumbnails,
   getScenarioId: () => props.id,
   deleteThumbnail: (...args) => deleteThumbnail(...args),
+  updateThumbnailTitle: (...args) => updateThumbnailTitle(...args),
   reorderScenarioThumbnails: (...args) => reorderScenarioThumbnails(...args),
   toast,
   openRecorderForSelection: (...args) => openRecorderForSelection(...args),
@@ -643,6 +648,12 @@ async function deleteAudio(...args) {
   return result;
 }
 
+async function replaceAudioContent(...args) {
+  const result = await apiReplaceAudioContent(...args);
+  markEditedIfPublished();
+  return result;
+}
+
 async function deleteThumbnail(...args) {
   const result = await apiDeleteThumbnail(...args);
   markEditedIfPublished();
@@ -675,6 +686,12 @@ async function updateScenarioStoryboard(...args) {
 
 async function updateThumbnailLayout(...args) {
   const result = await apiUpdateThumbnailLayout(...args);
+  markEditedIfPublished();
+  return result;
+}
+
+async function updateThumbnailTitle(...args) {
+  const result = await apiUpdateThumbnailTitle(...args);
   markEditedIfPublished();
   return result;
 }
@@ -1368,6 +1385,7 @@ onBeforeUnmount(() => {
                   v-model="descriptionDraft"
                   class="si-desc__textarea"
                   rows="3"
+                  maxlength="500"
                   placeholder="Add a description…"
                   :disabled="descriptionSaving"
                   @blur="saveScenarioDescription"
@@ -1624,7 +1642,7 @@ onBeforeUnmount(() => {
                 <section class="amb-card" role="dialog" aria-modal="true" aria-labelledby="ambience-title">
                   <div class="amb-head">
                     <div>
-                      <p class="amb-eyebrow">Vignette ambience</p>
+                      <p class="amb-eyebrow">Optional vignette ambience</p>
                       <h2 id="ambience-title" class="amb-title">{{ backgroundSummaryTitle }}</h2>
                     </div>
                     <button type="button" class="amb-close" aria-label="Close" @click="closeAmbiencePanel">
@@ -1768,15 +1786,15 @@ onBeforeUnmount(() => {
                           </div>
                           <label class="ambient-field">
                             <span>Title</span>
-                            <input v-model="backgroundTitle" class="side-note-input" placeholder="Forest, market, rain..."/>
+                            <input v-model="backgroundTitle" class="side-note-input" maxlength="255" placeholder="Forest, market, rain..."/>
                           </label>
                           <label class="ambient-field">
                             <span>Credit</span>
-                            <input v-model="backgroundSourceLabel" class="side-note-input" placeholder="Creator or library"/>
+                            <input v-model="backgroundSourceLabel" class="side-note-input" maxlength="180" placeholder="Creator or library"/>
                           </label>
                           <label class="ambient-field">
                             <span>Source</span>
-                            <input v-model="backgroundSourceUrl" class="side-note-input" placeholder="https://..."/>
+                            <input v-model="backgroundSourceUrl" class="side-note-input" maxlength="512" placeholder="https://..."/>
                           </label>
                         </section>
 
@@ -2367,6 +2385,7 @@ onBeforeUnmount(() => {
                     <input
                         v-model="reviewComment"
                         class="vg-review-banner__input"
+                        maxlength="255"
                         placeholder="Optional comment…"
                     />
                     <button type="button" class="vg-review-banner__reject" :disabled="reviewing" @click="rejectCurrentFork">
@@ -2592,6 +2611,7 @@ onBeforeUnmount(() => {
                               @keydown.enter.prevent="saveStudioTitle"
                               @keydown.escape.prevent="studioTitleEditing = false"
                               @focusin.once="$event.target.select()"
+                              maxlength="200"
                               autocomplete="off"
                               autofocus
                           />
@@ -2611,27 +2631,32 @@ onBeforeUnmount(() => {
                       </header>
 
                       <section class="studio-ambience-strip">
-                        <button type="button" class="studio-ambience-main" @click="openAmbiencePanel">
-                          <span class="fiche-speaker ambience">BG</span>
+                        <button
+                            type="button"
+                            class="studio-ambience-main"
+                            :class="{ 'studio-ambience-main--empty': !hasActiveBackgroundAmbience }"
+                            @click="openAmbiencePanel"
+                        >
+                          <span class="fiche-speaker ambience">{{ hasActiveBackgroundAmbience ? "BG" : "+" }}</span>
                           <span>
-                            <small>Vignette ambience</small>
+                            <small>Vignette ambience · Optional</small>
                             <strong>{{ backgroundSummaryTitle }}</strong>
                           </span>
-                          <em>{{ backgroundSummaryNote }}</em>
+                          <em v-if="backgroundSummaryNote">{{ backgroundSummaryNote }}</em>
                         </button>
                         <button
                             type="button"
                             class="studio-ambience-play"
-                            :disabled="presetAudioGenerating"
-                            :title="backgroundPlaying ? 'Pause background audio' : 'Play background audio'"
-                            :aria-label="backgroundPlaying ? 'Pause background audio' : 'Play background audio'"
+                            :disabled="presetAudioGenerating || !hasActiveBackgroundAmbience"
+                            :title="!hasActiveBackgroundAmbience ? 'No ambience to play' : (backgroundPlaying ? 'Pause background audio' : 'Play background audio')"
+                            :aria-label="!hasActiveBackgroundAmbience ? 'No ambience to play' : (backgroundPlaying ? 'Pause background audio' : 'Play background audio')"
                             @click="toggleBackgroundAudio"
                         >
                           <span v-if="backgroundPlaying" class="pause-icon" aria-hidden="true"></span>
                           <span v-else aria-hidden="true">▶</span>
                         </button>
                         <button type="button" class="studio-ambience-manage" @click="openAmbiencePanel">
-                          Ambience
+                          {{ hasActiveBackgroundAmbience ? "Manage" : "Add ambience" }}
                         </button>
                       </section>
 
@@ -2666,6 +2691,8 @@ onBeforeUnmount(() => {
                                   @click.stop="selectThumb(item, { scrollRecorder: false })"
                                   @focus="selectThumb(item, { scrollRecorder: false })"
                                   @input="updateThumbTitle(item, $event)"
+                                  @change="persistThumbTitle(item)"
+                                  maxlength="255"
                               />
                               <div class="fiche-actions">
                                 <button type="button" title="Move up" @click.stop="reorderThumb(item, 'up')">↑</button>

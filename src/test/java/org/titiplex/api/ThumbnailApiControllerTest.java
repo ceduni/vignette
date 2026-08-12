@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.ThumbnailRowDto;
 import org.titiplex.api.dto.UpdateThumbnailLayoutRequest;
+import org.titiplex.api.dto.UpdateThumbnailTitleRequest;
 import org.titiplex.api.dto.UploadResponse;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
@@ -183,6 +184,35 @@ class ThumbnailApiControllerTest {
         assertEquals(3, result.gridRow());
         assertEquals(2, result.gridColumnSpan());
         assertEquals(1, result.gridRowSpan());
+    }
+
+    @Test
+    void updateTitle_checksEditAccessAndRecordsHistory() {
+        Authentication auth = auth("alice", "ROLE_USER");
+        Thumbnail existing = new Thumbnail();
+        existing.setId(8L);
+        existing.setScenarioId(9L);
+        Scenario scenario = new Scenario();
+        scenario.setId(9L);
+        Thumbnail saved = new Thumbnail();
+        saved.setId(8L);
+        saved.setTitle("Arrival");
+        saved.setIdx(1);
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+        UpdateThumbnailTitleRequest request = new UpdateThumbnailTitleRequest("Arrival");
+
+        when(thumbnailService.getThumbnailById(8L)).thenReturn(existing);
+        when(scenarioService.getRequiredScenario(9L)).thenReturn(scenario);
+        when(thumbnailService.updateTitle(8L, "Arrival")).thenReturn(saved);
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
+        ThumbnailRowDto result = controller.updateTitle(8L, request, auth);
+
+        verify(scenarioService).assertCanEditScenario(scenario, auth);
+        verify(scenarioHistoryService).record(9L, 12L, org.titiplex.persistence.model.ScenarioHistoryAction.THUMBNAIL_UPDATED, "Renamed a thumbnail");
+        assertEquals("Arrival", result.title());
     }
 
     @Test

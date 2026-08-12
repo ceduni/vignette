@@ -71,19 +71,33 @@ describe("useBackgroundAmbience", () => {
         const {api} = setup();
         expect(api.hasActiveBackgroundAmbience.value).toBe(false);
         expect(api.selectedAmbiencePreset.value.id).toBe("forest-morning");
+        expect(api.backgroundSummaryTitle.value).toBe("Add ambience");
+        expect(api.backgroundSummaryNote.value).toBe("");
     });
 
-    it("selectAmbiencePreset enables preset ambience and fills in the form fields", () => {
+    it("opens the ambience panel without activating the default preset", () => {
+        const {api} = setup();
+
+        api.openAmbiencePanel();
+
+        expect(api.ambiencePanelOpen.value).toBe(true);
+        expect(api.ambiencePresetEnabled.value).toBe(false);
+        expect(api.hasActiveBackgroundAmbience.value).toBe(false);
+        expect(api.backgroundTitle.value).toBe("");
+    });
+
+    it("selectAmbiencePreset prepares the preset without marking it as added", () => {
         const {api} = setup();
         const preset = api.ambiencePresets.find((p) => p.id === "rain-window");
 
         api.selectAmbiencePreset(preset);
 
-        expect(api.ambiencePresetEnabled.value).toBe(true);
+        expect(api.ambiencePresetEnabled.value).toBe(false);
         expect(api.selectedBackgroundAudioId.value).toBeNull();
         expect(api.backgroundTitle.value).toBe("Rain on window");
         expect(api.backgroundVolume.value).toBe(preset.volume);
-        expect(api.hasActiveBackgroundAmbience.value).toBe(true);
+        expect(api.hasActiveBackgroundAmbience.value).toBe(false);
+        expect(api.backgroundSummaryTitle.value).toBe("Add ambience");
     });
 
     it("selectBackgroundAudio disables the preset and selects the real audio", () => {

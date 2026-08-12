@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.api.dto.ApiError;
 import org.titiplex.api.dto.ThumbnailRowDto;
 import org.titiplex.api.dto.UpdateThumbnailLayoutRequest;
+import org.titiplex.api.dto.UpdateThumbnailTitleRequest;
 import org.titiplex.api.dto.UploadResponse;
 import org.titiplex.api.security.OwnerOrAdminOperation;
 import org.titiplex.api.security.ProtectedResource;
@@ -367,6 +368,33 @@ public class ThumbnailApiController {
 
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
         scenarioHistoryService.record(scenario.getId(), actorId, ScenarioHistoryAction.THUMBNAIL_UPDATED, "Repositioned a thumbnail");
+
+        return new ThumbnailRowDto(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getIdx(),
+                saved.getGridColumn(),
+                saved.getGridRow(),
+                saved.getGridColumnSpan(),
+                saved.getGridRowSpan(),
+                saved.getImageWidth(),
+                saved.getImageHeight()
+        );
+    }
+
+    @PatchMapping("/thumbnails/{id}/title")
+    public ThumbnailRowDto updateTitle(
+            @PathVariable Long id,
+            @RequestBody UpdateThumbnailTitleRequest req,
+            Authentication auth
+    ) {
+        Thumbnail thumbnail = thumbnailService.getThumbnailById(id);
+        Scenario scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
+        scenarioService.assertCanEditScenario(scenario, auth);
+
+        Thumbnail saved = thumbnailService.updateTitle(id, req.title());
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenario.getId(), actorId, ScenarioHistoryAction.THUMBNAIL_UPDATED, "Renamed a thumbnail");
 
         return new ThumbnailRowDto(
                 saved.getId(),

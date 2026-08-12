@@ -155,18 +155,18 @@ export function useBackgroundAmbience({
     });
 
     const backgroundSummaryTitle = computed(() => {
-        return selectedBackgroundAudio.value?.title || selectedAmbiencePreset.value?.title || "Choose ambience";
+        return selectedBackgroundAudio.value?.title || "Add ambience";
     });
 
     const backgroundSummaryNote = computed(() => {
         if (selectedBackgroundAudio.value) {
             return selectedBackgroundAudio.value.sourceLabel || selectedBackgroundAudio.value.sourceUrl || "Ready for vignette playback";
         }
-        return selectedAmbiencePreset.value?.hint || "Choose a preset, then import audio";
+        return "";
     });
 
     const hasActiveBackgroundAmbience = computed(() => {
-        return !!selectedBackgroundAudio.value || (ambiencePresetEnabled.value && !!selectedAmbiencePreset.value);
+        return !!selectedBackgroundAudio.value;
     });
 
     function backgroundAudioUrl(audio = selectedBackgroundAudio.value) {
@@ -191,9 +191,6 @@ export function useBackgroundAmbience({
     }
 
     function openAmbiencePanel() {
-        if (!selectedBackgroundAudio.value && !backgroundTitle.value.trim()) {
-            selectAmbiencePreset(selectedAmbiencePreset.value);
-        }
         ambiencePanelOpen.value = true;
     }
 
@@ -205,7 +202,7 @@ export function useBackgroundAmbience({
         if (!preset) return;
         stopBackgroundPlayback();
         selectedAmbiencePresetId.value = preset.id;
-        ambiencePresetEnabled.value = true;
+        ambiencePresetEnabled.value = false;
         selectedBackgroundAudioId.value = null;
         backgroundTitle.value = preset.title;
         backgroundSourceLabel.value = "Vignette preset";
@@ -418,10 +415,6 @@ export function useBackgroundAmbience({
         if (backgroundPlaying.value) {
             pauseBackgroundPlayback();
             return;
-        }
-
-        if (!selectedBackgroundAudio.value && selectedAmbiencePreset.value) {
-            ambiencePresetEnabled.value = true;
         }
 
         try {

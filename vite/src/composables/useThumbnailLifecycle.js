@@ -12,6 +12,7 @@ export function useThumbnailLifecycle(options = {}) {
         sortedThumbnails,
         getScenarioId,
         deleteThumbnail,
+        updateThumbnailTitle,
         reorderScenarioThumbnails,
         toast,
         openRecorderForSelection,
@@ -59,6 +60,26 @@ export function useThumbnailLifecycle(options = {}) {
                 ...selectedThumb.value,
                 title,
             };
+        }
+    }
+
+    async function persistThumbTitle(targetThumb) {
+        if (!targetThumb?.id) return;
+        const current = thumbnails.value.find((thumb) => String(thumb.id) === String(targetThumb.id));
+        if (!current) return;
+
+        if (studioSandboxMode.value || !isPersistableThumbnailId(current.id)) {
+            return;
+        }
+
+        try {
+            const saved = await updateThumbnailTitle(current.id, {title: current.title || ""});
+            thumbnails.value = thumbnails.value.map((thumb) =>
+                String(thumb.id) === String(current.id) ? {...thumb, ...saved} : thumb
+            );
+            syncSelectedThumbnailFromList(current.id);
+        } catch (e) {
+            toast.error(e.message || "Could not save this scene title.");
         }
     }
 
@@ -204,6 +225,7 @@ export function useThumbnailLifecycle(options = {}) {
         selectThumb,
         selectGlobalThumb,
         updateThumbTitle,
+        persistThumbTitle,
         deleteThumb,
         syncSelectedThumbnailFromList,
         setOrderedThumbnails,

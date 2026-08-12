@@ -189,6 +189,57 @@ class AudioApiControllerWebMvcTest {
     }
 
     @Test
+    void replace_requiresAuthentication() throws Exception {
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio",
+                "replacement.webm",
+                "audio/webm",
+                new byte[]{4, 5, 6}
+        );
+
+        mvc.perform(multipart("/api/audios/5/content")
+                        .file(audio)
+                        .param("title", "New take")
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        })
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void replace_callsServiceWhenAuthenticatedWithCsrf() throws Exception {
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio",
+                "replacement.webm",
+                "audio/webm",
+                new byte[]{4, 5, 6}
+        );
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+        when(audioService.getScenarioIdForAudio(5L)).thenReturn(9L);
+        when(audioService.replaceAudio(5L, "New take", audio)).thenReturn(5L);
+
+        mvc.perform(multipart("/api/audios/5/content")
+                        .file(audio)
+                        .param("title", "New take")
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        })
+                        .with(user("alice").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(5));
+
+        verify(audioService).replaceAudio(5L, "New take", audio);
+    }
+
+    @Test
     void updateMarker_requiresAuthentication() throws Exception {
         mvc.perform(patch("/api/audios/5/marker")
                         .with(csrf())

@@ -6,10 +6,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.titiplex.persistence.model.Audio;
-import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.service.AudioService;
 import org.titiplex.service.ScenarioService;
-import org.titiplex.service.ThumbnailService;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,34 +20,22 @@ class AudioSecurityTest {
     private AudioService audioService;
 
     @Mock
-    private ThumbnailService thumbnailService;
-
-    @Mock
     private ScenarioService scenarioService;
 
     @InjectMocks
     private AudioSecurity audioSecurity;
 
-    private Audio audioOn(long thumbnailId) {
+    private Audio audioOn(long scenarioId) {
         Audio a = new Audio();
         a.setId(3L);
-        a.setThumbnailId(thumbnailId);
+        a.setScenarioId(scenarioId);
         a.setAuthorId(1L);
         return a;
     }
 
-    private Thumbnail thumbnailOf(long thumbnailId, long scenarioId) {
-        Thumbnail t = new Thumbnail();
-        t.setId(thumbnailId);
-        t.setScenarioId(scenarioId);
-        t.setAuthorId(1L);
-        return t;
-    }
-
     @Test
     void isOwner_trueForCollaboratorWhoDidNotUploadTheAudio() {
-        when(audioService.getAudioOrThrow(3L)).thenReturn(audioOn(7L));
-        when(thumbnailService.getThumbnailById(7L)).thenReturn(thumbnailOf(7L, 9L));
+        when(audioService.getAudioOrThrow(3L)).thenReturn(audioOn(9L));
         when(scenarioService.hasContentEditAccess(9L, "bob")).thenReturn(true);
 
         assertTrue(audioSecurity.isOwner(3L, "bob"));
@@ -57,10 +43,19 @@ class AudioSecurityTest {
 
     @Test
     void isOwner_falseWhenNoScenarioEditAccess() {
-        when(audioService.getAudioOrThrow(3L)).thenReturn(audioOn(7L));
-        when(thumbnailService.getThumbnailById(7L)).thenReturn(thumbnailOf(7L, 9L));
+        when(audioService.getAudioOrThrow(3L)).thenReturn(audioOn(9L));
         when(scenarioService.hasContentEditAccess(9L, "stranger")).thenReturn(false);
 
         assertFalse(audioSecurity.isOwner(3L, "stranger"));
+    }
+
+    @Test
+    void isOwner_supportsBackgroundAudioWithoutThumbnail() {
+        Audio audio = audioOn(9L);
+        audio.setThumbnailId(null);
+        when(audioService.getAudioOrThrow(3L)).thenReturn(audio);
+        when(scenarioService.hasContentEditAccess(9L, "alice")).thenReturn(true);
+
+        assertTrue(audioSecurity.isOwner(3L, "alice"));
     }
 }

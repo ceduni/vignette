@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.api.dto.LanguagePreviewAudioDto;
 import org.titiplex.persistence.model.Audio;
+import org.titiplex.persistence.model.AudioScope;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.repo.AudioRepository;
@@ -160,6 +161,54 @@ class AudioServiceTest {
         Audio result = audioService.getAudioOrThrow(19L);
 
         assertEquals(19L, result.getId());
+    }
+
+    @Test
+    void replaceAudio_updatesTheExistingTakeBeforeRemovingItsOldFile() throws Exception {
+        Audio audio = new Audio();
+        audio.setId(19L);
+        audio.setScope(AudioScope.SCENE);
+        audio.setScenarioId(10L);
+        audio.setThumbnailId(6L);
+        audio.setTitle("Old take");
+        audio.setStoragePath("audios/scenario-10/thumbnail-6/old.webm");
+
+        StoredFile stored = new StoredFile(
+                "audios/scenario-10/thumbnail-6/new.webm",
+                "new-hash",
+                321L,
+                "audio/webm",
+                "new.webm"
+        );
+
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getOriginalFilename()).thenReturn("new.webm");
+        when(audioRepository.findById(19L)).thenReturn(Optional.of(audio));
+        when(storage.storeAudio(multipartFile, 10L, 6L)).thenReturn(stored);
+        when(audioRepository.existsByStoragePathAndIdNot(audio.getStoragePath(), 19L)).thenReturn(false);
+
+        Long id = audioService.replaceAudio(19L, "New take", multipartFile);
+
+        assertEquals(19L, id);
+        assertEquals("New take", audio.getTitle());
+        assertEquals("new-hash", audio.getAudioSha256());
+        assertEquals(stored.relativePath(), audio.getStoragePath());
+        verify(audioRepository).save(audio);
+        verify(storage).deleteAfterCommit("audios/scenario-10/thumbnail-6/old.webm");
+    }
+
+    @Test
+    void deleteAudio_keepsAFileReferencedByAnotherAudio() {
+        Audio audio = new Audio();
+        audio.setId(19L);
+        audio.setStoragePath("audios/shared.webm");
+        when(audioRepository.findById(19L)).thenReturn(Optional.of(audio));
+        when(audioRepository.existsByStoragePathAndIdNot("audios/shared.webm", 19L)).thenReturn(true);
+
+        audioService.deleteAudio(19L);
+
+        verify(storage, never()).deleteAfterCommit("audios/shared.webm");
+        verify(audioRepository).delete(audio);
     }
 
     @Test

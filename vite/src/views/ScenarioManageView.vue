@@ -327,12 +327,12 @@ onMounted(loadAll);
               <div class="form-grid">
                 <label>
                   Title
-                  <input v-model="metadataForm.title"/>
+                  <input v-model="metadataForm.title" maxlength="200"/>
                 </label>
 
                 <label class="field--full">
                   Description
-                  <textarea v-model="metadataForm.description" rows="4"/>
+                  <textarea v-model="metadataForm.description" rows="4" maxlength="500"/>
                 </label>
 
                 <label class="field--full">

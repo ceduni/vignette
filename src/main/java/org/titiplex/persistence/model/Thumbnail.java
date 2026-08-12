@@ -5,10 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "thumbnail", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_thumbnail_scenario_sha256", columnNames = {"scenario_id", "image_sha256"}),
-        @UniqueConstraint(name = "uk_thumbnail_scenario_title", columnNames = {"scenario_id", "title"})
-})
+@Table(name = "thumbnail")
 @Getter
 @Setter
 public class Thumbnail {

@@ -98,7 +98,19 @@ describe("useSceneImageUpload", () => {
         expect(api.vignetteMakerOpen.value).toBe(false);
         expect(api.uploadDialogOpen.value).toBe(true);
         expect(api.uploadFiles.value).toHaveLength(1);
-        expect(api.uploadFiles.value[0].title).toBe("My scenario – scene");
+        expect(api.uploadFiles.value[0].title).toBe("My scenario – scene 1");
+    });
+
+    it("onVignetteMakerInsert gives each generated scene a distinct title", () => {
+        const {api} = setup();
+
+        api.onVignetteMakerInsert(new Blob(["first"], {type: "image/png"}));
+        api.onVignetteMakerInsert(new Blob(["second"], {type: "image/png"}));
+
+        expect(api.uploadFiles.value.map((entry) => entry.title)).toEqual([
+            "My scenario – scene 1",
+            "My scenario – scene 2",
+        ]);
     });
 
     it("uploadImage errors out when no files are queued", async () => {

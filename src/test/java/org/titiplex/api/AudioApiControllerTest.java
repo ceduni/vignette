@@ -136,6 +136,35 @@ class AudioApiControllerTest {
     }
 
     @Test
+    void replace_keepsTheAudioRecordAndRecordsHistory() throws Exception {
+        Authentication auth = auth("alice", "ROLE_USER");
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio",
+                "replacement.webm",
+                "audio/webm",
+                new byte[]{4, 5, 6}
+        );
+
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+        when(audioService.getScenarioIdForAudio(5L)).thenReturn(9L);
+        when(audioService.replaceAudio(5L, "New take", audio)).thenReturn(5L);
+
+        CreateAudioResponse response = controller.replace(5L, "New take", audio, auth);
+
+        assertEquals(5L, response.id());
+        verify(audioService).replaceAudio(5L, "New take", audio);
+        verify(scenarioHistoryService).record(
+                9L,
+                12L,
+                org.titiplex.persistence.model.ScenarioHistoryAction.AUDIO_UPDATED,
+                "Replaced an audio clip"
+        );
+    }
+
+    @Test
     void updateMarker_delegatesToService() {
         Authentication auth = auth("alice", "ROLE_USER");
         User user = new User();

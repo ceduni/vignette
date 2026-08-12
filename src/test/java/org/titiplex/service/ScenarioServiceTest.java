@@ -13,15 +13,22 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.ScenarioDto;
 import org.titiplex.persistence.model.CollaborationStatus;
 import org.titiplex.persistence.model.CollaboratorRole;
+import org.titiplex.persistence.model.Audio;
+import org.titiplex.persistence.model.AudioScope;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioCollaborator;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.AudioRepository;
+import org.titiplex.persistence.repo.ScenarioBookmarkRepository;
 import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
+import org.titiplex.persistence.repo.ScenarioHistoryRepository;
+import org.titiplex.persistence.repo.ScenarioInviteLinkRepository;
+import org.titiplex.persistence.repo.ScenarioLikeRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
 import org.titiplex.persistence.repo.ThumbnailRepository;
+import org.titiplex.service.storage.FileStorageService;
 
 import java.time.Instant;
 import java.util.List;
@@ -36,6 +43,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
@@ -60,6 +68,18 @@ class ScenarioServiceTest {
     private ScenarioCollaboratorRepository collaboratorRepo;
     @Mock
     private ScenarioHistoryService scenarioHistoryService;
+    @Mock
+    private ScenarioLikeRepository likeRepo;
+    @Mock
+    private ScenarioBookmarkRepository bookmarkRepo;
+    @Mock
+    private ScenarioInviteLinkRepository inviteLinkRepo;
+    @Mock
+    private ScenarioHistoryRepository historyRepo;
+    @Mock
+    private ThumbnailService thumbnailService;
+    @Mock
+    private FileStorageService storage;
 
     @InjectMocks
     private ScenarioService scenarioService;
@@ -85,6 +105,93 @@ class ScenarioServiceTest {
         assertEquals("fra", created.getLanguage_id());
         assertEquals(user, created.getAuthor());
         assertEquals(language, created.getLanguage());
+    }
+
+    @Test
+    void createScenario_rejectsDescriptionBeyondTheStoredLimit() {
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> scenarioService.createScenario("Title", "x".repeat(501), 9L, "fra", List.of())
+        );
+
+        assertEquals("Description must be 500 characters or fewer", error.getMessage());
+    }
+
+    @Test
+    void forkScenario_copiesBackgroundAudioMetadata() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        User user = author();
+        Language language = new Language();
+        language.setId("fra");
+        Scenario original = new Scenario();
+        original.setId(3L);
+        original.setTitle("Original");
+        original.setAuthor_id(7L);
+        original.setLanguage_id("fra");
+        original.setLanguage(language);
+        original.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        original.setTags(Set.of());
+        Audio background = new Audio();
+        background.setId(14L);
+        background.setStoragePath("audios/scenario-3/background/forest.wav");
+        background.setSizeBytes(20L);
+        background.setOriginalFilename("forest.wav");
+        background.setAudioSha256("hash");
+        background.setTitle("Forest");
+        background.setIdx(1);
+        background.setMime("audio/wav");
+        background.setScope(AudioScope.BACKGROUND);
+        background.setLanguageId("fra");
+        background.setSourceLabel("Field recording");
+        background.setSourceUrl("https://example.test/forest");
+
+        when(scenarioRepository.findByIdWithTags(3L)).thenReturn(Optional.of(original));
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+        when(userService.getUserById(7L)).thenReturn(user);
+        when(scenarioRepository.save(any(Scenario.class))).thenAnswer(invocation -> {
+            Scenario saved = invocation.getArgument(0);
+            saved.setId(44L);
+            return saved;
+        });
+        when(thumbnailRepo.findByScenarioIdOrderByIdxAsc(3L)).thenReturn(List.of());
+        when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(3L, AudioScope.BACKGROUND))
+                .thenReturn(List.of(background));
+
+        scenarioService.forkScenario(3L, "My copy", auth);
+
+        org.mockito.ArgumentCaptor<Audio> captor = org.mockito.ArgumentCaptor.forClass(Audio.class);
+        verify(audioRepo).save(captor.capture());
+        Audio copied = captor.getValue();
+        assertEquals(AudioScope.BACKGROUND, copied.getScope());
+        assertEquals(44L, copied.getScenarioId());
+        assertEquals("audios/scenario-3/background/forest.wav", copied.getStoragePath());
+        assertEquals("Field recording", copied.getSourceLabel());
+        assertEquals("https://example.test/forest", copied.getSourceUrl());
+    }
+
+    @Test
+    void updateScenarioMetadata_rejectsAnotherScenarioTitleBeforeSaving() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("Current title");
+        scenario.setLanguage_id("fra");
+        when(scenarioRepository.findByIdWithTags(3L)).thenReturn(Optional.of(scenario));
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId("Taken title", "alice", "fra"))
+                .thenReturn(true);
+
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> scenarioService.updateScenarioMetadata(
+                        3L,
+                        new org.titiplex.api.dto.UpdateScenarioMetadataRequest(" Taken title ", null, null),
+                        auth
+                )
+        );
+
+        assertEquals("Scenario already exists for this user and language", error.getMessage());
+        verify(scenarioRepository, never()).save(scenario);
     }
 
     @Test
@@ -452,5 +559,30 @@ class ScenarioServiceTest {
         when(scenarioRepository.existsByIdAndAuthorUsername(42L, "stranger")).thenReturn(false);
 
         assertThrows(AccessDeniedException.class, () -> scenarioService.assertCanDeleteScenario(scenario, auth));
+    }
+
+    @Test
+    void deleteScenario_keepsSharedBackgroundAudioFile() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario scenario = new Scenario();
+        scenario.setId(42L);
+        Audio audio = new Audio();
+        audio.setId(15L);
+        audio.setScenarioId(42L);
+        audio.setScope(AudioScope.BACKGROUND);
+        audio.setStoragePath("audios/shared-background.webm");
+
+        when(scenarioRepository.findByIdWithTags(42L)).thenReturn(Optional.of(scenario));
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "alice")).thenReturn(true);
+        when(thumbnailRepo.getThumbnailsByScenarioId(42L)).thenReturn(List.of());
+        when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(42L, AudioScope.BACKGROUND))
+                .thenReturn(List.of(audio));
+        when(audioRepo.existsByStoragePathAndIdNot("audios/shared-background.webm", 15L)).thenReturn(true);
+
+        scenarioService.deleteScenario(42L, auth);
+
+        verify(storage, never()).deleteAfterCommit("audios/shared-background.webm");
+        verify(audioRepo).delete(audio);
+        verify(scenarioRepository).delete(scenario);
     }
 }

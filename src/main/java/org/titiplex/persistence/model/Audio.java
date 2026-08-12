@@ -7,9 +7,7 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@Table(name = "audio", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_audio_scenario_sha256", columnNames = {"scenario_id", "audio_sha256"})
-})
+@Table(name = "audio")
 public class Audio {
 
     @Id
@@ -89,7 +87,7 @@ public class Audio {
     )
     private Scenario scenario;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "thumbnail_id",
             referencedColumnName = "id",

@@ -201,6 +201,29 @@ public class AudioApiController {
                 .body(media.resource());
     }
 
+    @OwnerOrAdminOperation(
+            resource = ProtectedResource.AUDIO,
+            param = "audioId"
+    )
+    @PutMapping(value = "/audios/{audioId}/content", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CreateAudioResponse replace(
+            @PathVariable Long audioId,
+            @RequestParam(defaultValue = "") String title,
+            @RequestPart("audio") MultipartFile audio,
+            Authentication auth
+    ) throws Exception {
+        Long scenarioId = audioService.getScenarioIdForAudio(audioId);
+        Long id = audioService.replaceAudio(audioId, title, audio);
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(
+                scenarioId,
+                actorId,
+                ScenarioHistoryAction.AUDIO_UPDATED,
+                "Replaced an audio clip"
+        );
+        return new CreateAudioResponse(id);
+    }
+
     /**
      * Uploads a new audio file and associates it with a specific thumbnail.
      * Optionally sets metadata such as title, index, and marker information.

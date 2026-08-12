@@ -48,5 +48,6 @@ public class ScenarioSchemaMaintenance implements ApplicationRunner {
         for (String name : staleConstraints) {
             jdbc.execute("alter table scenario drop constraint if exists " + name);
         }
+        jdbc.execute("alter table scenario alter column description set data type varchar(500)");
     }
 }
