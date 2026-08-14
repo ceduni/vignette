@@ -9,6 +9,7 @@ import {
   deleteScenario,
   fetchScenario,
   fetchScenarioBackgroundAudios,
+  fetchScenarioHistory,
   fetchScenarioThumbnails,
   fetchThumbnailAudios,
   publishScenario,
@@ -148,6 +149,26 @@ function openCollaboratorsPanel() {
 
 function closeCollaboratorsPanel() {
   collaboratorsPanelOpen.value = false;
+}
+
+const historyPanelOpen = ref(false);
+const historyEntries = ref([]);
+const historyLoading = ref(false);
+
+async function openHistoryPanel() {
+  historyPanelOpen.value = true;
+  historyLoading.value = true;
+  try {
+    historyEntries.value = await fetchScenarioHistory(props.id);
+  } catch (e) {
+    toast.error(e.message || "Failed to load scenario history.");
+  } finally {
+    historyLoading.value = false;
+  }
+}
+
+function closeHistoryPanel() {
+  historyPanelOpen.value = false;
 }
 
 async function handleInvite(username, role) {
@@ -623,6 +644,7 @@ const {
   removeBackgroundAudio,
   stopBackgroundPlayback,
   disposeBackgroundPlayback,
+  disposePresetAudioCache,
   pauseBackgroundPlayback,
   playBackgroundAudio,
   toggleBackgroundAudio,
@@ -1308,8 +1330,7 @@ onBeforeUnmount(() => {
   backgroundAudios.value.forEach((audio) => {
     if (audio.previewUrl) URL.revokeObjectURL(audio.previewUrl);
   });
-  presetAudioCache.forEach((audio) => URL.revokeObjectURL(audio.url));
-  presetAudioCache.clear();
+  disposePresetAudioCache();
 });
 </script>
 
@@ -2195,6 +2216,18 @@ onBeforeUnmount(() => {
                 />
               </div>
 
+              <div
+                  v-if="historyPanelOpen"
+                  class="dialog-backdrop"
+                  @click.self="closeHistoryPanel"
+              >
+                <ScenarioHistoryPanel
+                    :entries="historyEntries"
+                    :loading="historyLoading"
+                    @close="closeHistoryPanel"
+                />
+              </div>
+
               <div v-if="storyboardItems.length" class="vg-root">
                 <div class="vg-nav">
                   <div class="vg-brand-block">
@@ -2310,6 +2343,18 @@ onBeforeUnmount(() => {
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                         <circle cx="9" cy="7" r="4"/>
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
+                    </button>
+                    <button
+                        v-if="hasAnyRole"
+                        type="button"
+                        class="vg-icon-btn"
+                        title="History"
+                        @click="openHistoryPanel"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 7v5l3 3"/>
                       </svg>
                     </button>
                     <button

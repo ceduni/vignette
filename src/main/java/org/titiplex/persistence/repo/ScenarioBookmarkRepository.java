@@ -12,6 +12,7 @@ import java.util.List;
 public interface ScenarioBookmarkRepository extends JpaRepository<ScenarioBookmark, Long> {
     boolean existsByScenarioAndUser(Scenario scenario, User user);
     void deleteByScenarioAndUser(Scenario scenario, User user);
+    void deleteByScenario_Id(Long scenarioId);
     long countByScenario(Scenario scenario);
 
     @Query("select b.scenario.id from ScenarioBookmark b where b.user = :user")

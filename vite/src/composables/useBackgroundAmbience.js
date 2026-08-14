@@ -381,6 +381,11 @@ export function useBackgroundAmbience({
         backgroundAudioPlayer = null;
     }
 
+    function disposePresetAudioCache() {
+        presetAudioCache.forEach((audio) => URL.revokeObjectURL(audio.url));
+        presetAudioCache.clear();
+    }
+
     function pauseBackgroundPlayback() {
         if (!backgroundAudioPlayer) return;
         backgroundAudioPlayer.pause();
@@ -484,6 +489,7 @@ export function useBackgroundAmbience({
         removeBackgroundAudio,
         stopBackgroundPlayback,
         disposeBackgroundPlayback,
+        disposePresetAudioCache,
         pauseBackgroundPlayback,
         playBackgroundAudio,
         toggleBackgroundAudio,

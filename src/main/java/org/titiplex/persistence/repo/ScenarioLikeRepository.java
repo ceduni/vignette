@@ -12,6 +12,7 @@ import java.util.List;
 public interface ScenarioLikeRepository extends JpaRepository<ScenarioLike, Long> {
     boolean existsByScenarioAndUser(Scenario scenario, User user);
     void deleteByScenarioAndUser(Scenario scenario, User user);
+    void deleteByScenario_Id(Long scenarioId);
     long countByScenario(Scenario scenario);
 
     @Query("select l.scenario.id from ScenarioLike l where l.user = :user")
