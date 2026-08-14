@@ -161,7 +161,12 @@ onMounted(load);
 
     <template v-else>
       <div v-if="scenarios.length" class="us-grid">
-        <article v-for="(s, index) in scenarios" :key="s.id" class="us-card">
+        <article
+          v-for="(s, index) in scenarios"
+          :key="s.id"
+          class="us-card"
+          :class="{ 'us-card--popover-open': bookmarkCategoryPickerId === s.id }"
+        >
           <button type="button" class="us-card__thumb" @click="openReader(s)">
             <img
                 v-if="thumbnailUrl(s.id)"
@@ -322,6 +327,7 @@ onMounted(load);
 }
 
 .us-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   border-radius: 16px;
@@ -332,6 +338,11 @@ onMounted(load);
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
 .us-card:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(30, 8, 18, 0.1); }
+
+/* Grid items paint as atomic units in grid order — a descendant's z-index
+   can't escape past a later sibling card unless the card itself is raised,
+   otherwise the bookmark picker renders behind the row below it. */
+.us-card--popover-open { z-index: 50; }
 
 .us-card__thumb {
   position: relative;

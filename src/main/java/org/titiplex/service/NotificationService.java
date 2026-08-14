@@ -6,15 +6,23 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.titiplex.persistence.model.CollaborationStatus;
+import org.titiplex.persistence.model.DiscussionMessage;
+import org.titiplex.persistence.model.DiscussionTargetType;
 import org.titiplex.persistence.model.LanguageFollow;
 import org.titiplex.persistence.model.Notification;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioCollaborator;
 import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.NotificationRepository;
+import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
+import org.titiplex.persistence.repo.ScenarioRepository;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -27,6 +35,8 @@ public class NotificationService {
     private static final String TYPE_FORK_REJECTED = "FORK_REJECTED";
     private static final String TYPE_COLLABORATION_INVITE = "COLLABORATION_INVITE";
     private static final String TYPE_COLLABORATION_ACCEPTED = "COLLABORATION_ACCEPTED";
+    private static final String TYPE_COMMENT_REPLY = "COMMENT_REPLY";
+    private static final String TYPE_NEW_COMMENT_ON_SCENARIO = "NEW_COMMENT_ON_SCENARIO";
 
     // userId → list of active SSE emitters
     private final Map<Long, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
@@ -35,6 +45,8 @@ public class NotificationService {
     private final UserService userService;
     private final LanguageFollowService languageFollowService;
     private final LanguageService languageService;
+    private final ScenarioRepository scenarioRepository;
+    private final ScenarioCollaboratorRepository scenarioCollaboratorRepository;
     private final ObjectMapper objectMapper;
 
     public NotificationService(
@@ -42,12 +54,16 @@ public class NotificationService {
             UserService userService,
             LanguageFollowService languageFollowService,
             LanguageService languageService,
+            ScenarioRepository scenarioRepository,
+            ScenarioCollaboratorRepository scenarioCollaboratorRepository,
             ObjectMapper objectMapper
     ) {
         this.repo = repo;
         this.userService = userService;
         this.languageFollowService = languageFollowService;
         this.languageService = languageService;
+        this.scenarioRepository = scenarioRepository;
+        this.scenarioCollaboratorRepository = scenarioCollaboratorRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -259,6 +275,89 @@ public class NotificationService {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
                 .error("Failed to send invite accepted notification for scenario {}: {}", scenario.getId(), e.getMessage());
         }
+    }
+
+    /**
+     * Called by CommunityService.createMessage() whenever a new discussion message is posted.
+     * Notifies, in order of specificity:
+     * - the parent message's author, if this is a reply to their comment;
+     * - for scenario discussions, the scenario's author and accepted collaborators
+     *   (skipping anyone already notified above, so a single message never double-pings
+     *   the same person).
+     * The author of the new message is never notified about their own message.
+     */
+    @Transactional
+    public void notifyDiscussionMessage(DiscussionMessage message, DiscussionMessage parent) {
+        try {
+            Long authorId = message.getAuthorId();
+            User author = userService.getUserById(authorId);
+            Set<Long> alreadyNotified = new HashSet<>();
+            alreadyNotified.add(authorId);
+
+            if (parent != null && !alreadyNotified.contains(parent.getAuthorId())) {
+                User parentAuthor = userService.getUserById(parent.getAuthorId());
+
+                Notification notif = new Notification();
+                notif.setUser(parentAuthor);
+                notif.setType(TYPE_COMMENT_REPLY);
+                notif.setMessage(author.getUsername() + " replied to your comment");
+                notif.setTargetUrl(withDiscussionHighlight(
+                        discussionTargetUrl(message.getTargetType(), message.getTargetId()), message.getId()));
+                notif.setReferenceId(message.getId());
+                repo.save(notif);
+
+                pushToUser(parentAuthor.getId(), notif);
+                alreadyNotified.add(parentAuthor.getId());
+            }
+
+            if (message.getTargetType() == DiscussionTargetType.SCENARIO) {
+                Long scenarioId = Long.parseLong(message.getTargetId());
+                Scenario scenario = scenarioRepository.findById(scenarioId).orElse(null);
+                if (scenario != null) {
+                    Set<Long> recipientIds = new HashSet<>();
+                    recipientIds.add(scenario.getAuthor_id());
+                    for (ScenarioCollaborator collaborator : scenarioCollaboratorRepository
+                            .findByScenarioIdAndStatus(scenarioId, CollaborationStatus.ACCEPTED)) {
+                        recipientIds.add(collaborator.getUserId());
+                    }
+                    recipientIds.removeAll(alreadyNotified);
+
+                    for (Long recipientId : recipientIds) {
+                        User recipient = userService.getUserById(recipientId);
+
+                        Notification notif = new Notification();
+                        notif.setUser(recipient);
+                        notif.setType(TYPE_NEW_COMMENT_ON_SCENARIO);
+                        notif.setMessage(author.getUsername() + " commented on \"" + scenario.getTitle() + "\"");
+                        notif.setTargetUrl(withDiscussionHighlight("/scenarios/" + scenarioId, message.getId()));
+                        notif.setReferenceId(message.getId());
+                        repo.save(notif);
+
+                        pushToUser(recipientId, notif);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                .error("Failed to send discussion notifications for message {}: {}", message.getId(), e.getMessage());
+        }
+    }
+
+    private String discussionTargetUrl(DiscussionTargetType targetType, String targetId) {
+        return switch (targetType) {
+            case SCENARIO -> "/scenarios/" + targetId;
+            case LANGUAGE -> "/languages/" + targetId;
+            case AUDIO -> "";
+        };
+    }
+
+    /**
+     * Appends the replied/commented-on message's id as a query param so the
+     * scenario page can auto-open its discussion section and scroll to it.
+     */
+    private String withDiscussionHighlight(String url, Long messageId) {
+        if (url == null || url.isBlank()) return url;
+        return url + (url.contains("?") ? "&" : "?") + "discussion=" + messageId;
     }
 
     // ── CRUD ───────────────────────────────────────────────────────────────

@@ -135,6 +135,8 @@ export function useNotifications() {
       case "SYSTEM":         return "system";
       case "COLLABORATION_INVITE":  return "invite";
       case "COLLABORATION_ACCEPTED": return "check";
+      case "COMMENT_REPLY":         return "comment";
+      case "NEW_COMMENT_ON_SCENARIO": return "comment";
       default:               return "bell";
     }
   }
@@ -151,6 +153,8 @@ export function useNotifications() {
       case "SYSTEM":       return "System";
       case "COLLABORATION_INVITE":   return "Collaboration invite";
       case "COLLABORATION_ACCEPTED": return "Invite accepted";
+      case "COMMENT_REPLY":          return "Comment reply";
+      case "NEW_COMMENT_ON_SCENARIO": return "New comment";
       default:             return "Notification";
     }
   }

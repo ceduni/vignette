@@ -33,10 +33,29 @@ const stats = computed(() => ({
 }));
 
 const isSharedTab = computed(() => statusFilter.value === "SHARED");
+const isAllTab = computed(() => statusFilter.value === "ALL");
 
+// "All" merges owned + shared scenarios — each item is tagged with _shared so
+// per-card display (owner, role badge, edit/delete) still reflects its own
+// source rather than the active tab.
 const filtered = computed(() => {
   const q = effectiveSearch.value;
-  const source = isSharedTab.value ? sharedScenarios.value : scenarios.value;
+
+  let source;
+  if (isAllTab.value) {
+    const ownedIds = new Set(scenarios.value.map(s => String(s.id)));
+    source = [
+      ...scenarios.value.map(s => ({...s, _shared: false})),
+      ...sharedScenarios.value
+          .filter(s => !ownedIds.has(String(s.id)))
+          .map(s => ({...s, _shared: true})),
+    ];
+  } else if (isSharedTab.value) {
+    source = sharedScenarios.value.map(s => ({...s, _shared: true}));
+  } else {
+    source = scenarios.value.map(s => ({...s, _shared: false}));
+  }
+
   return source.filter(s => {
     const matchesSearch = !q || [
       s.title ?? "",
@@ -44,10 +63,20 @@ const filtered = computed(() => {
       s.description ?? "",
       ...(s.tags ?? []).map(String),
     ].some(v => v.toLowerCase().includes(q));
-    const matchesStatus = isSharedTab.value || statusFilter.value === "ALL" ||
+    const matchesStatus = isAllTab.value || isSharedTab.value ||
       String(s.visibilityStatus).toUpperCase() === statusFilter.value;
     return matchesSearch && matchesStatus;
   });
+});
+
+const showLoading = computed(() =>
+    isSharedTab.value ? sharedLoading.value : (isAllTab.value ? (loading.value || sharedLoading.value) : loading.value)
+);
+
+const hasAnyUnfiltered = computed(() => {
+  if (isSharedTab.value) return sharedScenarios.value.length > 0;
+  if (isAllTab.value) return scenarios.value.length > 0 || sharedScenarios.value.length > 0;
+  return scenarios.value.length > 0;
 });
 
 function thumbnailUrl(id) {
@@ -265,7 +294,7 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
       </div>
     </div>
 
-    <BaseLoader v-if="isSharedTab ? sharedLoading : loading">
+    <BaseLoader v-if="showLoading">
       {{ isSharedTab ? "Loading shared scenarios…" : "Loading your scenarios…" }}
     </BaseLoader>
     <BaseAlert v-else-if="!isSharedTab && error" type="error">{{ error }}</BaseAlert>
@@ -293,10 +322,10 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
               <h3 class="ms-card__title">{{ s.title || "Untitled scenario" }}</h3>
             </RouterLink>
             <div class="ms-card__meta">
-              <span v-if="isSharedTab" class="ms-card__owner">by
+              <span v-if="s._shared" class="ms-card__owner">by
                 <RouterLink :to="`/users/${s.authorUsername}/scenarios`" class="ms-card__owner-link">{{ s.authorUsername }}</RouterLink>
               </span>
-              <template v-if="isSharedTab && s.languageId">
+              <template v-if="s._shared && s.languageId">
                 <span class="ms-card__meta-sep">·</span>
               </template>
               <span v-if="s.languageId" class="ms-card__lang">{{ s.languageId }}</span>
@@ -334,16 +363,16 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
               </button>
-              <span v-if="isSharedTab" class="ms-card__role" :class="s.canEdit ? 'ms-card__role--editor' : 'ms-card__role--viewer'">
+              <span v-if="s._shared" class="ms-card__role" :class="s.canEdit ? 'ms-card__role--editor' : 'ms-card__role--viewer'">
                 {{ s.canEdit ? "Editor" : "Viewer" }}
               </span>
-              <button v-if="!isSharedTab && s.canEdit" type="button" class="ms-card__action ms-card__action--edit" title="Edit" @click.stop="openEdit(s)">
+              <button v-if="!s._shared && s.canEdit" type="button" class="ms-card__action ms-card__action--edit" title="Edit" @click.stop="openEdit(s)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                   <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
                 </svg>
               </button>
-              <button v-if="!isSharedTab" type="button" class="ms-card__action ms-card__action--delete" title="Delete" @click.stop="openDelete(s)">
+              <button v-if="!s._shared" type="button" class="ms-card__action ms-card__action--delete" title="Delete" @click.stop="openDelete(s)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                   <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
@@ -354,7 +383,7 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
         </div>
       </div>
 
-      <div v-else-if="(isSharedTab ? sharedScenarios : scenarios).length" class="ms-noresults">
+      <div v-else-if="hasAnyUnfiltered" class="ms-noresults">
         <div class="ms-noresults__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -479,11 +508,11 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
 .ms-tab__count--pub { background: rgba(74,103,65,0.12); color: #4A6741; }
 .ms-tab__count--draft { background: rgba(72,91,56,0.12); color: #485B38; }
 .ms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start; }
-.ms-card { display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: #fff; border: 1.5px solid var(--border); transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; box-shadow: 0 2px 8px rgba(30, 8, 18, 0.05); }
+.ms-card { position: relative; display: flex; flex-direction: column; border-radius: 18px; background: #fff; border: 1.5px solid var(--border); transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; box-shadow: 0 2px 8px rgba(30, 8, 18, 0.05); }
 .ms-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(30, 8, 18, 0.12); border-color: transparent; }
 .ms-card--pub { border-left: 3px solid #4A6741; }
 .ms-card--draft { border-left: 3px solid #485B38; }
-.ms-card__thumb { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--surface-alt); display: block; text-decoration: none; }
+.ms-card__thumb { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 18px 18px 0 0; background: var(--surface-alt); display: block; text-decoration: none; width: 100%; }
 .ms-card__img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 300ms ease; }
 .ms-card:hover .ms-card__img { transform: scale(1.04); }
 .ms-card__placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }

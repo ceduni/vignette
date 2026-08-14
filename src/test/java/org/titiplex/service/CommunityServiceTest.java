@@ -38,6 +38,9 @@ class CommunityServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private CommunityService service;
 

@@ -259,6 +259,7 @@ onMounted(load);
           v-for="(s, index) in filtered"
           :key="s.id"
           class="sc-card"
+          :class="{ 'sc-card--popover-open': bookmarkCategoryPickerId === s.id }"
         >
           <!-- Thumbnail -->
           <RouterLink v-if="currentUser && s.canEdit" :to="`/scenarios/${s.id}`" class="sc-card__thumb" tabindex="-1">
@@ -635,6 +636,7 @@ onMounted(load);
 
 /* Card */
 .sc-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   border-radius: 18px;
@@ -643,6 +645,11 @@ onMounted(load);
   box-shadow: 0 2px 8px rgba(42, 21, 0, 0.05);
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
 }
+
+/* Grid items paint as atomic units in grid order — a descendant's z-index
+   can't escape past a later sibling card unless the card itself is raised,
+   otherwise the bookmark picker renders behind the row below it. */
+.sc-card--popover-open { z-index: 50; }
 
 .sc-card:hover {
   transform: translateY(-4px);

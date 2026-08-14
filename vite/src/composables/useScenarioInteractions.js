@@ -67,6 +67,10 @@ export function useScenarioInteractions() {
     return _likedIds.value;
   });
 
+  // Retourne le statut renvoyé par le serveur (dont likeCount à jour) pour que
+  // les vues qui affichent un compteur se synchronisent sur la vérité serveur
+  // plutôt que de recalculer le delta elles-mêmes. Retourne null en cas d'échec
+  // réseau, après avoir annulé la mise à jour optimiste.
   async function toggleLike(scenarioId) {
     ensureLoaded();
     const id = String(scenarioId);
@@ -79,10 +83,18 @@ export function useScenarioInteractions() {
     writeSet(likesKey(uid()), next);
 
     try {
-      await apiFetch(`/api/scenarios/${id}/like`, {
+      return await apiFetch(`/api/scenarios/${id}/like`, {
         method: wasLiked ? "DELETE" : "POST",
       });
-    } catch {}
+    } catch {
+      // La requête a échoué — on annule la mise à jour optimiste pour ne pas
+      // dériver de l'état serveur
+      const reverted = new Set(_likedIds.value);
+      wasLiked ? reverted.add(id) : reverted.delete(id);
+      _likedIds.value = reverted;
+      writeSet(likesKey(uid()), reverted);
+      return null;
+    }
   }
 
   async function toggleBookmark(scenarioId) {
@@ -96,10 +108,16 @@ export function useScenarioInteractions() {
     writeSet(bookmarksKey(uid()), next);
 
     try {
-      await apiFetch(`/api/scenarios/${id}/bookmark`, {
+      return await apiFetch(`/api/scenarios/${id}/bookmark`, {
         method: wasBookmarked ? "DELETE" : "POST",
       });
-    } catch {}
+    } catch {
+      const reverted = new Set(_bookmarkedIds.value);
+      wasBookmarked ? reverted.add(id) : reverted.delete(id);
+      _bookmarkedIds.value = reverted;
+      writeSet(bookmarksKey(uid()), reverted);
+      return null;
+    }
   }
 
   async function fetchStatus(scenarioId) {
@@ -110,12 +128,36 @@ export function useScenarioInteractions() {
     }
   }
 
+  // Hydrates the like/bookmark sets from the server — the source of truth.
+  // localStorage is only an optimistic-UI cache: it can drift (different
+  // browser/device, cleared storage, a toggle request that failed silently),
+  // so this should be called once per session (on login) to reconcile it.
+  async function loadMyInteractionsFromServer() {
+    if (!currentUser.value) return;
+    try {
+      const data = await apiFetch("/api/scenarios/interactions/mine");
+      const liked = new Set((data.likedScenarioIds ?? []).map(String));
+      const bookmarked = new Set((data.bookmarkedScenarioIds ?? []).map(String));
+      const currentUid = uid();
+
+      _likedIds.value = liked;
+      _bookmarkedIds.value = bookmarked;
+      _loadedUid = currentUid;
+
+      writeSet(likesKey(currentUid), liked);
+      writeSet(bookmarksKey(currentUid), bookmarked);
+    } catch {
+      // Server unreachable — keep whatever's cached in localStorage.
+    }
+  }
+
   return {
     isLiked,
     isBookmarked,
     toggleLike,
     toggleBookmark,
     fetchStatus,
+    loadMyInteractionsFromServer,
     likedIds,
     bookmarkedIds,
   };

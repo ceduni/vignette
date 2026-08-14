@@ -36,6 +36,7 @@ import BaseAlert from "../components/ui/BaseAlert.vue";
 import BaseEmptyState from "../components/ui/BaseEmptyState.vue";
 import BaseBadge from "../components/ui/BaseBadge.vue";
 import CollaboratorsPanel from "../components/community/CollaboratorsPanel.vue";
+import DiscussionThread from "../components/community/DiscussionThread.vue";
 import ScenarioHistoryPanel from "../components/scenario/ScenarioHistoryPanel.vue";
 import {useCollaborators} from "../composables/useCollaborators";
 import {
@@ -162,6 +163,11 @@ function onDocumentClickForBookmarkPicker(event) {
   }
 }
 const likeCount = ref(0);
+
+async function handleToggleLike() {
+  const status = await toggleLike(props.id);
+  if (status) likeCount.value = status.likeCount;
+}
 
 const scenario = ref(null);
 const languageName = ref("");
@@ -331,6 +337,20 @@ function setStoryboardView(view) {
   }
 }
 
+// A "new comment" / "reply" notification links here with ?discussion={messageId}
+// so we jump straight to the Discussion tab and scroll to that message.
+const highlightMessageId = ref(null);
+
+function applyDiscussionQueryParam() {
+  const raw = route.query.discussion;
+  const messageId = Array.isArray(raw) ? raw[0] : raw;
+  if (!messageId || !isPublished.value) return;
+  storyboardView.value = "discussion";
+  highlightMessageId.value = messageId;
+}
+
+watch(() => route.query.discussion, applyDiscussionQueryParam);
+
 const selectedThumbnailPanelOpen = ref(false);
 const selectedLayoutPanelOpen = ref(false);
 
@@ -399,6 +419,14 @@ const playbackQueue = computed(() => {
 });
 
 const isPublished = computed(() => scenario.value?.visibilityStatus === "PUBLISHED");
+
+// Discussion is a published-only feature — fall back if the scenario is
+// unpublished while that tab happens to be open.
+watch(isPublished, (published) => {
+  if (!published && storyboardView.value === "discussion") {
+    storyboardView.value = "global";
+  }
+});
 
 const reviewStatus = computed(() => scenario.value?.reviewStatus ?? "NONE");
 const isForkPending = computed(() => reviewStatus.value === "PENDING");
@@ -1690,6 +1718,7 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   studioSandboxMode.value = false;
+  storyboardView.value = "studio";
 
   try {
     if (String(props.id).startsWith("emergency-")) {
@@ -1712,6 +1741,7 @@ async function loadAll() {
     await Promise.all([loadThumbs(), checkExistingRequest()]);
     await loadThumbs();
     applyUnclaimedDraftAudio();
+    applyDiscussionQueryParam();
   } catch (e) {
     if (studioFrontendOnly) {
       useStudioSandbox(e.message);
@@ -2471,6 +2501,10 @@ watch(
       if (quickMediaRecorder && quickMediaRecorder.state !== "inactive") quickMediaRecorder.stop();
       quickRecordingThumbId.value = null;
       closeQuickRecordingDialog();
+      // Vue Router reuses this component instance across /scenarios/:id
+      // navigations — reload everything for the new scenario rather than
+      // leaving the previous one's data on screen.
+      loadAll();
     }
 );
 
@@ -2997,7 +3031,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                     </div>
                     <Transition name="vg-kicker" mode="out-in">
                       <span :key="storyboardView" class="vg-kicker">
-                        {{ storyboardView === "studio" ? "Studio" : "Storyboard" }}
+                        {{ storyboardView === "studio" ? "Studio" : storyboardView === "discussion" ? "Discussion" : "Storyboard" }}
                       </span>
                     </Transition>
                   </div>
@@ -3012,13 +3046,22 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                       Storyboard
                     </button>
                     <button
-                        v-if="isOwner && !isPublished"
+                        v-if="canEditScenario"
                         type="button"
                         class="vg-tab"
                         :class="{ active: storyboardView === 'studio' }"
                         @click="setStoryboardView('studio')"
                     >
                       Studio
+                    </button>
+                    <button
+                        v-if="isPublished"
+                        type="button"
+                        class="vg-tab"
+                        :class="{ active: storyboardView === 'discussion' }"
+                        @click="setStoryboardView('discussion')"
+                    >
+                      Discussion
                     </button>
                   </div>
 
@@ -3088,7 +3131,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                         class="vg-interaction-btn"
                         :class="{ 'vg-interaction-btn--active': isLiked(props.id) }"
                         :title="isLiked(props.id) ? 'Unlike' : 'Like'"
-                        @click="toggleLike(props.id)"
+                        @click="handleToggleLike"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24"
                            :fill="isLiked(props.id) ? 'currentColor' : 'none'"
@@ -3346,7 +3389,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                   />
                 </div>
 
-                <div v-else key="studio" class="vg-view active">
+                <div v-else-if="storyboardView === 'studio'" key="studio" class="vg-view active">
                   <div class="studio-wrap studio-wrap--fiches">
                     <main class="studio-fiches">
                       <header class="studio-fiches-head">
@@ -3793,6 +3836,18 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
                       </div>
                     </aside>
                   </div>
+                </div>
+
+                <div v-else-if="storyboardView === 'discussion' && isPublished" key="discussion" class="vg-view active vg-view--discussion">
+                  <DiscussionThread
+                      title="Discussion"
+                      subtitle="Questions, notes, and feedback about this scenario."
+                      target-type="SCENARIO"
+                      :target-id="props.id"
+                      :highlight-message-id="highlightMessageId"
+                      empty-title="No discussion yet"
+                      empty-message="Start the conversation about this scenario."
+                  />
                 </div>
                 </Transition>
               </div>
@@ -4903,6 +4958,13 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBo
 .vg-review-banner__reject:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.vg-view--discussion {
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 4px 48px;
 }
 
 .icon-button {

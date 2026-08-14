@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth";
 import { useNotifications } from "../composables/useNotifications";
 import { useLanguageFollows } from "../composables/useLanguageFollows";
+import { useScenarioInteractions } from "../composables/useScenarioInteractions";
 
 const route  = useRoute();
 const router = useRouter();
@@ -14,6 +15,7 @@ const {
   iconForType, formatTime,
 } = useNotifications();
 const { loadFollows, reset: resetFollows } = useLanguageFollows();
+const { loadMyInteractionsFromServer } = useScenarioInteractions();
 
 const mobileMenuOpen   = ref(false);
 const profileOpen      = ref(false);
@@ -27,6 +29,7 @@ onMounted(() => {
     if (isAuthenticated.value) {
       init();
       loadFollows();
+      loadMyInteractionsFromServer();
     }
   });
   document.addEventListener("click", onDocClick);
@@ -45,7 +48,7 @@ watch(() => route.fullPath, () => {
 
 // Init notifications when user logs in
 watch(isAuthenticated, (v) => {
-  if (v) { init(); loadFollows(); }
+  if (v) { init(); loadFollows(); loadMyInteractionsFromServer(); }
   else   { teardown(); resetFollows(); }
 });
 
@@ -119,6 +122,20 @@ function notifIconPath(type) {
       return `<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>`;
     case "NEW_BOOKMARK":
       return `<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>`;
+    case "COMMENT_REPLY":
+    case "NEW_COMMENT_ON_SCENARIO":
+      return `<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>`;
+    case "NEW_FOLLOWER":
+      return `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/>`;
+    case "FORK_REVIEW_REQUESTED":
+      return `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    case "FORK_APPROVED":
+    case "COLLABORATION_ACCEPTED":
+      return `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
+    case "FORK_REJECTED":
+      return `<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>`;
+    case "COLLABORATION_INVITE":
+      return `<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>`;
     default:
       return `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`;
   }
@@ -572,6 +589,11 @@ function notifIconPath(type) {
 .notif-item__icon--like     { background: #e53e3e; }
 .notif-item__icon--bookmark { background: var(--primary); }
 .notif-item__icon--follow   { background: #6d28d9; }
+.notif-item__icon--comment  { background: #0f766e; }
+.notif-item__icon--review   { background: #b45309; }
+.notif-item__icon--check    { background: #16a34a; }
+.notif-item__icon--cross    { background: #9f1239; }
+.notif-item__icon--invite   { background: #2563eb; }
 .notif-item__icon--bell,
 .notif-item__icon--system   { background: var(--text-soft); }
 

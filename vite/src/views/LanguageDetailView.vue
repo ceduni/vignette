@@ -1,5 +1,5 @@
 <script setup>
-import {computed, ref, watch} from "vue";
+import {computed, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {RouterLink} from "vue-router";
 import {fetchLanguage, fetchLanguageScenarios, fetchMyLanguagePermissions} from "../api/languages";
 import {fetchScenarioThumbnails} from "../api/scenarios";
@@ -8,6 +8,7 @@ import {useAuth} from "../composables/useAuth";
 import {useToast} from "../composables/useToast";
 import {useLanguageFollows} from "../composables/useLanguageFollows";
 import {useScenarioInteractions} from "../composables/useScenarioInteractions";
+import {useBookmarkCategories} from "../composables/useBookmarkCategories";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
 import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 import {useScenarioReader} from "../composables/useScenarioReader";
@@ -21,6 +22,50 @@ const { loadMe, isAuthenticated, currentUser } = useAuth();
 const toast = useToast();
 const { openReader, activeScenario, closeReader } = useScenarioReader();
 const { isLiked, toggleLike, isBookmarked, toggleBookmark } = useScenarioInteractions();
+const { getCategory, setCategory, removeCategory, categoryList: bookmarkCategoryList, addCategory: addBookmarkCategory } = useBookmarkCategories();
+
+const bookmarkCategoryPickerId = ref(null);
+const newBookmarkCategoryName = ref("");
+const bookmarkPickerEl = ref(null);
+
+function handleBookmarkClick(scenarioId) {
+  const wasBookmarked = isBookmarked(scenarioId);
+  if (wasBookmarked) {
+    removeCategory(scenarioId);
+    toggleBookmark(scenarioId);
+    bookmarkCategoryPickerId.value = null;
+  } else {
+    toggleBookmark(scenarioId);
+    bookmarkCategoryPickerId.value = scenarioId;
+  }
+}
+
+function assignBookmarkCategory(scenarioId, category) {
+  setCategory(scenarioId, category);
+  bookmarkCategoryPickerId.value = null;
+}
+
+function createAndAssignBookmarkCategory(scenarioId) {
+  const name = newBookmarkCategoryName.value.trim();
+  if (!name) return;
+  addBookmarkCategory(name);
+  setCategory(scenarioId, name);
+  newBookmarkCategoryName.value = "";
+  bookmarkCategoryPickerId.value = null;
+}
+
+function onDocumentClickForBookmarkPicker(event) {
+  if (
+      bookmarkCategoryPickerId.value !== null &&
+      bookmarkPickerEl.value &&
+      !bookmarkPickerEl.value.contains(event.target)
+  ) {
+    bookmarkCategoryPickerId.value = null;
+  }
+}
+
+onMounted(() => document.addEventListener("click", onDocumentClickForBookmarkPicker));
+onBeforeUnmount(() => document.removeEventListener("click", onDocumentClickForBookmarkPicker));
 
 const language   = ref(null);
 const scenarios  = ref([]);
@@ -131,13 +176,15 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
-function handleToggleLike(scenarioId) {
+async function handleToggleLike(scenarioId) {
   const id = String(scenarioId);
   const wasLiked = isLiked(id);
-  // Optimistic update — mutate reactive map
+  // Optimistic update for snappy UI — reconciled with the server's count below
   const current = likeCountMap.value[id] ?? 0;
   likeCountMap.value = { ...likeCountMap.value, [id]: current + (wasLiked ? -1 : 1) };
-  toggleLike(id);
+
+  const status = await toggleLike(id);
+  if (status) likeCountMap.value = { ...likeCountMap.value, [id]: status.likeCount };
 }
 
 function avatarColor(username) {
@@ -335,6 +382,7 @@ watch(() => props.id, (id) => load(id), { immediate: true });
           v-for="(s, index) in filtered"
           :key="s.id"
           class="lv-card"
+          :class="{ 'lv-card--popover-open': bookmarkCategoryPickerId === s.id }"
         >
           <button type="button" class="lv-card__thumb" @click="openReader(s)">
             <img v-if="thumbnailUrls[s.id]" :src="thumbnailUrls[s.id]" :alt="s.title" class="lv-card__img"/>
@@ -372,24 +420,61 @@ watch(() => props.id, (id) => load(id), { immediate: true });
                 class="lv-card__icon-btn"
                 :class="{ 'lv-card__icon-btn--active': isLiked(s.id) }"
                 :title="isLiked(s.id) ? 'Unlike' : 'Like'"
-                @click="toggleLike(s.id)"
+                @click="handleToggleLike(s.id)"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" :fill="isLiked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
               </button>
-              <button
-                v-if="isAuthenticated"
-                type="button"
-                class="lv-card__icon-btn"
-                :class="{ 'lv-card__icon-btn--active': isBookmarked(s.id) }"
-                :title="isBookmarked(s.id) ? 'Remove bookmark' : 'Bookmark'"
-                @click="toggleBookmark(s.id)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" :fill="isBookmarked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                </svg>
-              </button>
+              <div v-if="isAuthenticated" :ref="el => { if (bookmarkCategoryPickerId === s.id) bookmarkPickerEl = el }" class="lv-card__bookmark-wrap">
+                <button
+                  type="button"
+                  class="lv-card__icon-btn"
+                  :class="{ 'lv-card__icon-btn--active': isBookmarked(s.id) }"
+                  :title="isBookmarked(s.id) ? 'Remove bookmark' : 'Bookmark'"
+                  @click="handleBookmarkClick(s.id)"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" :fill="isBookmarked(s.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
+
+                <div v-if="bookmarkCategoryPickerId === s.id" class="lv-card__bookmark-picker">
+                  <p class="lv-card__bookmark-picker__label">Save to category</p>
+                  <button type="button" class="lv-card__bookmark-picker__item lv-card__bookmark-picker__item--none" @click="assignBookmarkCategory(s.id, null)">
+                    No category
+                  </button>
+                  <div v-if="bookmarkCategoryList.length" class="lv-card__bookmark-picker__divider"></div>
+                  <button
+                    v-for="cat in bookmarkCategoryList"
+                    :key="cat"
+                    type="button"
+                    class="lv-card__bookmark-picker__item"
+                    :class="{ 'lv-card__bookmark-picker__item--active': getCategory(s.id) === cat }"
+                    @click="assignBookmarkCategory(s.id, cat)"
+                  >
+                    {{ cat }}
+                    <span v-if="getCategory(s.id) === cat">✓</span>
+                  </button>
+                  <div class="lv-card__bookmark-picker__divider"></div>
+                  <div class="lv-card__bookmark-picker__new">
+                    <input
+                      v-model="newBookmarkCategoryName"
+                      class="lv-card__bookmark-picker__new-input"
+                      placeholder="New category…"
+                      @keydown.enter="createAndAssignBookmarkCategory(s.id)"
+                    />
+                    <button
+                      type="button"
+                      class="lv-card__bookmark-picker__new-btn"
+                      :disabled="!newBookmarkCategoryName.trim()"
+                      @click="createAndAssignBookmarkCategory(s.id)"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
               <button
                   type="button"
                   class="lv-card__icon-btn"
@@ -499,17 +584,55 @@ watch(() => props.id, (id) => load(id), { immediate: true });
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                   </svg>
                 </button>
-                <button
-                  v-if="isAuthenticated"
-                  type="button"
-                  class="lv-card__icon-btn"
-                  :class="{ 'lv-card__icon-btn--active': isBookmarked(currentScenario.id) }"
-                  @click="toggleBookmark(currentScenario.id)"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" :fill="isBookmarked(currentScenario.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                  </svg>
-                </button>
+                <div v-if="isAuthenticated" :ref="el => { if (bookmarkCategoryPickerId === currentScenario.id) bookmarkPickerEl = el }" class="lv-card__bookmark-wrap">
+                  <button
+                    type="button"
+                    class="lv-card__icon-btn"
+                    :class="{ 'lv-card__icon-btn--active': isBookmarked(currentScenario.id) }"
+                    :title="isBookmarked(currentScenario.id) ? 'Remove bookmark' : 'Bookmark'"
+                    @click="handleBookmarkClick(currentScenario.id)"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" :fill="isBookmarked(currentScenario.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                    </svg>
+                  </button>
+
+                  <div v-if="bookmarkCategoryPickerId === currentScenario.id" class="lv-card__bookmark-picker">
+                    <p class="lv-card__bookmark-picker__label">Save to category</p>
+                    <button type="button" class="lv-card__bookmark-picker__item lv-card__bookmark-picker__item--none" @click="assignBookmarkCategory(currentScenario.id, null)">
+                      No category
+                    </button>
+                    <div v-if="bookmarkCategoryList.length" class="lv-card__bookmark-picker__divider"></div>
+                    <button
+                      v-for="cat in bookmarkCategoryList"
+                      :key="cat"
+                      type="button"
+                      class="lv-card__bookmark-picker__item"
+                      :class="{ 'lv-card__bookmark-picker__item--active': getCategory(currentScenario.id) === cat }"
+                      @click="assignBookmarkCategory(currentScenario.id, cat)"
+                    >
+                      {{ cat }}
+                      <span v-if="getCategory(currentScenario.id) === cat">✓</span>
+                    </button>
+                    <div class="lv-card__bookmark-picker__divider"></div>
+                    <div class="lv-card__bookmark-picker__new">
+                      <input
+                        v-model="newBookmarkCategoryName"
+                        class="lv-card__bookmark-picker__new-input"
+                        placeholder="New category…"
+                        @keydown.enter="createAndAssignBookmarkCategory(currentScenario.id)"
+                      />
+                      <button
+                        type="button"
+                        class="lv-card__bookmark-picker__new-btn"
+                        :disabled="!newBookmarkCategoryName.trim()"
+                        @click="createAndAssignBookmarkCategory(currentScenario.id)"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <button
                     type="button"
                     class="lv-card__icon-btn"
@@ -695,9 +818,13 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 
 /* ── Grid view ── */
 .lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; align-items: start; }
-.lv-card { display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: #fff; border: 1.5px solid var(--border); box-shadow: 0 2px 8px rgba(42,21,0,0.05); transition: transform 200ms ease, box-shadow 200ms ease; }
+.lv-card { position: relative; display: flex; flex-direction: column; border-radius: 18px; background: #fff; border: 1.5px solid var(--border); box-shadow: 0 2px 8px rgba(42,21,0,0.05); transition: transform 200ms ease, box-shadow 200ms ease; }
 .lv-card:hover { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(42,21,0,0.11); }
-.lv-card__thumb { position: relative; aspect-ratio: 4/3; overflow: hidden; background: var(--surface-alt); display: block; border: 0; padding: 0; cursor: pointer; width: 100%; }
+/* Grid items paint as atomic units in grid order — a descendant's z-index
+   can't escape past a later sibling card unless the card itself is raised,
+   otherwise the bookmark picker renders behind the row below it. */
+.lv-card--popover-open { z-index: 50; }
+.lv-card__thumb { position: relative; aspect-ratio: 4/3; overflow: hidden; border-radius: 18px 18px 0 0; background: var(--surface-alt); display: block; border: 0; padding: 0; cursor: pointer; width: 100%; }
 .lv-card__img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 300ms ease; }
 .lv-card:hover .lv-card__img { transform: scale(1.04); }
 .lv-card__placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
@@ -717,6 +844,36 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 .lv-card__icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0; border: 1.5px solid var(--border); border-radius: 10px; background: transparent; color: var(--text-soft); cursor: pointer; transition: all 0.15s; }
 .lv-card__icon-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.05); }
 .lv-card__icon-btn--active { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.08); }
+
+.lv-card__bookmark-wrap { position: relative; display: inline-flex; }
+.lv-card__bookmark-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(42, 21, 0, 0.16);
+}
+.lv-card__bookmark-picker__label { margin: 2px 6px 4px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-soft); }
+.lv-card__bookmark-picker__item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 0.83rem; font-weight: 600; text-align: left; cursor: pointer; transition: background 120ms ease; }
+.lv-card__bookmark-picker__item:hover { background: var(--surface-alt); }
+.lv-card__bookmark-picker__item--active { color: var(--primary); background: rgba(192, 74, 8, 0.06); }
+.lv-card__bookmark-picker__item--none { color: var(--text-soft); }
+.lv-card__bookmark-picker__divider { height: 1px; background: var(--border); margin: 4px 0; }
+.lv-card__bookmark-picker__new { display: flex; gap: 6px; padding: 2px; }
+.lv-card__bookmark-picker__new-input { flex: 1; min-width: 0; border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 9px; font: inherit; font-size: 0.8rem; outline: none; transition: border-color 140ms ease; }
+.lv-card__bookmark-picker__new-input:focus { border-color: var(--primary); }
+.lv-card__bookmark-picker__new-btn { border: 0; border-radius: 8px; padding: 0 11px; background: var(--primary); color: #fff; font: inherit; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: background 140ms ease; }
+.lv-card__bookmark-picker__new-btn:hover:not(:disabled) { background: var(--primary-strong); }
+.lv-card__bookmark-picker__new-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
 .lv-card__open-btn { display: inline-flex; align-items: center; gap: 5px; border: 1.5px solid var(--border); border-radius: 10px; padding: 7px 12px; background: transparent; color: var(--text-soft); font: inherit; font-size: 0.78rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: all 0.15s; }
 .lv-card__open-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(192,74,8,0.05); }
 .lv-single__open-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: 1.5px solid var(--border); border-radius: 12px; background: transparent; color: var(--text); font: inherit; font-size: 0.9rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: all 0.15s; }
@@ -724,8 +881,8 @@ watch(() => props.id, (id) => load(id), { immediate: true });
 
 /* ── Single view ── */
 .lv-single { display: flex; flex-direction: column; gap: 20px; }
-.lv-single__card { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; background: #fff; border: 1.5px solid var(--border); border-radius: 22px; overflow: hidden; box-shadow: 0 4px 24px rgba(42,21,0,0.08); }
-.lv-single__img-wrap { position: relative; aspect-ratio: 4/3; background: var(--surface-alt); overflow: hidden; }
+.lv-single__card { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; background: #fff; border: 1.5px solid var(--border); border-radius: 22px; box-shadow: 0 4px 24px rgba(42,21,0,0.08); }
+.lv-single__img-wrap { position: relative; aspect-ratio: 4/3; border-radius: 22px 0 0 22px; background: var(--surface-alt); overflow: hidden; }
 .lv-single__img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .lv-single__img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
 .lv-single__placeholder-icon { width: 64px; height: 64px; color: rgba(42,21,0,0.15); }
