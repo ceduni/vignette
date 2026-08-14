@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onMounted, ref, watch} from "vue";
+import {computed, nextTick, onMounted, ref, watch} from "vue";
 import {RouterLink} from "vue-router";
 import {createDiscussionMessage, fetchDiscussionMessages} from "../../api/community";
 import {useAuth} from "../../composables/useAuth";
@@ -15,6 +15,8 @@ const props = defineProps({
   targetId: {type: [String, Number], required: true},
   emptyTitle: {type: String, default: "No messages yet"},
   emptyMessage: {type: String, default: "Start the first discussion."},
+  // Message id to scroll to and briefly flash-highlight once the thread has loaded
+  highlightMessageId: {type: [String, Number], default: null},
 });
 
 const {isAuthenticated, loadMe} = useAuth();
@@ -27,6 +29,7 @@ const messages = ref([]);
 
 const content = ref("");
 const replyTo = ref(null);
+const highlightedId = ref(props.highlightMessageId != null ? String(props.highlightMessageId) : null);
 
 const normalizedTargetId = computed(() => String(props.targetId ?? ""));
 
@@ -109,12 +112,31 @@ async function loadThread() {
   error.value = "";
   try {
     messages.value = await fetchDiscussionMessages(props.targetType, normalizedTargetId.value);
+    if (highlightedId.value) scrollToHighlighted();
   } catch (e) {
     error.value = e.message || "Failed to load discussion.";
   } finally {
     loading.value = false;
   }
 }
+
+// Scrolls to and briefly flashes the message matching highlightedId, then
+// clears it so the highlight class is removed after ~1.6s.
+async function scrollToHighlighted() {
+  const id = highlightedId.value;
+  if (!id) return;
+  await nextTick();
+  document.getElementById(`discussion-message-${id}`)
+      ?.scrollIntoView({behavior: "smooth", block: "center"});
+  setTimeout(() => {
+    if (highlightedId.value === id) highlightedId.value = null;
+  }, 1600);
+}
+
+watch(() => props.highlightMessageId, (value) => {
+  highlightedId.value = value != null ? String(value) : null;
+  if (highlightedId.value) scrollToHighlighted();
+});
 
 async function submit() {
   if (!content.value.trim()) return;
@@ -185,9 +207,13 @@ onMounted(() => {
     <div v-else-if="threadedMessages.length" class="discussion-thread__list">
       <article
           v-for="message in threadedMessages"
+          :id="`discussion-message-${message.id}`"
           :key="message.id"
           class="discussion-message"
-          :class="{ 'discussion-message--reply': message._depth > 0 }"
+          :class="{
+            'discussion-message--reply': message._depth > 0,
+            'discussion-message--highlight': highlightedId === String(message.id),
+          }"
           :style="{ '--discussion-depth': message._depth }"
       >
         <!-- Ligne de fil pour les réponses -->
@@ -413,6 +439,21 @@ onMounted(() => {
 
 .discussion-message--reply .discussion-message__inner {
   background: linear-gradient(180deg, #f8fbff 0%, #f1f6ff 100%);
+}
+
+.discussion-message--highlight .discussion-message__inner {
+  animation: discussion-highlight-flash 1.6s ease-out;
+}
+
+@keyframes discussion-highlight-flash {
+  0%, 60% {
+    box-shadow: 0 0 0 3px rgba(192, 74, 8, 0.45);
+    border-color: var(--primary);
+  }
+  100% {
+    box-shadow: var(--shadow);
+    border-color: var(--border);
+  }
 }
 
 /* Avatar */

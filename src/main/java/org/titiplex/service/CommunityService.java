@@ -16,6 +16,7 @@ public class CommunityService {
     private final AudioRepository audioRepository;
     private final ScenarioRepository scenarioRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public CommunityService(DiscussionMessageRepository discussionRepo,
                             AccreditationRequestRepository requestRepo,
@@ -23,7 +24,8 @@ public class CommunityService {
                             LanguageRepository languageRepository,
                             AudioRepository audioRepository,
                             ScenarioRepository scenarioRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            NotificationService notificationService) {
         this.discussionRepo = discussionRepo;
         this.requestRepo = requestRepo;
         this.accreditationRepo = accreditationRepo;
@@ -31,6 +33,7 @@ public class CommunityService {
         this.audioRepository = audioRepository;
         this.scenarioRepository = scenarioRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     public List<DiscussionMessage> listMessages(DiscussionTargetType targetType, String targetId) {
@@ -48,8 +51,9 @@ public class CommunityService {
         if (!userRepository.existsById(authorId)) throw new IllegalArgumentException("Unknown user");
         validateTarget(targetType, targetId);
 
+        DiscussionMessage parent = null;
         if (parentMessageId != null) {
-            DiscussionMessage parent = discussionRepo.findById(parentMessageId)
+            parent = discussionRepo.findById(parentMessageId)
                     .orElseThrow(() -> new IllegalArgumentException("Unknown parent message"));
 
             boolean sameTargetType = parent.getTargetType() == targetType;
@@ -68,7 +72,11 @@ public class CommunityService {
         message.setContributionType(contributionType == null ? ContributionType.GENERAL : contributionType);
         message.setContent(content.trim());
         message.setCreatedAt(Instant.now());
-        return discussionRepo.save(message);
+        DiscussionMessage saved = discussionRepo.save(message);
+
+        notificationService.notifyDiscussionMessage(saved, parent);
+
+        return saved;
     }
 
     public AccreditationRequest createRequest(Long requesterId,

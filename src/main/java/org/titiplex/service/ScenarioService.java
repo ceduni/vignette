@@ -432,6 +432,12 @@ public class ScenarioService {
             return;
         }
 
+        // A user with a pending collaboration invitation can preview the scenario
+        // before deciding whether to accept
+        if (username != null && hasPendingInvitation(scenario.getId(), username)) {
+            return;
+        }
+
         // Original author can view a pending/rejected fork of their own scenario
         if (username != null && scenario.getParentScenarioId() != null) {
             Scenario original = repo.findById(scenario.getParentScenarioId()).orElse(null);
@@ -483,6 +489,13 @@ public class ScenarioService {
         Long userId = userService.getUserByUsername(username).getId();
         return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, userId)
                 .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
+                .isPresent();
+    }
+
+    private boolean hasPendingInvitation(Long scenarioId, String username) {
+        Long userId = userService.getUserByUsername(username).getId();
+        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, userId)
+                .filter(c -> c.getStatus() == CollaborationStatus.PENDING)
                 .isPresent();
     }
 

@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.titiplex.api.dto.ApiError;
+import org.titiplex.api.dto.MyScenarioInteractionsDto;
 import org.titiplex.api.dto.ScenarioInteractionStatusDto;
 import org.titiplex.api.security.UserOperation;
 import org.titiplex.service.ScenarioInteractionService;
@@ -133,5 +134,26 @@ public class ScenarioInteractionApiController {
             @Parameter(hidden = true) Authentication auth
     ) {
         return interactionService.getStatus(id, auth.getName());
+    }
+
+    @Operation(
+            summary = "Get my interactions",
+            description = "Returns the IDs of every scenario the authenticated user has liked and bookmarked. " +
+                    "Used to hydrate client-side like/bookmark state from the server on login, instead of relying " +
+                    "solely on a local cache that can drift (different browser/device, cleared storage, failed requests)."
+    )
+    @UserOperation
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Interactions retrieved",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = MyScenarioInteractionsDto.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication required",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    @GetMapping("/interactions/mine")
+    public MyScenarioInteractionsDto getMyInteractions(
+            @Parameter(hidden = true) Authentication auth
+    ) {
+        return interactionService.getMyInteractions(auth.getName());
     }
 }

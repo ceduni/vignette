@@ -2,6 +2,7 @@ package org.titiplex.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.titiplex.api.dto.MyScenarioInteractionsDto;
 import org.titiplex.api.dto.ScenarioInteractionStatusDto;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioBookmark;
@@ -88,6 +89,14 @@ public class ScenarioInteractionService {
         Scenario scenario = getScenario(scenarioId);
         User user = getUser(username);
         return buildStatus(scenario, user);
+    }
+
+    public MyScenarioInteractionsDto getMyInteractions(String username) {
+        User user = getUser(username);
+        return new MyScenarioInteractionsDto(
+                likeRepository.findScenarioIdsByUser(user),
+                bookmarkRepository.findScenarioIdsByUser(user)
+        );
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

@@ -582,6 +582,11 @@ onUnmounted(() => {
             @canplay="onAudioCanPlay"
           />
 
+          <!-- Optional caller-provided actions (e.g. accept/decline an invite) -->
+          <div v-if="$slots.actions" class="reader-actions-bar">
+            <slot name="actions" />
+          </div>
+
           <div class="reader-footer">
             <template v-if="viewMode === 'scene'">
               <span>← → navigate</span>
@@ -1113,6 +1118,17 @@ onUnmounted(() => {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Optional actions bar (e.g. accept/decline an invite) */
+.reader-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
 
 .reader-footer {
   display: flex;
