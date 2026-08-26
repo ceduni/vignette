@@ -16,6 +16,7 @@ import {
   rejectFork,
   replaceAudioContent as apiReplaceAudioContent,
   reorderScenarioThumbnails as apiReorderScenarioThumbnails,
+  selectScenarioBackgroundAudio as apiSelectScenarioBackgroundAudio,
   updateAudioGloss as apiUpdateAudioGloss,
   updateScenarioMetadata as apiUpdateScenarioMetadata,
   updateScenarioStoryboard as apiUpdateScenarioStoryboard,
@@ -362,6 +363,7 @@ const {
   trimEnd,
   trimDragging,
   trimPreviewPlaying,
+  trimSaving,
   trimWaveBars,
   toggleTrimEditor,
   updateTrimStart,
@@ -374,6 +376,11 @@ const {
   stopTrimPreview,
 } = useAudioTrimEditor(selectedVoice, selectedThumb, {
   updateVoiceFields: (thumb, voice, fields) => updateVoiceFields(thumb, voice, fields),
+  replaceAudioContent: (...args) => replaceAudioContent(...args),
+  fetchThumbnailAudios,
+  audioMap,
+  studioSandboxMode,
+  getScenarioId: () => props.id,
 });
 
 const {
@@ -542,6 +549,8 @@ const {
   sortedThumbnails,
   getScenarioId: () => props.id,
   deleteThumbnail: (...args) => deleteThumbnail(...args),
+  reloadThumbnails: () => loadThumbs(),
+  onThumbnailDeleted: () => markEditedIfPublished(),
   updateThumbnailTitle: (...args) => updateThumbnailTitle(...args),
   reorderScenarioThumbnails: (...args) => reorderScenarioThumbnails(...args),
   toast,
@@ -656,6 +665,7 @@ const {
   getScenarioId: () => props.id,
   fetchScenarioBackgroundAudios,
   uploadScenarioBackgroundAudio: (...args) => uploadScenarioBackgroundAudio(...args),
+  selectScenarioBackgroundAudio: (...args) => selectScenarioBackgroundAudio(...args),
   deleteAudio: (...args) => deleteAudio(...args),
   prepareAudioUploadFile: (file) => prepareAudioUploadFile(file),
   fileBaseName,
@@ -681,8 +691,36 @@ const isPublished = computed(() => scenario.value?.visibilityStatus === "PUBLISH
 
 const hasUnpublishedEdits = ref(false);
 
+function publicationEditKey() {
+  return `vignette:scenario:${props.id}:publication-edit`;
+}
+
+function setUnpublishedEdits(value) {
+  hasUnpublishedEdits.value = value;
+  try {
+    if (value) localStorage.setItem(publicationEditKey(), "1");
+    else localStorage.removeItem(publicationEditKey());
+  } catch {
+  }
+}
+
+watch(
+    [() => scenario.value?.id, isPublished],
+    ([scenarioId, published]) => {
+      if (!scenarioId || !published) {
+        hasUnpublishedEdits.value = false;
+        return;
+      }
+      try {
+        hasUnpublishedEdits.value = localStorage.getItem(publicationEditKey()) === "1";
+      } catch {
+        hasUnpublishedEdits.value = false;
+      }
+    }
+);
+
 function markEditedIfPublished() {
-  if (isPublished.value) hasUnpublishedEdits.value = true;
+  if (isPublished.value) setUnpublishedEdits(true);
 }
 
 async function deleteAudio(...args) {
@@ -747,6 +785,12 @@ async function uploadScenarioThumbnail(...args) {
 
 async function uploadScenarioBackgroundAudio(...args) {
   const result = await apiUploadScenarioBackgroundAudio(...args);
+  markEditedIfPublished();
+  return result;
+}
+
+async function selectScenarioBackgroundAudio(...args) {
+  const result = await apiSelectScenarioBackgroundAudio(...args);
   markEditedIfPublished();
   return result;
 }
@@ -1177,6 +1221,8 @@ async function loadAll() {
   storyboardView.value = "studio";
 
   try {
+    await loadMe();
+
     if (String(props.id).startsWith("emergency-")) {
       if (isAuthenticated.value) {
         const draftId = route.query.draftAudio;
@@ -1190,7 +1236,6 @@ async function loadAll() {
       return;
     }
 
-    await loadMe();
     await loadScenario();
 
     isOwner.value =
@@ -1235,6 +1280,7 @@ async function publishCurrentScenario() {
   publishing.value = true;
   try {
     scenario.value = await publishScenario(props.id);
+    setUnpublishedEdits(false);
     toast.success("Scenario published.");
   } catch (e) {
     toast.error(e.message || "Failed to publish scenario.");
@@ -1259,7 +1305,7 @@ async function confirmUpdatePublished() {
   publishing.value = true;
   try {
     scenario.value = await publishScenario(props.id);
-    hasUnpublishedEdits.value = false;
+    setUnpublishedEdits(false);
     updateConfirmOpen.value = false;
     toast.success("Live scenario updated.");
   } catch (e) {
@@ -1474,9 +1520,9 @@ onBeforeUnmount(() => {
 
         <div v-if="updateConfirmOpen" class="dialog-backdrop" @click.self="cancelUpdateConfirm">
           <div class="ms-confirm" style="z-index:210">
-            <p class="ms-confirm__eyebrow">Not reversible</p>
+            <p class="ms-confirm__eyebrow">Publication update</p>
             <h2 class="ms-confirm__title">Update the live version?</h2>
-            <p class="ms-confirm__body">This scenario is already published. Anyone can see it right now. Confirming will push your changes live immediately. This cannot be undone.</p>
+            <p class="ms-confirm__body">Your changes are saved. Confirm that the current version is ready for the published scenario.</p>
             <div class="ms-confirm__actions">
               <button type="button" class="ms-confirm__cancel" @click="cancelUpdateConfirm">Keep editing</button>
               <button type="button" class="ms-confirm__delete" :disabled="publishing" @click="confirmUpdatePublished">
@@ -2017,7 +2063,7 @@ onBeforeUnmount(() => {
                         <div>
                           <strong>{{ isPublished ? "Published" : "Draft (private)" }}</strong>
                           <small>
-                            {{ isPublished && hasUnpublishedEdits ? "You've made changes since this went live" : isPublished ? "Visible to the community" : "Only you can see this" }}
+                            {{ isPublished && hasUnpublishedEdits ? "Changes saved since the last publication update" : isPublished ? "Visible to the community" : "Only you can see this" }}
                           </small>
                         </div>
                       </div>
@@ -2664,6 +2710,7 @@ onBeforeUnmount(() => {
                       :trim-start="trimStart"
                       :trim-end="trimEnd"
                       :trim-preview-playing="trimPreviewPlaying"
+                      :trim-saving="trimSaving"
                       @select-voice="(voice) => selectVoice(voice, selectedThumb, { scrollRecorder: false })"
                       @select-speaker-slot="selectSpeakerSlot"
                       @update:recording-trim-open="recordingTrimOpen = $event"
@@ -3011,9 +3058,9 @@ onBeforeUnmount(() => {
                             <button type="button" class="trim-editor__handle trim-editor__handle--end" :style="{ left: `${trimEnd}%` }" aria-label="Cut end" @pointerdown.stop.prevent="beginTrimDrag('end', $event)"><span></span></button>
                           </div>
                           <div class="trim-panel__actions">
-                            <button type="button" :disabled="!selectedVoice || selectedVoice.isDraft" @click="previewTrimSelection">{{ trimPreviewPlaying ? "Stop" : "Preview" }}</button>
-                            <button type="button" @click="resetTrimSelection">Reset</button>
-                            <button type="button" class="primary" :disabled="!selectedVoice || selectedVoice.isDraft" @click="applyTrimSelection">Apply</button>
+                            <button type="button" :disabled="trimSaving || !selectedVoice || selectedVoice.isDraft" @click="previewTrimSelection">{{ trimPreviewPlaying ? "Stop" : "Preview" }}</button>
+                            <button type="button" :disabled="trimSaving" @click="resetTrimSelection">Reset</button>
+                            <button type="button" class="primary" :disabled="trimSaving || !selectedVoice || selectedVoice.isDraft" @click="applyTrimSelection">{{ trimSaving ? "Cutting…" : "Apply" }}</button>
                           </div>
                         </div>
                       </div>

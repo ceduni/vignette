@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @Service
 public class AudioService {
@@ -59,8 +60,9 @@ public class AudioService {
     }
 
     public List<ScenarioBackgroundAudioDto> listBackgroundForScenario(Long scenarioId) {
+        Long activeAudioId = scenarioService.getRequiredScenario(scenarioId).getActiveBackgroundAudioId();
         return audios.findByScenarioIdAndScopeOrderByIdxAscIdAsc(scenarioId, AudioScope.BACKGROUND).stream()
-                .map(this::toBackgroundDto)
+                .map(audio -> toBackgroundDto(audio, activeAudioId))
                 .toList();
     }
 
@@ -178,6 +180,24 @@ public class AudioService {
     }
 
     @Transactional
+    public void selectBackgroundAudio(Long scenarioId, Long audioId) {
+        Scenario scenario = scenarioService.getRequiredScenario(scenarioId);
+        if (audioId == null) {
+            scenario.setActiveBackgroundAudioId(null);
+            scenarioRepository.save(scenario);
+            return;
+        }
+
+        Audio audio = getAudioOrThrow(audioId);
+        if (audio.getScope() != AudioScope.BACKGROUND || !scenarioId.equals(audio.getScenarioId())) {
+            throw new IllegalArgumentException("Audio does not belong to this scenario's background tracks");
+        }
+
+        scenario.setActiveBackgroundAudioId(audioId);
+        scenarioRepository.save(scenario);
+    }
+
+    @Transactional
     public Long createBackgroundAudio(Long scenarioId,
                                       String title,
                                       String sourceLabel,
@@ -217,6 +237,8 @@ public class AudioService {
         a.setSourceUrl(normalizedSourceUrl);
 
         audios.save(a);
+        s.setActiveBackgroundAudioId(a.getId());
+        scenarioRepository.save(s);
         return a.getId();
     }
 
@@ -275,6 +297,19 @@ public class AudioService {
     @Transactional
     public void deleteAudio(Long audioId) {
         Audio a = getAudioOrThrow(audioId);
+        if (a.getScope() == AudioScope.BACKGROUND) {
+            Scenario scenario = scenarioService.getRequiredScenario(a.getScenarioId());
+            if (audioId.equals(scenario.getActiveBackgroundAudioId())) {
+                Long replacementId = audios.findByScenarioIdAndScopeOrderByIdxAscIdAsc(a.getScenarioId(), AudioScope.BACKGROUND)
+                        .stream()
+                        .map(Audio::getId)
+                        .filter(id -> !audioId.equals(id))
+                        .findFirst()
+                        .orElse(null);
+                scenario.setActiveBackgroundAudioId(replacementId);
+                scenarioRepository.save(scenario);
+            }
+        }
         boolean fileIsShared = audios.existsByStoragePathAndIdNot(a.getStoragePath(), audioId);
         if (!fileIsShared) {
             storage.deleteAfterCommit(a.getStoragePath());
@@ -320,7 +355,7 @@ public class AudioService {
         );
     }
 
-    private ScenarioBackgroundAudioDto toBackgroundDto(Audio a) {
+    private ScenarioBackgroundAudioDto toBackgroundDto(Audio a, Long activeAudioId) {
         return new ScenarioBackgroundAudioDto(
                 a.getId(),
                 a.getTitle(),
@@ -328,7 +363,8 @@ public class AudioService {
                 a.getMime(),
                 "/api/audios/" + a.getId() + "/content",
                 a.getSourceLabel(),
-                a.getSourceUrl()
+                a.getSourceUrl(),
+                Objects.equals(a.getId(), activeAudioId)
         );
     }
 }

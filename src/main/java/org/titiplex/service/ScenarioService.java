@@ -238,6 +238,7 @@ public class ScenarioService {
     public Scenario publishScenario(Long id, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
         assertCanPublishScenario(scenario, authentication);
+        boolean firstPublication = scenario.getVisibilityStatus() != ScenarioVisibilityStatus.PUBLISHED;
 
         if (scenario.getReviewStatus() == ReviewStatus.PENDING) {
             throw new AccessDeniedException("Ce fork doit être approuvé par l'auteur original avant publication.");
@@ -247,17 +248,21 @@ public class ScenarioService {
         }
 
         scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
-        if (scenario.getPublishedAt() == null) {
-            scenario.setPublishedAt(Instant.now());
-        }
+        scenario.setPublishedAt(Instant.now());
 
         Scenario saved = repo.save(scenario);
 
         Long actorId = userService.getUserByUsername(authentication.getName()).getId();
-        scenarioHistoryService.record(saved.getId(), actorId, ScenarioHistoryAction.PUBLISHED, "Published the scenario");
+        scenarioHistoryService.record(
+                saved.getId(),
+                actorId,
+                ScenarioHistoryAction.PUBLISHED,
+                firstPublication ? "Published the scenario" : "Updated the published scenario"
+        );
 
-        // Notify followers of this language
-        notificationService.notifyNewScenarioInLanguage(saved);
+        if (firstPublication) {
+            notificationService.notifyNewScenarioInLanguage(saved);
+        }
         return saved;
     }
 

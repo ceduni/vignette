@@ -17,6 +17,8 @@ public record ScenarioBackgroundAudioDto(
         @Schema(description = "Optional credit or source label", example = "Freesound user fieldrecordist")
         String sourceLabel,
         @Schema(description = "Optional source URL", example = "https://freesound.org/s/12345/")
-        String sourceUrl
+        String sourceUrl,
+        @Schema(description = "Whether this audio is used by the scenario player")
+        boolean active
 ) {
 }

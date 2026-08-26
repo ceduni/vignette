@@ -16,6 +16,7 @@ const props = defineProps({
   trimStart: {type: [Number, String], default: 0},
   trimEnd: {type: [Number, String], default: 100},
   trimPreviewPlaying: {type: Boolean, default: false},
+  trimSaving: {type: Boolean, default: false},
 });
 
 const emit = defineEmits([
@@ -260,9 +261,9 @@ function onFileChange(event) {
           <strong>{{ trimEnd }}%</strong>
         </label>
         <div class="trim-panel__actions">
-          <button type="button" :disabled="!activeAudio || activeAudio.isDraft" @click="emit('preview-trim')">{{ trimPreviewPlaying ? "Stop" : "Preview" }}</button>
-          <button type="button" @click="emit('reset-trim')">Reset</button>
-          <button type="button" class="primary" :disabled="!activeAudio || activeAudio.isDraft" @click="emit('apply-trim')">Apply</button>
+          <button type="button" :disabled="trimSaving || !activeAudio || activeAudio.isDraft" @click="emit('preview-trim')">{{ trimPreviewPlaying ? "Stop" : "Preview" }}</button>
+          <button type="button" :disabled="trimSaving" @click="emit('reset-trim')">Reset</button>
+          <button type="button" class="primary" :disabled="trimSaving || !activeAudio || activeAudio.isDraft" @click="emit('apply-trim')">{{ trimSaving ? "Cutting…" : "Apply" }}</button>
         </div>
       </div>
     </div>

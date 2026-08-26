@@ -5,6 +5,15 @@ export function draftAudioStorageKey(username) {
     return username ? `${BASE_KEY}:${username}` : ANONYMOUS_KEY;
 }
 
+export function draftAudioStudioPath(draft, username) {
+    const params = new URLSearchParams({draftAudio: String(draft.id)});
+    if (username) {
+        if (draft.title) params.set("draftTitle", draft.title);
+        return `/create-scenario?${params.toString()}`;
+    }
+    return `/scenarios/emergency-${draft.id}?${params.toString()}`;
+}
+
 export function migrateLegacyDraftAudios() {
     try {
         const legacyRaw = localStorage.getItem(BASE_KEY);

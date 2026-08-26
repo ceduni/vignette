@@ -103,6 +103,12 @@ return apiFetch(`/api/scenarios/${id}/background-audios`, {
         body: formData,
 });
 }
+export function selectScenarioBackgroundAudio(id, audioId) {
+return apiFetch(`/api/scenarios/${id}/background-audio`, {
+        method: "PATCH",
+        body: {audioId},
+});
+}
 export function updateAudioMarker(audioId, body) {
 return apiFetch(`/api/audios/${audioId}/marker`, {
         method: "PATCH",

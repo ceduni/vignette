@@ -1,6 +1,6 @@
 <script setup>
 import {computed, onMounted, onUnmounted, ref} from "vue";
-import {RouterLink, useRoute, useRouter} from "vue-router";
+import {RouterLink, useRoute} from "vue-router";
 import {fetchLanguageOptions} from "../api/languages";
 import {createScenario} from "../api/scenarios";
 import BaseAlert from "../components/ui/BaseAlert.vue";
@@ -8,7 +8,6 @@ import {useToast} from "../composables/useToast";
 import TagAutocompleteInput from "@/components/TagAutocompleteInput.vue";
 
 const route = useRoute();
-const router = useRouter();
 const toast = useToast();
 
 const pendingDraftAudioId = route.query.draftAudio ? String(route.query.draftAudio) : "";
@@ -94,11 +93,10 @@ async function submit() {
       allowDownload: form.value.allowDownload,
     });
     toast.success("Scenario created!");
-    router.push(
-        pendingDraftAudioId
-            ? `/scenarios/${created.id}?draftAudio=${pendingDraftAudioId}`
-            : `/scenarios/${created.id}`
-    );
+    const studioPath = pendingDraftAudioId
+        ? `/scenarios/${created.id}?draftAudio=${encodeURIComponent(pendingDraftAudioId)}`
+        : `/scenarios/${created.id}`;
+    window.location.assign(studioPath);
   } catch (e) {
     const msg = e.message || "";
     error.value = msg.toLowerCase().includes("unique") || msg.includes("23505") || msg.includes("duplicate")

@@ -99,6 +99,7 @@ export function useBackgroundAmbience({
     getScenarioId,
     fetchScenarioBackgroundAudios,
     uploadScenarioBackgroundAudio,
+    selectScenarioBackgroundAudio,
     deleteAudio,
     prepareAudioUploadFile,
     fileBaseName,
@@ -211,10 +212,30 @@ export function useBackgroundAmbience({
         backgroundLoop.value = true;
     }
 
-    function selectBackgroundAudio(audio) {
+    async function selectBackgroundAudio(audio) {
         if (!audio) return;
+        const previousId = selectedBackgroundAudioId.value;
         ambiencePresetEnabled.value = false;
         selectedBackgroundAudioId.value = audio.id;
+        backgroundAudios.value = backgroundAudios.value.map((item) => ({
+            ...item,
+            active: String(item.id) === String(audio.id),
+        }));
+
+        if (studioSandboxMode.value || String(getScenarioId()).startsWith("emergency-") || !selectScenarioBackgroundAudio) {
+            return;
+        }
+
+        try {
+            await selectScenarioBackgroundAudio(getScenarioId(), audio.id);
+        } catch (e) {
+            selectedBackgroundAudioId.value = previousId;
+            backgroundAudios.value = backgroundAudios.value.map((item) => ({
+                ...item,
+                active: String(item.id) === String(previousId),
+            }));
+            toast.error(e.message || "Could not select background audio.");
+        }
     }
 
     function openBackgroundAudioFile() {
@@ -375,10 +396,13 @@ export function useBackgroundAmbience({
 
     function disposeBackgroundPlayback() {
         stopBackgroundPlayback();
-        if (!backgroundAudioPlayer) return;
-        backgroundAudioPlayer.removeAttribute("src");
-        backgroundAudioPlayer.load();
-        backgroundAudioPlayer = null;
+        if (backgroundAudioPlayer) {
+            backgroundAudioPlayer.removeAttribute("src");
+            backgroundAudioPlayer.load();
+            backgroundAudioPlayer = null;
+        }
+        presetAudioCache.forEach((audio) => URL.revokeObjectURL(audio.url));
+        presetAudioCache.clear();
     }
 
     function disposePresetAudioCache() {
@@ -438,11 +462,11 @@ export function useBackgroundAmbience({
             const rows = await fetchScenarioBackgroundAudios(getScenarioId());
             backgroundAudios.value = Array.isArray(rows) ? rows : [];
 
+            const active = backgroundAudios.value.find((audio) => audio.active);
             const preferred = backgroundAudios.value.find((audio) => String(audio.id) === String(preferredId ?? ""));
-            selectedBackgroundAudioId.value = preferred?.id ?? backgroundAudios.value[0]?.id ?? null;
+            selectedBackgroundAudioId.value = active?.id ?? preferred?.id ?? backgroundAudios.value[0]?.id ?? null;
             ambiencePresetEnabled.value = !selectedBackgroundAudioId.value && ambiencePresetEnabled.value;
-        } catch (e) {
-            console.error(`Failed to load background audios for scenario ${getScenarioId()}`, e);
+        } catch {
             backgroundAudios.value = [];
             selectedBackgroundAudioId.value = null;
         }

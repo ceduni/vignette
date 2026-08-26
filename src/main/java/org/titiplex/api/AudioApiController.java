@@ -22,6 +22,7 @@ import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.api.dto.CreateAudioResponse;
 import org.titiplex.api.dto.LanguagePreviewAudioDto;
 import org.titiplex.api.dto.ScenarioBackgroundAudioDto;
+import org.titiplex.api.dto.SelectScenarioBackgroundAudioRequest;
 import org.titiplex.api.dto.UpdateMarkerRequest;
 import org.titiplex.api.security.*;
 import org.titiplex.persistence.model.ScenarioHistoryAction;
@@ -156,6 +157,23 @@ public class AudioApiController {
         Long authorId = userService.getUserByUsername(auth.getName()).getId();
         Long id = audioService.createBackgroundAudio(scenarioId, title, sourceLabel, sourceUrl, authorId, audio);
         return new CreateAudioResponse(id);
+    }
+
+    @Operation(
+            summary = "Select scenario background audio",
+            description = "Selects the background audio used by the scenario player."
+    )
+    @OwnerOrAdminOperation(
+            resource = ProtectedResource.SCENARIO,
+            param = "scenarioId"
+    )
+    @PatchMapping("/scenarios/{scenarioId}/background-audio")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void selectBackground(
+            @PathVariable Long scenarioId,
+            @RequestBody SelectScenarioBackgroundAudioRequest request
+    ) {
+        audioService.selectBackgroundAudio(scenarioId, request.audioId());
     }
 
     /**

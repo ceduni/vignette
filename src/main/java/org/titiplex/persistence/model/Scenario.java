@@ -51,6 +51,8 @@ public class Scenario {
     private ScenarioVisibilityStatus visibilityStatus = ScenarioVisibilityStatus.DRAFT;
     @Column(name = "published_at")
     private Instant publishedAt;
+    @Column(name = "active_background_audio_id")
+    private Long activeBackgroundAudioId;
     @Enumerated(EnumType.STRING)
     @Column(name = "storyboard_layout_mode", nullable = false)
     private StoryboardLayoutMode storyboardLayoutMode = StoryboardLayoutMode.PRESET;

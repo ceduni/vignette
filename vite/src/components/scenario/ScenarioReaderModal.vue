@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
-import { fetchScenarioThumbnails, fetchThumbnailAudios } from "../../api/scenarios";
+import { fetchScenarioBackgroundAudios, fetchScenarioThumbnails, fetchThumbnailAudios } from "../../api/scenarios";
 import { buildApiUrl } from "../../api/rest";
 import { buildStoryboardItems, storyboardItemStyle } from "../../utils/scenarioStoryboard.js";
 
@@ -14,16 +14,59 @@ const loading = ref(false);
 const error = ref("");
 const thumbnails = ref([]);
 const audioMap = ref({});
+const backgroundAudios = ref([]);
 const currentIndex = ref(0);
 const viewMode = ref("grid");
 const isAutoplay = ref(false);
 const isFullscreen = ref(false);
 const audioRef = ref(null);
+const backgroundAudioRef = ref(null);
 const containerRef = ref(null);
 const autoplayTimer = ref(null);
 const audioDuration = ref(0);
 const audioCurrentTime = ref(0);
 const audioPlaying = ref(false);
+const ambienceEnabled = ref(true);
+const ambiencePlaying = ref(false);
+const sceneAudioIndex = ref(0);
+
+const activeBackgroundAudio = computed(() => {
+  return backgroundAudios.value.find((audio) => audio.active) ?? backgroundAudios.value[0] ?? null;
+});
+
+const backgroundAudioUrl = computed(() => {
+  const audio = activeBackgroundAudio.value;
+  if (!audio) return null;
+  return buildApiUrl(audio.contentUrl || `/api/audios/${audio.id}/content`);
+});
+
+function playAmbience() {
+  const el = backgroundAudioRef.value;
+  if (!el || !backgroundAudioUrl.value || !ambienceEnabled.value) return;
+  el.volume = 0.22;
+  el.play().catch(() => {
+    ambiencePlaying.value = false;
+  });
+}
+
+function pauseAmbience(reset = false) {
+  const el = backgroundAudioRef.value;
+  if (!el) return;
+  el.pause();
+  if (reset) el.currentTime = 0;
+  ambiencePlaying.value = false;
+}
+
+function toggleAmbience() {
+  ambienceEnabled.value = !ambienceEnabled.value;
+  if (!ambienceEnabled.value) {
+    pauseAmbience();
+    return;
+  }
+  if (audioPlaying.value || isAutoplay.value || isGridSequencePlaying.value || gridPlayingId.value) {
+    playAmbience();
+  }
+}
 
 const currentThumb = computed(() => thumbnails.value[currentIndex.value] ?? null);
 
@@ -32,10 +75,11 @@ const currentAudios = computed(() => {
   return audioMap.value[currentThumb.value.id] ?? [];
 });
 
+const currentAudio = computed(() => currentAudios.value[sceneAudioIndex.value] ?? null);
+
 const currentAudioUrl = computed(() => {
-  const first = currentAudios.value[0];
-  if (!first) return null;
-  return buildApiUrl(`/api/audios/${first.id}/content`);
+  if (!currentAudio.value) return null;
+  return buildApiUrl(`/api/audios/${currentAudio.value.id}/content`);
 });
 
 const thumbImageUrl = computed(() => {
@@ -51,9 +95,17 @@ function thumbHasAudio(thumb) {
   return (audioMap.value[thumb.id] ?? []).length > 0;
 }
 
-function gridAudioUrl(thumb) {
-  const first = (audioMap.value[thumb.id] ?? [])[0];
-  return first ? buildApiUrl(`/api/audios/${first.id}/content`) : null;
+function orderedAudiosForThumb(thumb) {
+  return [...(audioMap.value[thumb.id] ?? [])]
+    .sort((a, b) => (a.idx ?? a.id) - (b.idx ?? b.id));
+}
+
+function audioUrl(audio) {
+  return audio ? buildApiUrl(`/api/audios/${audio.id}/content`) : null;
+}
+
+function queueEntriesForThumb(thumb) {
+  return orderedAudiosForThumb(thumb).map((audio) => ({thumb, audio}));
 }
 
 const gridPlayingId = ref(null);
@@ -65,12 +117,13 @@ function stopGridSequence() {
   isGridSequencePlaying.value = false;
   gridSequenceList.value = [];
   gridSequenceIndex.value = -1;
+  pauseAmbience(true);
 }
 
 function toggleGridAudio(thumb) {
   const el = audioRef.value;
-  const url = gridAudioUrl(thumb);
-  if (!el || !url) return;
+  const entries = queueEntriesForThumb(thumb);
+  if (!el || !entries.length) return;
 
   if (gridPlayingId.value === String(thumb.id)) {
     stopGridSequence();
@@ -80,17 +133,17 @@ function toggleGridAudio(thumb) {
 
   stopGridSequence();
   el.pause();
-  el.src = url;
-  el.currentTime = 0;
-  gridPlayingId.value = String(thumb.id);
-  el.play().catch(() => { gridPlayingId.value = null; });
+  isGridSequencePlaying.value = true;
+  gridSequenceList.value = entries;
+  gridSequenceIndex.value = -1;
+  advanceGridSequence();
 }
 
 function playFromStart() {
-  const withAudio = thumbnails.value.filter(thumbHasAudio);
-  if (!withAudio.length) return;
+  const entries = thumbnails.value.flatMap(queueEntriesForThumb);
+  if (!entries.length) return;
   isGridSequencePlaying.value = true;
-  gridSequenceList.value = withAudio;
+  gridSequenceList.value = entries;
   gridSequenceIndex.value = -1;
   advanceGridSequence();
 }
@@ -103,15 +156,16 @@ function advanceGridSequence() {
     return;
   }
   gridSequenceIndex.value = nextIndex;
-  const thumb = gridSequenceList.value[nextIndex];
+  const entry = gridSequenceList.value[nextIndex];
   const el = audioRef.value;
-  const url = gridAudioUrl(thumb);
+  const url = audioUrl(entry?.audio);
   if (!el || !url) { advanceGridSequence(); return; }
 
   el.pause();
   el.src = url;
   el.currentTime = 0;
-  gridPlayingId.value = String(thumb.id);
+  gridPlayingId.value = String(entry.thumb.id);
+  playAmbience();
   el.play().catch(() => { advanceGridSequence(); });
 }
 
@@ -134,24 +188,35 @@ const hasNext = computed(() => currentIndex.value < totalScenes.value - 1);
 const hasPrev = computed(() => currentIndex.value > 0);
 
 async function loadScenario(id) {
+  stopAutoplay();
   loading.value = true;
   error.value = "";
   thumbnails.value = [];
   audioMap.value = {};
+  backgroundAudios.value = [];
+  ambienceEnabled.value = true;
   currentIndex.value = 0;
   viewMode.value = "grid";
   stopGridSequence();
   gridPlayingId.value = null;
 
   try {
-    const thumbs = await fetchScenarioThumbnails(id);
+    const [thumbs, ambience] = await Promise.all([
+      fetchScenarioThumbnails(id),
+      fetchScenarioBackgroundAudios(id).catch(() => []),
+    ]);
     const sorted = [...thumbs].sort((a, b) => (a.idx ?? a.id) - (b.idx ?? b.id));
     thumbnails.value = sorted;
+    backgroundAudios.value = (Array.isArray(ambience) ? [...ambience] : [])
+      .sort((a, b) => (a.idx ?? a.id) - (b.idx ?? b.id));
 
     const map = {};
     await Promise.all(
       sorted.map(async (t) => {
-        try { map[t.id] = await fetchThumbnailAudios(t.id); }
+        try {
+          const audios = await fetchThumbnailAudios(t.id);
+          map[t.id] = [...audios].sort((a, b) => (a.idx ?? a.id) - (b.idx ?? b.id));
+        }
         catch { map[t.id] = []; }
       })
     );
@@ -196,12 +261,16 @@ function goTo(index, keepAutoplay = false) {
   audioCurrentTime.value = 0;
   audioDuration.value = 0;
   audioPlaying.value = false;
+  sceneAudioIndex.value = 0;
   gridPlayingId.value = null;
 }
 
 function goNext(keepAutoplay = false) {
   if (hasNext.value) goTo(currentIndex.value + 1, keepAutoplay);
-  else isAutoplay.value = false;
+  else {
+    isAutoplay.value = false;
+    pauseAmbience(true);
+  }
 }
 
 function goPrev() { goTo(currentIndex.value - 1, false); }
@@ -210,6 +279,7 @@ const AUTOPLAY_FALLBACK_MS = 3500;
 
 function startAutoplay() {
   isAutoplay.value = true;
+  playAmbience();
   playCurrentScene();
 }
 
@@ -222,6 +292,7 @@ function stopAutoplay() {
     audioRef.value.pause();
     audioRef.value.currentTime = 0;
   }
+  pauseAmbience(true);
 }
 
 function toggleAutoplay() {
@@ -232,26 +303,39 @@ function toggleAutoplay() {
 function playCurrentScene() {
   if (!isAutoplay.value) return;
   clearTimer();
+  sceneAudioIndex.value = 0;
 
-  if (currentAudioUrl.value && audioRef.value) {
-    audioRef.value.pause();
-    audioRef.value.currentTime = 0;
-    audioRef.value.src = currentAudioUrl.value;
-    audioRef.value.load();
-
-    const playPromise = audioRef.value.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        autoplayTimer.value = setTimeout(() => {
-          if (isAutoplay.value) goNext(true);
-        }, AUTOPLAY_FALLBACK_MS);
-      });
-    }
+  if (currentAudios.value.length && audioRef.value) {
+    playSceneAudio(0);
   } else {
     autoplayTimer.value = setTimeout(() => {
       if (isAutoplay.value) goNext(true);
     }, AUTOPLAY_FALLBACK_MS);
   }
+}
+
+function playSceneAudio(index) {
+  const audio = currentAudios.value[index];
+  const el = audioRef.value;
+  const url = audioUrl(audio);
+  if (!el || !url) return false;
+
+  sceneAudioIndex.value = index;
+  el.pause();
+  el.src = url;
+  el.currentTime = 0;
+  el.load();
+  playAmbience();
+  el.play().catch(() => {
+    if (index + 1 < currentAudios.value.length) {
+      playSceneAudio(index + 1);
+    } else if (isAutoplay.value) {
+      autoplayTimer.value = setTimeout(() => goNext(true), AUTOPLAY_FALLBACK_MS);
+    } else {
+      pauseAmbience(true);
+    }
+  });
+  return true;
 }
 
 watch(currentIndex, () => {
@@ -266,16 +350,30 @@ function onAudioEnded() {
     advanceGridSequence();
     return;
   }
+  if (sceneAudioIndex.value + 1 < currentAudios.value.length) {
+    playSceneAudio(sceneAudioIndex.value + 1);
+    return;
+  }
   gridPlayingId.value = null;
   if (isAutoplay.value) {
     autoplayTimer.value = setTimeout(() => {
       if (isAutoplay.value) goNext(true);
     }, 600);
+  } else {
+    sceneAudioIndex.value = 0;
+    pauseAmbience(true);
   }
 }
 
-function onAudioPlay() { audioPlaying.value = true; }
-function onAudioPause() { audioPlaying.value = false; gridPlayingId.value = null; }
+function onAudioPlay() {
+  audioPlaying.value = true;
+  playAmbience();
+}
+function onAudioPause() {
+  audioPlaying.value = false;
+  if (!isGridSequencePlaying.value) gridPlayingId.value = null;
+  if (!isAutoplay.value && !isGridSequencePlaying.value) pauseAmbience();
+}
 function onAudioTimeUpdate() {
   if (audioRef.value) audioCurrentTime.value = audioRef.value.currentTime;
 }
@@ -287,8 +385,18 @@ function onAudioCanPlay() {
 
 function toggleAudio() {
   if (!audioRef.value) return;
-  if (audioPlaying.value) audioRef.value.pause();
-  else audioRef.value.play().catch(() => {});
+  if (audioPlaying.value) {
+    audioRef.value.pause();
+    pauseAmbience();
+  } else {
+    playAmbience();
+    const expectedUrl = currentAudioUrl.value;
+    if (expectedUrl && audioRef.value.src !== expectedUrl) {
+      playSceneAudio(sceneAudioIndex.value);
+    } else {
+      audioRef.value.play().catch(() => {});
+    }
+  }
 }
 
 async function toggleFullscreen() {
@@ -330,6 +438,7 @@ function close() {
 
 watch(() => props.scenario, (s) => {
   if (s?.id) loadScenario(s.id);
+  else stopAutoplay();
 }, { immediate: true });
 
 onMounted(() => {
@@ -365,6 +474,23 @@ onUnmounted(() => {
               <p class="reader-header__meta">By {{ scenario.authorUsername ?? "Unknown" }}</p>
             </div>
             <div class="reader-header__actions">
+              <button
+                v-if="backgroundAudioUrl"
+                type="button"
+                class="reader-btn reader-ambience-btn"
+                :class="{ 'reader-btn--active': ambienceEnabled }"
+                :title="`${activeBackgroundAudio?.title || 'Vignette ambience'} · ${ambienceEnabled ? 'click to mute' : 'click to enable'}`"
+                @click="toggleAmbience"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M11 5 6 9H2v6h4l5 4V5Z"/>
+                  <path v-if="ambienceEnabled" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a9 9 0 0 1 0 12"/>
+                  <path v-else d="m16 9 5 5M21 9l-5 5"/>
+                </svg>
+                <span class="reader-ambience-btn__dot" :class="{ 'reader-ambience-btn__dot--playing': ambiencePlaying }"></span>
+                {{ ambienceEnabled ? "Ambience on" : "Ambience off" }}
+              </button>
+
               <button
                 v-if="viewMode === 'scene'"
                 type="button"
@@ -535,6 +661,9 @@ onUnmounted(() => {
                   <div class="reader-scene__label">
                     <span class="reader-scene__counter">{{ currentIndex + 1 }} / {{ totalScenes }}</span>
                     <span v-if="currentThumb.title" class="reader-scene__title">{{ currentThumb.title }}</span>
+                    <span v-if="currentAudios.length > 1" class="reader-scene__counter">
+                      Take {{ sceneAudioIndex + 1 }} / {{ currentAudios.length }}
+                    </span>
                   </div>
 
                   <button
@@ -571,6 +700,7 @@ onUnmounted(() => {
 
           <audio
             ref="audioRef"
+            data-reader-voice
             :src="currentAudioUrl ?? ''"
             preload="auto"
             style="display:none"
@@ -582,10 +712,20 @@ onUnmounted(() => {
             @canplay="onAudioCanPlay"
           />
 
-          <!-- Optional caller-provided actions (e.g. accept/decline an invite) -->
           <div v-if="$slots.actions" class="reader-actions-bar">
             <slot name="actions" />
           </div>
+
+          <audio
+            ref="backgroundAudioRef"
+            data-reader-ambience
+            :src="backgroundAudioUrl ?? ''"
+            preload="auto"
+            loop
+            style="display:none"
+            @play="ambiencePlaying = true"
+            @pause="ambiencePlaying = false"
+          />
 
           <div class="reader-footer">
             <template v-if="viewMode === 'scene'">
@@ -739,6 +879,23 @@ onUnmounted(() => {
   color: #fff;
 }
 .reader-btn--primary:hover { background: var(--primary-strong); border-color: var(--primary-strong); color: #fff; }
+
+.reader-ambience-btn {
+  gap: 5px;
+}
+
+.reader-ambience-btn__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.reader-ambience-btn__dot--playing {
+  opacity: 1;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+}
 
 .reader-icon-btn {
   display: flex;
@@ -1175,5 +1332,7 @@ onUnmounted(() => {
   .reader-nav--prev { left: 8px; }
   .reader-nav--next { right: 8px; }
   .reader-grid { grid-auto-rows: 34px; }
+  .reader-ambience-btn { padding-inline: 0.7rem; }
+  .reader-ambience-btn__dot { display: none; }
 }
 </style>

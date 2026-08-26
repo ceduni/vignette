@@ -25,6 +25,8 @@ function setup(overrides = {}) {
         sortedThumbnails,
         getScenarioId: () => 42,
         deleteThumbnail: vi.fn(async () => {}),
+        reloadThumbnails: null,
+        onThumbnailDeleted: vi.fn(),
         updateThumbnailTitle: vi.fn(async (id, body) => ({id, idx: 1, title: body.title.trim()})),
         reorderScenarioThumbnails: vi.fn(async () => []),
         toast: makeToast(),
@@ -111,7 +113,67 @@ describe("useThumbnailLifecycle", () => {
         expect(deps.deleteThumbnail).toHaveBeenCalledWith(1);
         expect(thumbnails.value.map((t) => t.id)).toEqual([2, 3]);
         expect(selectedThumb.value.id).toBe(2);
+        expect(deps.onThumbnailDeleted).toHaveBeenCalledWith(expect.objectContaining({id: 1}));
         expect(deps.toast.success).toHaveBeenCalledWith("Image removed from this board.");
+    });
+
+    it("deleteThumb removes the image immediately and ignores a repeated request", async () => {
+        let finishDelete;
+        const deleteThumbnail = vi.fn(() => new Promise((resolve) => {
+            finishDelete = resolve;
+        }));
+        const {api, deps, thumbnails} = setup({deleteThumbnail});
+        const target = thumbnails.value[0];
+
+        const deletion = api.deleteThumb(target);
+        const repeatedDeletion = api.deleteThumb(target);
+
+        expect(thumbnails.value.map((thumb) => thumb.id)).toEqual([2, 3]);
+        expect(deps.deleteThumbnail).toHaveBeenCalledTimes(1);
+
+        finishDelete();
+        await Promise.all([deletion, repeatedDeletion]);
+    });
+
+    it("deleteThumb keeps the image removed when a refresh confirms the server deleted it", async () => {
+        let thumbnailRef;
+        const reloadThumbnails = vi.fn(async () => {
+            thumbnailRef.value = [{id: 2, idx: 1}, {id: 3, idx: 2}];
+        });
+        const {api, deps, thumbnails} = setup({
+            deleteThumbnail: vi.fn(async () => {
+                throw new Error("Database constraint violation");
+            }),
+            reloadThumbnails,
+        });
+        thumbnailRef = thumbnails;
+
+        await api.deleteThumb(thumbnails.value[0]);
+
+        expect(reloadThumbnails).toHaveBeenCalled();
+        expect(thumbnails.value.map((thumb) => thumb.id)).toEqual([2, 3]);
+        expect(deps.onThumbnailDeleted).toHaveBeenCalledWith(expect.objectContaining({id: 1}));
+        expect(deps.toast.success).toHaveBeenCalledWith("Image removed from this board.");
+        expect(deps.toast.error).not.toHaveBeenCalled();
+    });
+
+    it("deleteThumb restores the image when the server did not delete it", async () => {
+        let thumbnailRef;
+        const reloadThumbnails = vi.fn(async () => {
+            thumbnailRef.value = [{id: 1, idx: 1}, {id: 2, idx: 2}, {id: 3, idx: 3}];
+        });
+        const {api, deps, thumbnails} = setup({
+            deleteThumbnail: vi.fn(async () => {
+                throw new Error("Delete failed");
+            }),
+            reloadThumbnails,
+        });
+        thumbnailRef = thumbnails;
+
+        await api.deleteThumb(thumbnails.value[0]);
+
+        expect(thumbnails.value.map((thumb) => thumb.id)).toEqual([1, 2, 3]);
+        expect(deps.toast.error).toHaveBeenCalledWith("Delete failed");
     });
 
     it("deleteThumb stops an in-progress quick recording for the deleted thumb", async () => {

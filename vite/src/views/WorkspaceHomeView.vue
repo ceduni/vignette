@@ -12,7 +12,12 @@ import {apiFetch} from "../api/rest";
 import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
 import {useToast} from "../composables/useToast";
 import {useAuth} from "../composables/useAuth";
-import {draftAudioStorageKey, migrateAnonymousDraftAudios, migrateLegacyDraftAudios} from "../utils/draftAudioStorage";
+import {
+  draftAudioStorageKey,
+  draftAudioStudioPath,
+  migrateAnonymousDraftAudios,
+  migrateLegacyDraftAudios,
+} from "../utils/draftAudioStorage";
 
 migrateLegacyDraftAudios();
 const {currentUser} = useAuth();
@@ -229,7 +234,7 @@ function updateDraftTitle(draft, title) {
 }
 
 function draftPath(draft) {
-  return `/scenarios/emergency-${draft.id}?draftAudio=${draft.id}`;
+  return draftAudioStudioPath(draft, currentUser.value?.username);
 }
 
 function formatDuration(seconds) {
@@ -487,12 +492,12 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
               </span>
             </div>
 
-            <RouterLink :to="draftPath(draft)" class="ms-draft__open">
+            <a :href="draftPath(draft)" class="ms-draft__open">
               <span>Open in studio</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6"/>
               </svg>
-            </RouterLink>
+            </a>
           </article>
         </div>
 

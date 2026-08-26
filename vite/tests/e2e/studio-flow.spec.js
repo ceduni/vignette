@@ -205,4 +205,18 @@ test("studio flow creates a maker scene, imports audio, adds ambience, opens pla
 
     await page.getByRole("button", {name: /publish/i}).click();
     await expect(page.locator(".vg-status--pub", {hasText: "Published"})).toBeVisible();
+
+    const primaryNav = page.getByLabel("Primary");
+    await primaryNav.getByRole("link", {name: "About", exact: true}).click({noWaitAfter: true});
+    await expect(page).toHaveURL(/\/about$/);
+    await expect(page.getByRole("heading", {name: "About Vignette"})).toBeVisible();
+    await expect(page.locator(".page--studio")).toHaveCount(0);
+
+    await page.goBack();
+    await expect(page.locator(".page--studio")).toBeVisible();
+
+    await page.getByLabel("Primary").getByRole("link", {name: "Home", exact: true}).click({noWaitAfter: true});
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator(".home-page")).toBeVisible();
+    await expect(page.locator(".page--studio")).toHaveCount(0);
 });

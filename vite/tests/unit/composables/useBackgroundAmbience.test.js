@@ -38,6 +38,7 @@ function setup(overrides = {}) {
         getScenarioId: () => 42,
         fetchScenarioBackgroundAudios: vi.fn(async () => []),
         uploadScenarioBackgroundAudio: vi.fn(async () => ({id: 99})),
+        selectScenarioBackgroundAudio: vi.fn(async () => {}),
         deleteAudio: vi.fn(async () => {}),
         prepareAudioUploadFile: vi.fn(async (file) => file),
         fileBaseName: (file, fallback) => file?.name?.replace(/\.[^.]+$/, "") || fallback,
@@ -56,7 +57,9 @@ describe("useBackgroundAmbience", () => {
         OriginalAudio = global.Audio;
         global.Audio = FakeAudio;
         URL.createObjectURL = URL.createObjectURL || (() => "");
+        URL.revokeObjectURL = URL.revokeObjectURL || (() => {});
         vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake");
+        vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
         toastMocks.success.mockReset();
         toastMocks.error.mockReset();
         toastMocks.info.mockReset();
@@ -100,27 +103,28 @@ describe("useBackgroundAmbience", () => {
         expect(api.backgroundSummaryTitle.value).toBe("Add ambience");
     });
 
-    it("selectBackgroundAudio disables the preset and selects the real audio", () => {
-        const {api} = setup();
+    it("selectBackgroundAudio disables the preset and persists the real audio", async () => {
+        const {api, deps} = setup();
         api.backgroundAudios.value = [{id: 5, title: "Field recording"}];
 
-        api.selectBackgroundAudio(api.backgroundAudios.value[0]);
+        await api.selectBackgroundAudio(api.backgroundAudios.value[0]);
 
         expect(api.ambiencePresetEnabled.value).toBe(false);
         expect(api.selectedBackgroundAudioId.value).toBe(5);
         expect(api.selectedBackgroundAudio.value.title).toBe("Field recording");
+        expect(deps.selectScenarioBackgroundAudio).toHaveBeenCalledWith(42, 5);
     });
 
     it("loadBackgroundAudios populates the list and picks a selection", async () => {
         const {api, deps} = setup({
-            fetchScenarioBackgroundAudios: vi.fn(async () => [{id: 1, title: "A"}, {id: 2, title: "B"}]),
+            fetchScenarioBackgroundAudios: vi.fn(async () => [{id: 1, title: "A"}, {id: 2, title: "B", active: true}]),
         });
 
         await api.loadBackgroundAudios();
 
         expect(deps.fetchScenarioBackgroundAudios).toHaveBeenCalledWith(42);
         expect(api.backgroundAudios.value).toHaveLength(2);
-        expect(api.selectedBackgroundAudioId.value).toBe(1);
+        expect(api.selectedBackgroundAudioId.value).toBe(2);
     });
 
     it("loadBackgroundAudios is a no-op in sandbox mode", async () => {
@@ -178,6 +182,15 @@ describe("useBackgroundAmbience", () => {
 
         await api.toggleBackgroundAudio();
         expect(api.backgroundPlaying.value).toBe(false);
+    });
+
+    it("disposes generated preset audio without leaking its object URL", async () => {
+        const {api} = setup();
+
+        await api.playBackgroundAudio();
+        api.disposeBackgroundPlayback();
+
+        expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:fake");
     });
 
     it("onAmbDragOver/onAmbDropZoneClick are no-ops for non-owners", () => {

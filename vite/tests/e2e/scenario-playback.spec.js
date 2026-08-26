@@ -2,7 +2,7 @@ import {expect, test} from "@playwright/test";
 
 function wavBuffer() {
     const sampleRate = 8000;
-    const samples = 160;
+    const samples = 8000;
     const buffer = Buffer.alloc(44 + samples * 2);
     buffer.write("RIFF", 0);
     buffer.writeUInt32LE(36 + samples * 2, 4);
@@ -83,7 +83,22 @@ test("scenario page loads, selects scenes, and opens the studio player", async (
         await route.fulfill({
             status: 200,
             contentType: "application/json",
-            body: JSON.stringify([]),
+            body: JSON.stringify([
+                {
+                    id: 900,
+                    idx: 1,
+                    title: "Rain ambience",
+                    contentUrl: "/api/audios/900/content",
+                    active: false,
+                },
+                {
+                    id: 901,
+                    idx: 2,
+                    title: "Forest ambience",
+                    contentUrl: "/api/audios/901/content",
+                    active: true,
+                },
+            ]),
         });
     });
 
@@ -122,6 +137,14 @@ test("scenario page loads, selects scenes, and opens the studio player", async (
                     markerX: 20,
                     markerY: 30,
                     markerLabel: "A",
+                },
+                {
+                    id: 501,
+                    idx: 2,
+                    title: "Audio A second take",
+                    markerX: 60,
+                    markerY: 30,
+                    markerLabel: "B",
                 },
             ]),
         });
@@ -172,4 +195,21 @@ test("scenario page loads, selects scenes, and opens the studio player", async (
     await expect(page.locator('button[title="Preview scenario"]')).toBeEnabled();
     await page.locator('button[title="Preview scenario"]').click();
     await expect(page.locator(".reader-grid")).toBeVisible();
+    await expect(page.getByRole("button", {name: "Ambience on"})).toBeVisible();
+    await expect(page.locator("audio[data-reader-ambience]")).toHaveAttribute("src", "/api/audios/901/content");
+
+    await page.locator("audio[data-reader-voice]").evaluate((audio) => {
+        window.readerVoiceSources = [audio.getAttribute("src")];
+        audio.addEventListener("loadstart", () => {
+            window.readerVoiceSources.push(new URL(audio.src).pathname);
+        });
+    });
+
+    await page.getByRole("button", {name: "Play from start"}).click();
+    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => !audio.paused)).toBe(true);
+    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => audio.volume)).toBeCloseTo(0.22, 2);
+    await expect.poll(async () => {
+        const sources = await page.evaluate(() => window.readerVoiceSources || []);
+        return [...new Set(sources.map((source) => Number(source.match(/\/audios\/(\d+)\/content/)?.[1])).filter(Boolean))];
+    }, {timeout: 6000}).toEqual([500, 501, 1000]);
 });

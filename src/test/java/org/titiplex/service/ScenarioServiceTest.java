@@ -18,6 +18,7 @@ import org.titiplex.persistence.model.AudioScope;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioCollaborator;
+import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.AudioRepository;
@@ -498,6 +499,32 @@ class ScenarioServiceTest {
         verify(scenarioRepository).findPublishedByLanguageIdInOrderByCreatedAtDesc(
                 eq(List.of("fra", "oci")),
                 eq(Pageable.ofSize(15))
+        );
+    }
+
+    @Test
+    void publishScenario_updatesThePublicationTimeWithoutNotifyingFollowersAgain() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario scenario = publishedScenario(42L, "Published scenario");
+        Instant previousPublication = Instant.parse("2025-01-02T00:00:00Z");
+        scenario.setPublishedAt(previousPublication);
+        User user = author();
+
+        when(scenarioRepository.findByIdWithTags(42L)).thenReturn(Optional.of(scenario));
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "alice")).thenReturn(true);
+        when(scenarioRepository.save(scenario)).thenReturn(scenario);
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
+        Scenario updated = scenarioService.publishScenario(42L, auth);
+
+        assertEquals(ScenarioVisibilityStatus.PUBLISHED, updated.getVisibilityStatus());
+        assertEquals(true, updated.getPublishedAt().isAfter(previousPublication));
+        verify(notificationService, never()).notifyNewScenarioInLanguage(any());
+        verify(scenarioHistoryService).record(
+                42L,
+                7L,
+                ScenarioHistoryAction.PUBLISHED,
+                "Updated the published scenario"
         );
     }
 

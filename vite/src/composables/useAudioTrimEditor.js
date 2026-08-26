@@ -1,9 +1,15 @@
 import {ref, watch} from "vue";
 import {buildApiUrl} from "../api/rest";
+import {trimAudioSourceToWav} from "../utils/audioTrim";
 import {useToast} from "./useToast";
 
 export function useAudioTrimEditor(selectedVoiceRef, selectedThumbRef, options = {}) {
     const updateVoiceFields = options.updateVoiceFields ?? (() => {});
+    const replaceAudioContent = options.replaceAudioContent ?? null;
+    const fetchThumbnailAudios = options.fetchThumbnailAudios ?? null;
+    const audioMap = options.audioMap ?? null;
+    const studioSandboxMode = options.studioSandboxMode ?? ref(false);
+    const getScenarioId = options.getScenarioId ?? (() => "");
 
     const toast = useToast();
 
@@ -12,6 +18,7 @@ export function useAudioTrimEditor(selectedVoiceRef, selectedThumbRef, options =
     const trimEnd = ref(100);
     const trimDragging = ref(null);
     const trimPreviewPlaying = ref(false);
+    const trimSaving = ref(false);
     let trimPreviewAudio = null;
 
     const trimWaveBars = [
@@ -138,17 +145,72 @@ export function useAudioTrimEditor(selectedVoiceRef, selectedThumbRef, options =
         trimPreviewAudio.addEventListener("ended", stopTrimPreview);
     }
 
-    function applyTrimSelection() {
+    function trimmedFileName(voice) {
+        const base = String(voice?.title || "audio")
+            .trim()
+            .replace(/[^\p{L}\p{N}_-]+/gu, "-")
+            .replace(/^-+|-+$/g, "") || "audio";
+        return `${base}-cut.wav`;
+    }
+
+    function isLocalVoice(voice) {
+        const id = String(voice?.id || "");
+        return studioSandboxMode.value ||
+            String(getScenarioId()).startsWith("emergency-") ||
+            id.startsWith("local-");
+    }
+
+    async function applyTrimSelection() {
         const voice = selectedVoiceRef.value;
         const thumb = selectedThumbRef.value;
-        if (!voice || !thumb) return;
+        if (!voice || !thumb || voice.isDraft || trimSaving.value) return;
+        if (Number(trimStart.value) === 0 && Number(trimEnd.value) === 100) {
+            toast.info("Move the start or end handle before applying the cut.");
+            return;
+        }
+
         stopTrimPreview();
-        updateVoiceFields(thumb, voice, {
-            trimStart: trimStart.value,
-            trimEnd: trimEnd.value,
-        });
-        recordingTrimOpen.value = false;
-        toast.success(`Cut saved: ${trimStart.value}% to ${trimEnd.value}%.`);
+        trimSaving.value = true;
+
+        try {
+            const source = selectedVoiceAudioUrl();
+            if (!source) throw new Error("No audio is available to cut.");
+
+            const {blob, durationSeconds} = await trimAudioSourceToWav(
+                source,
+                trimStart.value,
+                trimEnd.value
+            );
+
+            if (isLocalVoice(voice)) {
+                const previousPreviewUrl = voice.previewUrl;
+                const previewUrl = URL.createObjectURL(blob);
+                updateVoiceFields(thumb, voice, {previewUrl, trimStart: 0, trimEnd: 100});
+                if (String(previousPreviewUrl || "").startsWith("blob:")) {
+                    URL.revokeObjectURL(previousPreviewUrl);
+                }
+            } else {
+                if (!replaceAudioContent || !fetchThumbnailAudios || !audioMap) {
+                    throw new Error("Audio saving is not available.");
+                }
+
+                const formData = new FormData();
+                formData.append("title", voice.title || "Audio");
+                formData.append("audio", blob, trimmedFileName(voice));
+                await replaceAudioContent(voice.id, formData);
+                const freshAudios = await fetchThumbnailAudios(thumb.id);
+                audioMap.value = {...audioMap.value, [thumb.id]: freshAudios};
+            }
+
+            trimStart.value = 0;
+            trimEnd.value = 100;
+            recordingTrimOpen.value = false;
+            toast.success(`Audio cut saved (${durationSeconds.toFixed(1)} s).`);
+        } catch (error) {
+            toast.error(error?.message || "Could not cut this audio.");
+        } finally {
+            trimSaving.value = false;
+        }
     }
 
     return {
@@ -157,6 +219,7 @@ export function useAudioTrimEditor(selectedVoiceRef, selectedThumbRef, options =
         trimEnd,
         trimDragging,
         trimPreviewPlaying,
+        trimSaving,
         trimWaveBars,
         toggleTrimEditor,
         updateTrimStart,

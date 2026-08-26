@@ -293,6 +293,22 @@ class AudioApiControllerWebMvcTest {
     }
 
     @Test
+    void selectBackground_callsServiceWhenAuthenticatedWithCsrf() throws Exception {
+        mvc.perform(patch("/api/scenarios/12/background-audio")
+                        .with(user("alice").roles("USER"))
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "audioId": 99
+                                }
+                                """))
+                .andExpect(status().isNoContent());
+
+        verify(audioService).selectBackgroundAudio(12L, 99L);
+    }
+
+    @Test
     void delete_requiresAuthentication() throws Exception {
         mvc.perform(delete("/api/audios/6").with(csrf()))
                 .andExpect(status().isUnauthorized());

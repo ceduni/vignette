@@ -15,6 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.api.dto.CreateAudioResponse;
 import org.titiplex.api.dto.LanguagePreviewAudioDto;
+import org.titiplex.api.dto.SelectScenarioBackgroundAudioRequest;
 import org.titiplex.api.dto.UpdateMarkerRequest;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
@@ -55,6 +56,13 @@ class AudioApiControllerTest {
 
     @InjectMocks
     private AudioApiController controller;
+
+    @Test
+    void selectBackground_updatesTheScenarioPlayerSelection() {
+        controller.selectBackground(12L, new SelectScenarioBackgroundAudioRequest(99L));
+
+        verify(audioService).selectBackgroundAudio(12L, 99L);
+    }
 
     @Test
     void list_checksScenarioVisibilityAndReturnsServiceDtos() {

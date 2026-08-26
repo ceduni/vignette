@@ -12,6 +12,8 @@ export function useThumbnailLifecycle(options = {}) {
         sortedThumbnails,
         getScenarioId,
         deleteThumbnail,
+        reloadThumbnails,
+        onThumbnailDeleted = () => {},
         updateThumbnailTitle,
         reorderScenarioThumbnails,
         toast,
@@ -25,6 +27,8 @@ export function useThumbnailLifecycle(options = {}) {
         quickRecordingThumbId,
         stopQuickRecording,
     } = options;
+
+    const deletingThumbnailIds = new Set();
 
     function selectThumb(thumb, {openRecorder = true, scrollRecorder = false} = {}) {
         if (!thumb?.id) return;
@@ -88,26 +92,19 @@ export function useThumbnailLifecycle(options = {}) {
 
         const targetId = String(targetThumb.id);
         const isLocal = !isPersistableThumbnailId(targetThumb.id);
+        if (deletingThumbnailIds.has(targetId)) return;
 
-        if (!studioSandboxMode.value && !isLocal) {
-            try {
-                await deleteThumbnail(targetThumb.id);
-            } catch (e) {
-                toast.error(e.message || "Could not delete this image.");
-                return;
-            }
-        }
-
+        const previousThumbnails = thumbnails.value;
+        const previousAudioMap = audioMap.value;
+        const previousSelectedThumb = selectedThumb.value;
+        const previousActiveAudioId = activeAudioId.value;
+        const previousGlobalRecorderOpen = globalRecorderOpen.value;
         const ordered = sortedThumbnails.value;
         const removedIndex = ordered.findIndex((thumb) => String(thumb.id) === targetId);
 
         thumbnails.value = thumbnails.value.filter((thumb) => String(thumb.id) !== targetId);
         const {[targetThumb.id]: _removedAudios, ...nextAudioMap} = audioMap.value;
         audioMap.value = nextAudioMap;
-
-        if (String(quickRecordingThumbId.value ?? "") === targetId) {
-            stopQuickRecording();
-        }
 
         if (selectedThumb.value && String(selectedThumb.value.id) === targetId) {
             const nextThumb = ordered[removedIndex + 1] || ordered[removedIndex - 1] || null;
@@ -116,6 +113,46 @@ export function useThumbnailLifecycle(options = {}) {
             globalRecorderOpen.value = !!selectedThumb.value && storyboardView.value === "global";
         }
 
+        if (!studioSandboxMode.value && !isLocal) {
+            deletingThumbnailIds.add(targetId);
+            try {
+                await deleteThumbnail(targetThumb.id);
+            } catch (e) {
+                let removedOnServer = false;
+                if (reloadThumbnails) {
+                    try {
+                        await reloadThumbnails();
+                        removedOnServer = !thumbnails.value.some((thumb) => String(thumb.id) === targetId);
+                    } catch {
+                    }
+                }
+
+                if (removedOnServer) {
+                    if (String(quickRecordingThumbId.value ?? "") === targetId) {
+                        stopQuickRecording();
+                    }
+                    onThumbnailDeleted(targetThumb);
+                    toast.success("Image removed from this board.");
+                    return;
+                }
+
+                thumbnails.value = previousThumbnails;
+                audioMap.value = previousAudioMap;
+                selectedThumb.value = previousSelectedThumb;
+                activeAudioId.value = previousActiveAudioId;
+                globalRecorderOpen.value = previousGlobalRecorderOpen;
+                toast.error(e.message || "Could not delete this image.");
+                return;
+            } finally {
+                deletingThumbnailIds.delete(targetId);
+            }
+        }
+
+        if (String(quickRecordingThumbId.value ?? "") === targetId) {
+            stopQuickRecording();
+        }
+
+        onThumbnailDeleted(targetThumb);
         toast.success("Image removed from this board.");
     }
 

@@ -1,8 +1,12 @@
 <script setup>
 import {computed, onBeforeUnmount, ref, watch} from "vue";
-import {RouterLink} from "vue-router";
 import {useAuth} from "../composables/useAuth";
-import {draftAudioStorageKey, migrateAnonymousDraftAudios, migrateLegacyDraftAudios} from "../utils/draftAudioStorage";
+import {
+  draftAudioStorageKey,
+  draftAudioStudioPath,
+  migrateAnonymousDraftAudios,
+  migrateLegacyDraftAudios,
+} from "../utils/draftAudioStorage";
 
 const {currentUser} = useAuth();
 
@@ -198,12 +202,7 @@ function updateDraftTitle(draft, title) {
 }
 
 function draftScenarioPath(draft) {
-  if (currentUser.value?.username) {
-    const params = new URLSearchParams({draftAudio: String(draft.id)});
-    if (draft.title) params.set("draftTitle", draft.title);
-    return `/create-scenario?${params.toString()}`;
-  }
-  return `/scenarios/emergency-${draft.id}?draftAudio=${draft.id}`;
+  return draftAudioStudioPath(draft, currentUser.value?.username);
 }
 
 function formatDuration(seconds) {
@@ -435,12 +434,12 @@ onBeforeUnmount(() => {
               </span>
             </div>
 
-            <RouterLink :to="draftScenarioPath(draft)" class="er-item__cta">
+            <a :href="draftScenarioPath(draft)" class="er-item__cta">
               <span>Open in studio</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6"/>
               </svg>
-            </RouterLink>
+            </a>
           </article>
         </div>
 

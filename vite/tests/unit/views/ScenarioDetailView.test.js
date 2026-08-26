@@ -2,6 +2,17 @@ import {nextTick} from "vue";
 import {mountWithRouter} from "../../helpers/mountWithRouter";
 import ScenarioDetailView from "@/views/ScenarioDetailView.vue";
 
+const localStorageValues = new Map();
+Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+        getItem: (key) => localStorageValues.get(key) ?? null,
+        setItem: (key, value) => localStorageValues.set(key, String(value)),
+        removeItem: (key) => localStorageValues.delete(key),
+        clear: () => localStorageValues.clear(),
+    },
+});
+
 Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
     writable: true,
@@ -27,6 +38,7 @@ const apiMocks = vi.hoisted(() => ({
     deleteScenario: vi.fn(),
     deleteThumbnail: vi.fn(),
     publishScenario: vi.fn(),
+    selectScenarioBackgroundAudio: vi.fn(),
     replaceAudioContent: vi.fn(),
     reorderScenarioThumbnails: vi.fn(),
     updateAudioGloss: vi.fn(),
@@ -88,6 +100,7 @@ vi.mock("@/api/scenarios", () => ({
     fetchScenarioThumbnails: apiMocks.fetchScenarioThumbnails,
     fetchThumbnailAudios: apiMocks.fetchThumbnailAudios,
     publishScenario: apiMocks.publishScenario,
+    selectScenarioBackgroundAudio: apiMocks.selectScenarioBackgroundAudio,
     replaceAudioContent: apiMocks.replaceAudioContent,
     reorderScenarioThumbnails: apiMocks.reorderScenarioThumbnails,
     updateAudioGloss: apiMocks.updateAudioGloss,
@@ -390,6 +403,7 @@ async function clickButtonByText(wrapper, text) {
 describe("ScenarioDetailView", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        localStorage.clear();
 
         autoplayApi.currentIndex.value = -1;
         autoplayApi.currentItem.value = null;
@@ -522,6 +536,33 @@ describe("ScenarioDetailView", () => {
             columns: 3,
         });
         expect(apiMocks.toastSuccess).toHaveBeenCalledWith("Storyboard settings saved.");
+    });
+
+    it("keeps the publication update reminder after a reload and clears it after confirmation", async () => {
+        const publishedScenario = {...baseScenario(), visibilityStatus: "PUBLISHED"};
+        const firstMount = await mountScenarioView({scenario: publishedScenario});
+
+        await firstMount.wrapper.find('.vg-tab').trigger("click");
+        await flushPromises();
+        await firstMount.wrapper.find('button[title="Storyboard settings"]').trigger("click");
+        await flushPromises();
+        const saveButton = firstMount.wrapper.findAll("button")
+            .find((button) => button.text().includes("Save settings"));
+        await saveButton.trigger("click");
+        await flushPromises();
+
+        expect(localStorage.getItem("vignette:scenario:77:publication-edit")).toBe("1");
+        firstMount.wrapper.unmount();
+
+        const secondMount = await mountScenarioView({scenario: publishedScenario});
+        await flushPromises();
+        expect(secondMount.wrapper.text()).toContain("Update live version");
+
+        await clickButtonByText(secondMount.wrapper, "Update live version");
+        await clickButtonByText(secondMount.wrapper, "Yes, update live version");
+
+        expect(localStorage.getItem("vignette:scenario:77:publication-edit")).toBeNull();
+        expect(apiMocks.toastSuccess).toHaveBeenCalledWith("Live scenario updated.");
     });
 
     it("saves custom storyboard settings from the settings dialog", async () => {
