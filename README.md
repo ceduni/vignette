@@ -123,6 +123,7 @@ Languages data and metadata are directly imported from [Glottolog](https://glott
 - [API docs](https://titiplex.github.io/vignette/)
 - [Repository](https://github.com/titiplex/vignette/)
 - [Project report](https://protolabo.github.io/vignette/) (in french)
+- [Studio and creation guide](docs/volet-creation.md) (in french)
 
 ## Getting started
 
