@@ -113,7 +113,7 @@ class NotificationServiceTest {
         assertEquals(bob, notif.getUser());
         assertEquals("COMMENT_REPLY", notif.getType());
         assertEquals("alice replied to your comment", notif.getMessage());
-        assertEquals("/languages/chuj", notif.getTargetUrl());
+        assertEquals("/languages/chuj?discussion=100", notif.getTargetUrl());
         assertEquals(100L, notif.getReferenceId());
     }
 
@@ -180,7 +180,7 @@ class NotificationServiceTest {
         for (Notification notif : captor.getAllValues()) {
             assertEquals("NEW_COMMENT_ON_SCENARIO", notif.getType());
             assertEquals("alice commented on \"My scenario\"", notif.getMessage());
-            assertEquals("/scenarios/12", notif.getTargetUrl());
+            assertEquals("/scenarios/12?discussion=200", notif.getTargetUrl());
         }
     }
 
