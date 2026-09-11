@@ -6,6 +6,7 @@ import { fetchLanguage } from '../api/languages'
 import { buildApiUrl } from '../api/rest'
 import { useScenarioReader } from '../composables/useScenarioReader'
 import ScenarioReaderModal from './scenario/ScenarioReaderModal.vue'
+import { scenarioLocation } from '../utils/scenarioLocation'
 
 const props = defineProps({
   speed: { type: Number, default: 0.003 },
@@ -23,7 +24,8 @@ let isPaused = false
 let globe = null
 let animationId = null
 
-let currentPhi = 0
+const INITIAL_PHI = 4.2
+let currentPhi = INITIAL_PHI
 let currentTheta = 0.2
 
 
@@ -39,7 +41,7 @@ async function loadData() {
   try {
     const scenarioData = await fetchScenarios()
     const all = Array.isArray(scenarioData) ? scenarioData : (scenarioData.content ?? [])
-    const publishedAll = all.filter(s => s.visibilityStatus === 'PUBLISHED' && s.languageId)
+    const publishedAll = all.filter(s => s.visibilityStatus === 'PUBLISHED')
 
     publishedAll.sort((a, b) => {
       const ka = scenarioSortKey(a)
@@ -48,7 +50,7 @@ async function loadData() {
     })
 
     const candidatePool = publishedAll.slice(0, props.maxMarkers * 5)
-    const languageIds = [...new Set(candidatePool.map(s => String(s.languageId)))]
+    const languageIds = [...new Set(candidatePool.filter(s => !scenarioLocation(s) && s.languageId).map(s => String(s.languageId)))]
 
     const langMap = {}
     await Promise.all(
@@ -64,7 +66,7 @@ async function loadData() {
     )
     languageMap.value = langMap
 
-    const published = candidatePool.filter(s => langMap[String(s.languageId)])
+    const published = candidatePool.filter(s => scenarioLocation(s, langMap))
     const selected = published.slice(0, props.maxMarkers)
     scenarios.value = selected
 
@@ -96,11 +98,10 @@ function rotationFor(scenarioId) {
 
 const markers = computed(() =>
   scenarios.value.map((s) => {
-    const lang = languageMap.value[String(s.languageId)]
     return {
       id: `scenario-${s.id}`,
       scenario: s,
-      location: [lang.latitude, lang.longitude],
+      location: scenarioLocation(s, languageMap.value),
       caption: s.title || 'Untitled',
       rotate: rotationFor(s.id),
     }
@@ -219,7 +220,7 @@ onMounted(() => {
   window.addEventListener('pointerup', onPointerUp, { passive: true })
 
   const canvas = canvasRef.value
-  let phi = 0
+  let phi = INITIAL_PHI
 
   function init() {
     const width = canvas.offsetWidth
@@ -228,7 +229,7 @@ onMounted(() => {
     globe = createGlobe(canvas, {
       devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
       width, height: width,
-      phi: 0, theta: 0.2,
+      phi: INITIAL_PHI, theta: 0.2,
       dark: 0, diffuse: 1.2,
       mapSamples: 16000, mapBrightness: 6,
       baseColor: [0.99, 0.97, 0.96],
@@ -282,6 +283,9 @@ onBeforeUnmount(() => {
       :key="m.id"
       type="button"
       class="globe-polaroid"
+      :title="m.scenario.location?.name || m.caption"
+      :data-latitude="m.location[0]"
+      :data-longitude="m.location[1]"
       :ref="setMarkerRef(m.id)"
       @click="handleMarkerClick(m.scenario)"
     >

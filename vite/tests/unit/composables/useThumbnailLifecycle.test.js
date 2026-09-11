@@ -1,4 +1,4 @@
-import {ref} from "vue";
+import {ref, computed} from "vue";
 import {useThumbnailLifecycle} from "@/composables/useThumbnailLifecycle";
 
 function makeToast() {
@@ -235,4 +235,25 @@ describe("useThumbnailLifecycle", () => {
         const {api} = setup();
         expect(api.moveThumbInOrder([{id: 1}, {id: 2}], 0, 0)).toBeNull();
     });
+});
+
+describe('persisted scene ordering', () => {
+  it('rolls back and reports an unavailable reorder endpoint instead of claiming success', async () => {
+    const original = [{id: 1, idx: 1}, {id: 2, idx: 2}];
+    const thumbnails = ref(original);
+    const selectedThumb = ref(original[0]);
+    const toast = {success: vi.fn(), error: vi.fn()};
+    const lifecycle = useThumbnailLifecycle({
+      thumbnails, selectedThumb, savingOrder: ref(false), studioSandboxMode: ref(false),
+      sortedThumbnails: computed(() => [...thumbnails.value].sort((a,b) => a.idx-b.idx)),
+      getScenarioId: () => 5,
+      reorderScenarioThumbnails: vi.fn().mockRejectedValue(new Error('HTTP 404')),
+      toast,
+    });
+    await lifecycle.reorderThumb(original[1], 'up');
+    expect(thumbnails.value).toEqual(original);
+    expect(selectedThumb.value.id).toBe(1);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith('HTTP 404');
+  });
 });

@@ -39,6 +39,8 @@ public record ScenarioDto(
         @Schema(description = "Optional comment left by the reviewer.")
         String reviewComment,
         @Schema(description = "Whether the requesting user can edit this scenario (author, or accepted OWNER/EDITOR collaborator).")
-        boolean canEdit
+        boolean canEdit,
+        @Schema(description = "Optional story location used on the globe.")
+        ScenarioLocationDto location
 ) {
 }

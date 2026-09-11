@@ -21,6 +21,9 @@ public record AudioRowDto(
         @Schema(description = "Y axis of the audio marker.", example = "12.3")
         Double markerY,
         @Schema(description = "Label of the audio marker.", example = "Person number 1")
-        String markerLabel
+        String markerLabel,
+        String transcription,
+        String gloss,
+        String freeTranslation
 ) {
 }

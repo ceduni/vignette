@@ -91,8 +91,8 @@ class AudioApiControllerWebMvcTest {
         when(scenarioService.getRequiredScenario(3L)).thenReturn(scenario);
         when(audioService.listForThumbnail(7L)).thenReturn(
                 List.of(
-                        new AudioRowDto(1L, "Audio 1", 1, "audio/webm", 10.0, 20.0, "speaker"),
-                        new AudioRowDto(2L, "Audio 2", 2, "audio/webm", null, null, null)
+                        new AudioRowDto(1L, "Audio 1", 1, "audio/webm", 10.0, 20.0, "speaker", null, null, null),
+                        new AudioRowDto(2L, "Audio 2", 2, "audio/webm", null, null, null, null, null, null)
                 )
         );
         mvc.perform(get("/api/thumbnails/7/audios"))
@@ -105,7 +105,7 @@ class AudioApiControllerWebMvcTest {
     }
 
     @Test
-    void content_isPublicAndReturnsHeaders() throws Exception {
+    void content_checksScenarioVisibilityAndReturnsHeaders() throws Exception {
         Resource resource = new ByteArrayResource(new byte[]{9, 8, 7});
         MediaContent media = new MediaContent(resource, "audio/webm", 3L, "\"audio-etag\"");
 
@@ -115,7 +115,7 @@ class AudioApiControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "audio/webm"))
                 .andExpect(header().string("ETag", "\"audio-etag\""))
-                .andExpect(header().string("Cache-Control", "private, max-age=3600"))
+                .andExpect(header().string("Cache-Control", "private, no-store"))
                 .andExpect(header().longValue("Content-Length", 3L));
     }
 

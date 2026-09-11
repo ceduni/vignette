@@ -131,15 +131,18 @@ class ThumbnailApiControllerTest {
         Resource resource = new ByteArrayResource(new byte[]{1, 2, 3, 4});
         MediaContent media = new MediaContent(resource, "image/png", 4L, "\"etag-1\"");
 
+        Thumbnail thumbnail = new Thumbnail();
+        thumbnail.setScenarioId(9L);
+        when(thumbnailService.getThumbnailById(8L)).thenReturn(thumbnail);
         when(thumbnailService.loadContent(8L)).thenReturn(media);
 
-        ResponseEntity<Resource> response = controller.content(8L);
+        ResponseEntity<Resource> response = controller.content(8L, null);
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals("image/png", Objects.requireNonNull(response.getHeaders().getContentType()).toString());
         assertEquals(4L, response.getHeaders().getContentLength());
         assertEquals("\"etag-1\"", response.getHeaders().getETag());
-        assertEquals("public, max-age=3600", response.getHeaders().getFirst("Cache-Control"));
+        assertEquals("private, no-store", response.getHeaders().getFirst("Cache-Control"));
         assertEquals(resource, response.getBody());
     }
 

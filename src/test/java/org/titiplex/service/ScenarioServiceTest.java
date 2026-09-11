@@ -186,7 +186,7 @@ class ScenarioServiceTest {
                 IllegalArgumentException.class,
                 () -> scenarioService.updateScenarioMetadata(
                         3L,
-                        new org.titiplex.api.dto.UpdateScenarioMetadataRequest(" Taken title ", null, null),
+                        new org.titiplex.api.dto.UpdateScenarioMetadataRequest(" Taken title ", null, null, null),
                         auth
                 )
         );

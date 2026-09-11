@@ -78,8 +78,8 @@ class AudioApiControllerTest {
         when(thumbnailService.getThumbnailById(7L)).thenReturn(thumbnail);
         when(scenarioService.getRequiredScenario(11L)).thenReturn(scenario);
         when(audioService.listForThumbnail(7L)).thenReturn(List.of(
-                new AudioRowDto(1L, "Audio 1", 1, "audio/webm", 10.0, 20.0, "A"),
-                new AudioRowDto(2L, "Audio 2", 2, "audio/webm", null, null, null)
+                new AudioRowDto(1L, "Audio 1", 1, "audio/webm", 10.0, 20.0, "A", null, null, null),
+                new AudioRowDto(2L, "Audio 2", 2, "audio/webm", null, null, null, null, null, null)
         ));
 
         List<AudioRowDto> result = controller.list(7L, auth);
@@ -98,13 +98,13 @@ class AudioApiControllerTest {
 
         when(audioService.loadContent(4L)).thenReturn(media);
 
-        ResponseEntity<Resource> response = controller.content(4L);
+        ResponseEntity<Resource> response = controller.content(4L, null);
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals("audio/webm", Objects.requireNonNull(response.getHeaders().getContentType()).toString());
         assertEquals(3L, response.getHeaders().getContentLength());
         assertEquals("\"audio-etag\"", response.getHeaders().getETag());
-        assertEquals("private, max-age=3600", response.getHeaders().getFirst("Cache-Control"));
+        assertEquals("private, no-store", response.getHeaders().getFirst("Cache-Control"));
         assertEquals(resource, response.getBody());
     }
 
@@ -200,7 +200,7 @@ class AudioApiControllerTest {
     @Test
     void listByLanguage_delegatesToService() {
         when(audioService.listForLanguage("chuj")).thenReturn(List.of(
-                new AudioRowDto(1L, "Clip", 1, "audio/webm", null, null, null)
+                new AudioRowDto(1L, "Clip", 1, "audio/webm", null, null, null, null, null, null)
         ));
 
         List<AudioRowDto> result = controller.listByLanguage("chuj");

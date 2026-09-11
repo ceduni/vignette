@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 .vite/
 test-results/
+
+# Generated test reports
+coverage/
+playwright-report/

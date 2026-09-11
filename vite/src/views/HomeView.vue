@@ -3,7 +3,16 @@ import {nextTick, onBeforeUnmount, onMounted, ref} from "vue";
 import {RouterLink} from "vue-router";
 import GlobePolaroids from "../components/GlobePolaroids.vue";
 import {fetchScenarios, fetchScenarioThumbnails} from "../api/scenarios";
+import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
+import {useScenarioReader} from "../composables/useScenarioReader";
+import {useAuth} from "../composables/useAuth";
 import {buildApiUrl} from "../api/rest";
+
+const {currentUser, loadMe} = useAuth();
+const {activeScenario, openReader, closeReader} = useScenarioReader();
+function ownsScenario(scenario) {
+  return !!currentUser.value && currentUser.value.username === scenario.authorUsername;
+}
 
 const COMMUNITY_LIMIT = 10;
 const communityScenarios = ref([]);
@@ -65,7 +74,7 @@ async function loadCommunityScenarios() {
   communityError.value = "";
 
   try {
-    const scenarioResponse = await fetchScenarios();
+    const [scenarioResponse] = await Promise.all([fetchScenarios(), loadMe()]);
     const published = asList(scenarioResponse)
         .filter((scenario) => scenario.visibilityStatus === "PUBLISHED")
         .slice(0, COMMUNITY_LIMIT);
@@ -99,7 +108,10 @@ onMounted(() => {
   window.addEventListener("resize", updateCommunityScrollState, {passive: true});
   loadCommunityScenarios();
 });
-onBeforeUnmount(() => window.removeEventListener("resize", updateCommunityScrollState));
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateCommunityScrollState);
+  closeReader();
+});
 </script>
 
 <template>
@@ -206,10 +218,13 @@ onBeforeUnmount(() => window.removeEventListener("resize", updateCommunityScroll
           aria-label="Published community scenarios. Scroll horizontally to see more."
           @scroll.passive="updateCommunityScrollState"
       >
-        <RouterLink
+        <component
+            :is="ownsScenario(scenario) ? RouterLink : 'button'"
             v-for="(scenario, index) in communityScenarios"
             :key="scenario.id"
-            :to="`/scenarios/${scenario.id}`"
+            :to="ownsScenario(scenario) ? `/scenarios/${scenario.id}` : undefined"
+            :type="ownsScenario(scenario) ? undefined : 'button'"
+            @click="!ownsScenario(scenario) && openReader(scenario)"
             class="home-card"
             :aria-label="`Open ${scenario.title}`"
         >
@@ -235,7 +250,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", updateCommunityScroll
               <span class="home-card__lang">{{ scenario.languageId }}</span>
             </span>
           </div>
-        </RouterLink>
+        </component>
       </div>
 
       <div v-else class="home-community__state" role="status">
@@ -249,5 +264,6 @@ onBeforeUnmount(() => window.removeEventListener("resize", updateCommunityScroll
       </div>
     </section>
 
+    <ScenarioReaderModal :scenario="activeScenario" @close="closeReader" />
   </main>
 </template>

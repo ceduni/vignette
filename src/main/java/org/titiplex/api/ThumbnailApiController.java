@@ -247,7 +247,8 @@ public class ThumbnailApiController {
             summary = "Get thumbnail image content",
             description = "Returns the raw thumbnail content with the appropriate MIME type and cache headers."
     )
-    @PublicOperation
+    @org.titiplex.api.security.ApiAccess(level = org.titiplex.api.security.ApiAccessLevel.PUBLIC,
+            rule = "Published media is public. Draft media requires permission to view its scenario.")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -269,15 +270,19 @@ public class ThumbnailApiController {
                     required = true,
                     example = "1"
             )
-            @PathVariable Long id
+            @PathVariable Long id,
+            @Parameter(hidden = true) Authentication auth
     ) {
+        var thumbnail = thumbnailService.getThumbnailById(id);
+        var scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
+        scenarioService.assertCanViewScenario(scenario, auth);
         var media = thumbnailService.loadContent(id);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(media.contentType()))
                 .contentLength(media.sizeBytes())
                 .eTag(media.etag())
-                .header("Cache-Control", "public, max-age=3600")
+                .header("Cache-Control", "private, no-store")
                 .body(media.resource());
     }
 
@@ -380,6 +385,21 @@ public class ThumbnailApiController {
                 saved.getImageWidth(),
                 saved.getImageHeight()
         );
+    }
+
+    public record ReorderRequest(List<Long> thumbnailIds) {}
+
+    @PatchMapping("/scenarios/{scenarioId}/thumbnails/reorder")
+    public List<ThumbnailRowDto> reorder(@PathVariable Long scenarioId,
+            @RequestBody ReorderRequest request, Authentication auth) {
+        Scenario scenario = scenarioService.getRequiredScenario(scenarioId);
+        scenarioService.assertCanEditScenario(scenario, auth);
+        var rows = thumbnailService.reorder(scenarioId, request.thumbnailIds());
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.THUMBNAIL_UPDATED, "Reordered scenes");
+        return rows.stream().map(t -> new ThumbnailRowDto(t.getId(), t.getTitle(), t.getIdx(),
+                t.getGridColumn(), t.getGridRow(), t.getGridColumnSpan(), t.getGridRowSpan(),
+                t.getImageWidth(), t.getImageHeight())).toList();
     }
 
     @PatchMapping("/thumbnails/{id}/title")

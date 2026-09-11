@@ -1,5 +1,8 @@
-import {ref} from "vue";
+import {nextTick, ref} from "vue";
 import {useBackgroundAmbience} from "@/composables/useBackgroundAmbience";
+
+const ambienceMocks = vi.hoisted(() => ({updateAudioAmbience: vi.fn(async () => {})}));
+vi.mock("@/api/scenarios", () => ambienceMocks);
 
 const toastMocks = vi.hoisted(() => ({
     success: vi.fn(),
@@ -68,6 +71,18 @@ describe("useBackgroundAmbience", () => {
     afterEach(() => {
         global.Audio = OriginalAudio;
         vi.restoreAllMocks();
+    });
+
+    it("restores saved mix settings and persists studio changes", async () => {
+        const {api} = setup({fetchScenarioBackgroundAudios: vi.fn(async () => [{id: 99, active: true, volume: 35, loop: false}])});
+        await api.loadBackgroundAudios();
+        await nextTick();
+        expect(api.backgroundVolume.value).toBe(35);
+        expect(api.backgroundLoop.value).toBe(false);
+        api.backgroundVolume.value = 12;
+        api.backgroundLoop.value = true;
+        await api.saveBackgroundSettings();
+        expect(ambienceMocks.updateAudioAmbience).toHaveBeenCalledWith(99, {volume: 12, loop: true});
     });
 
     it("defaults to no active ambience", () => {

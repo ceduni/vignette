@@ -142,3 +142,7 @@ return apiFetch(`/api/audios/${audioId}`, {
         method: "DELETE",
 });
 }
+
+export function updateAudioAmbience(audioId, body) {
+    return apiFetch(`/api/audios/${audioId}/ambience`, {method: "PATCH", body});
+}

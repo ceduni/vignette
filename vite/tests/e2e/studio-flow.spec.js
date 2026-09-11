@@ -115,6 +115,8 @@ test("studio flow creates a maker scene, imports audio, adds ambience, opens pla
         await route.fulfill(json({message: "Unsupported audio method"}, 405));
     });
 
+    await page.route("**/api/audios/*/ambience", (route) => route.fulfill({status: 204}));
+
     await page.route("**/api/scenarios/88/background-audios", async (route) => {
         const method = route.request().method();
         if (method === "GET") {

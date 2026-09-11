@@ -1,6 +1,7 @@
 package org.titiplex.service;
 
 import org.springframework.data.domain.PageRequest;
+import org.titiplex.api.dto.ScenarioLocationDto;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
@@ -342,6 +343,28 @@ public class ScenarioService {
             changedFields.add("tags");
         }
 
+        if (request.location() != null) {
+            ScenarioLocationDto location = request.location();
+            Double latitude = location.latitude();
+            Double longitude = location.longitude();
+            String name = location.name() == null ? "" : location.name().trim();
+            if (latitude == null && longitude == null && name.isEmpty()) {
+                scenario.setLocationName(null);
+                scenario.setLatitude(null);
+                scenario.setLongitude(null);
+            } else {
+                if (name.length() > 200 || latitude == null || longitude == null
+                        || !Double.isFinite(latitude) || !Double.isFinite(longitude)
+                        || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+                    throw new IllegalArgumentException("A location requires valid latitude (-90 to 90) and longitude (-180 to 180), and a name of at most 200 characters");
+                }
+                scenario.setLocationName(name.isEmpty() ? null : name);
+                scenario.setLatitude(latitude);
+                scenario.setLongitude(longitude);
+            }
+            changedFields.add("location");
+        }
+
         Scenario saved = repo.save(scenario);
 
         if (!changedFields.isEmpty()) {
@@ -491,22 +514,25 @@ public class ScenarioService {
     }
 
     private boolean isAcceptedCollaborator(Long scenarioId, String username) {
-        Long userId = userService.getUserByUsername(username).getId();
-        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, userId)
+        User user = userService.getUserByUsername(username);
+        if (user == null) return false;
+        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, user.getId())
                 .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
                 .isPresent();
     }
 
     private boolean hasPendingInvitation(Long scenarioId, String username) {
-        Long userId = userService.getUserByUsername(username).getId();
-        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, userId)
+        User user = userService.getUserByUsername(username);
+        if (user == null) return false;
+        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, user.getId())
                 .filter(c -> c.getStatus() == CollaborationStatus.PENDING)
                 .isPresent();
     }
 
     private boolean hasEditorAccess(Long scenarioId, String username) {
-        Long userId = userService.getUserByUsername(username).getId();
-        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, userId)
+        User user = userService.getUserByUsername(username);
+        if (user == null) return false;
+        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, user.getId())
                 .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
                 .filter(c -> c.getRole() == CollaboratorRole.OWNER || c.getRole() == CollaboratorRole.EDITOR)
                 .isPresent();
@@ -555,7 +581,9 @@ public class ScenarioService {
                 reviewedByUsername,
                 s.getReviewedAt(),
                 s.getReviewComment(),
-                canEdit
+                canEdit,
+                s.getLatitude() != null && s.getLongitude() != null
+                        ? new ScenarioLocationDto(s.getLocationName(), s.getLatitude(), s.getLongitude()) : null
         );
     }
 
@@ -657,6 +685,9 @@ public class ScenarioService {
         Scenario fork = new Scenario();
         fork.setTitle(title);
         fork.setDescription(original.getDescription());
+        fork.setLocationName(original.getLocationName());
+        fork.setLatitude(original.getLatitude());
+        fork.setLongitude(original.getLongitude());
         fork.setAuthor_id(userId);
         fork.setLanguage_id(original.getLanguage_id());
         fork.setCreatedAt(Instant.now());
@@ -718,6 +749,9 @@ public class ScenarioService {
                 audioCopy.setMarkerX(oa.getMarkerX());
                 audioCopy.setMarkerY(oa.getMarkerY());
                 audioCopy.setMarkerLabel(oa.getMarkerLabel());
+                audioCopy.setTranscription(oa.getTranscription());
+                audioCopy.setGloss(oa.getGloss());
+                audioCopy.setFreeTranslation(oa.getFreeTranslation());
                 audioRepo.save(audioCopy);
             }
         }
@@ -740,6 +774,8 @@ public class ScenarioService {
             audioCopy.setLanguageId(originalAudio.getLanguageId());
             audioCopy.setSourceLabel(originalAudio.getSourceLabel());
             audioCopy.setSourceUrl(originalAudio.getSourceUrl());
+            audioCopy.setBackgroundVolume(originalAudio.getBackgroundVolume());
+            audioCopy.setBackgroundLoop(originalAudio.getBackgroundLoop());
             audioRepo.save(audioCopy);
         }
 

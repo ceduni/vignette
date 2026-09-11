@@ -73,6 +73,24 @@ public class ThumbnailService {
         return repo.findByScenarioIdOrderByIdxAsc(scenarioId);
     }
 
+    @Transactional
+    public List<Thumbnail> reorder(Long scenarioId, List<Long> ids) {
+        List<Thumbnail> rows = listByScenarioId(scenarioId);
+        var byId = rows.stream().collect(java.util.stream.Collectors.toMap(Thumbnail::getId, t -> t));
+        if (ids == null || ids.size() != rows.size() || ids.stream().anyMatch(java.util.Objects::isNull)
+                || new java.util.HashSet<>(ids).size() != ids.size()
+                || !byId.keySet().equals(new java.util.HashSet<>(ids))) {
+            throw new IllegalArgumentException("Provide every scene in this vignette exactly once");
+        }
+        var ordered = new java.util.ArrayList<Thumbnail>();
+        for (int i = 0; i < ids.size(); i++) {
+            Thumbnail row = byId.get(ids.get(i));
+            row.setIdx(i + 1);
+            ordered.add(row);
+        }
+        return repo.saveAll(ordered);
+    }
+
     public Thumbnail getThumbnailById(Long id) {
         return repo.findById(id).orElseThrow(() -> new NoSuchElementException("Thumbnail not found"));
     }

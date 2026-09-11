@@ -29,9 +29,38 @@ const audioPlaying = ref(false);
 const ambienceEnabled = ref(true);
 const ambiencePlaying = ref(false);
 const sceneAudioIndex = ref(0);
+const glossaryOpen = ref(true);
+const ambienceVolume = ref(22);
+
+const glossaryEntries = computed(() => thumbnails.value.flatMap((thumb) =>
+  orderedAudiosForThumb(thumb).map((audio, index) => ({thumb, audio, index}))
+).filter(({audio}) => [audio.transcription, audio.gloss, audio.freeTranslation].some((text) => text?.trim())));
+
+const visibleGlossaryEntries = computed(() => viewMode.value === "scene"
+  ? glossaryEntries.value.filter(({audio}) => audio.id === currentAudio.value?.id)
+  : glossaryEntries.value);
+
+function openGlossaryEntry(entry) {
+  stopAutoplay();
+  enterSceneById(entry.thumb.id);
+  sceneAudioIndex.value = entry.index;
+}
+
+function selectTake(event) {
+  stopAutoplay();
+  sceneAudioIndex.value = Number(event.target.value);
+}
+
+watch(ambienceVolume, (volume) => {
+  if (backgroundAudioRef.value) backgroundAudioRef.value.volume = Number(volume) / 100;
+});
 
 const activeBackgroundAudio = computed(() => {
   return backgroundAudios.value.find((audio) => audio.active) ?? backgroundAudios.value[0] ?? null;
+});
+
+watch(activeBackgroundAudio, (audio) => {
+  ambienceVolume.value = audio?.volume ?? 22;
 });
 
 const backgroundAudioUrl = computed(() => {
@@ -43,7 +72,8 @@ const backgroundAudioUrl = computed(() => {
 function playAmbience() {
   const el = backgroundAudioRef.value;
   if (!el || !backgroundAudioUrl.value || !ambienceEnabled.value) return;
-  el.volume = 0.22;
+  if (el.ended && !el.loop) return;
+  el.volume = Number(ambienceVolume.value) / 100;
   el.play().catch(() => {
     ambiencePlaying.value = false;
   });
@@ -141,7 +171,7 @@ function toggleGridAudio(thumb) {
 
 function playFromStart() {
   const entries = thumbnails.value.flatMap(queueEntriesForThumb);
-  if (!entries.length) return;
+  if (!entries.length) { enterScene(0, true); return; }
   isGridSequencePlaying.value = true;
   gridSequenceList.value = entries;
   gridSequenceIndex.value = -1;
@@ -195,6 +225,9 @@ async function loadScenario(id) {
   audioMap.value = {};
   backgroundAudios.value = [];
   ambienceEnabled.value = true;
+  ambienceVolume.value = 22;
+  glossaryOpen.value = true;
+  sceneAudioIndex.value = 0;
   currentIndex.value = 0;
   viewMode.value = "grid";
   stopGridSequence();
@@ -257,6 +290,8 @@ function goTo(index, keepAutoplay = false) {
   if (index < 0 || index >= totalScenes.value) return;
   clearTimer();
   if (!keepAutoplay) isAutoplay.value = false;
+  audioRef.value?.pause();
+  if (!keepAutoplay) pauseAmbience();
   currentIndex.value = index;
   audioCurrentTime.value = 0;
   audioDuration.value = 0;
@@ -360,7 +395,6 @@ function onAudioEnded() {
       if (isAutoplay.value) goNext(true);
     }, 600);
   } else {
-    sceneAudioIndex.value = 0;
     pauseAmbience(true);
   }
 }
@@ -415,7 +449,6 @@ function onFullscreenChange() {
 
 function onKeyDown(e) {
   if (!props.scenario) return;
-
   if (e.key === "Escape") {
     if (isFullscreen.value) { document.exitFullscreen?.(); return; }
     if (viewMode.value === "scene") { backToGrid(); return; }
@@ -423,6 +456,7 @@ function onKeyDown(e) {
     return;
   }
 
+  if (e.target?.closest?.("input, select, textarea, button, a, [contenteditable=true]")) return;
   if (viewMode.value !== "scene") return;
   if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); goNext(); }
   else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); goPrev(); }
@@ -474,11 +508,15 @@ onUnmounted(() => {
               <p class="reader-header__meta">By {{ scenario.authorUsername ?? "Unknown" }}</p>
             </div>
             <div class="reader-header__actions">
+              <button v-if="glossaryEntries.length" type="button" class="reader-btn"
+                :aria-expanded="glossaryOpen" aria-controls="reader-glossary"
+                @click="glossaryOpen = !glossaryOpen">Glossary</button>
               <button
                 v-if="backgroundAudioUrl"
                 type="button"
                 class="reader-btn reader-ambience-btn"
                 :class="{ 'reader-btn--active': ambienceEnabled }"
+                :aria-pressed="ambienceEnabled"
                 :title="`${activeBackgroundAudio?.title || 'Vignette ambience'} · ${ambienceEnabled ? 'click to mute' : 'click to enable'}`"
                 @click="toggleAmbience"
               >
@@ -698,6 +736,37 @@ onUnmounted(() => {
             </template>
           </div>
 
+          <section v-if="glossaryOpen && glossaryEntries.length" id="reader-glossary" class="reader-glossary" aria-label="Glossary">
+            <div class="reader-glossary__heading">
+              <h3>Glossary</h3>
+              <label v-if="viewMode === 'scene' && currentAudios.length > 1">
+                Take
+                <select :value="sceneAudioIndex" aria-label="Glossary take" @change="selectTake">
+                  <option v-for="(audio, index) in currentAudios" :key="audio.id" :value="index">
+                    {{ index + 1 }} · {{ audio.title || 'Recording' }}
+                  </option>
+                </select>
+              </label>
+            </div>
+            <p v-if="!visibleGlossaryEntries.length">No glossary for this take.</p>
+            <article v-for="entry in visibleGlossaryEntries" :key="entry.audio.id" class="reader-glossary__entry"
+              :class="{'reader-glossary__entry--active': viewMode === 'grid' && isGridSequencePlaying && gridSequenceList[gridSequenceIndex]?.audio.id === entry.audio.id}">
+              <button v-if="viewMode === 'grid'" type="button" class="reader-back" @click="openGlossaryEntry(entry)">
+                {{ entry.thumb.title || 'Scene' }} · Take {{ entry.index + 1 }}
+              </button>
+              <dl>
+                <template v-if="entry.audio.transcription"><dt>Transcription</dt><dd>{{ entry.audio.transcription }}</dd></template>
+                <template v-if="entry.audio.gloss"><dt>Gloss</dt><dd>{{ entry.audio.gloss }}</dd></template>
+                <template v-if="entry.audio.freeTranslation"><dt>Translation</dt><dd>{{ entry.audio.freeTranslation }}</dd></template>
+              </dl>
+            </article>
+          </section>
+
+          <div v-if="backgroundAudioUrl" class="reader-ambience-controls">
+            <span>{{ activeBackgroundAudio.title || 'Background ambience' }}<small v-if="activeBackgroundAudio.sourceLabel"> · {{ activeBackgroundAudio.sourceLabel }}</small></span>
+            <label>Ambience volume <input v-model.number="ambienceVolume" aria-label="Ambience volume" type="range" min="0" max="100"/> {{ ambienceVolume }}%</label>
+          </div>
+
           <audio
             ref="audioRef"
             data-reader-voice
@@ -721,7 +790,7 @@ onUnmounted(() => {
             data-reader-ambience
             :src="backgroundAudioUrl ?? ''"
             preload="auto"
-            loop
+            :loop="activeBackgroundAudio?.loop ?? true"
             style="display:none"
             @play="ambiencePlaying = true"
             @pause="ambiencePlaying = false"
@@ -747,6 +816,19 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.reader-glossary { padding: 12px 20px; border-top: 1.5px solid var(--border); overflow-y: auto; max-height: 28vh; flex-shrink: 0; }
+.reader-glossary__heading, .reader-ambience-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.reader-glossary h3 { margin: 0; font-size: 0.9rem; }
+.reader-glossary__heading label, .reader-ambience-controls label { display: flex; flex-direction: row; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.reader-glossary__heading select { min-width: 0; width: auto; max-width: 100%; }
+.reader-glossary__entry { padding: 10px; margin-top: 8px; border-radius: 10px; background: var(--surface); }
+.reader-glossary__entry--active { box-shadow: inset 3px 0 var(--primary); }
+.reader-glossary dl { margin: 0; display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 6px 12px; font-size: 0.85rem; }
+.reader-glossary dt { font-weight: 700; color: var(--text-soft); }
+.reader-glossary dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.reader-ambience-controls { padding: 10px 20px; border-top: 1.5px solid var(--border); font-size: 0.78rem; flex-shrink: 0; }
+.reader-ambience-controls input { width: 100px; }
+
 .reader-backdrop {
   position: fixed;
   inset: 0;
@@ -833,6 +915,7 @@ onUnmounted(() => {
 }
 
 .reader-header__actions {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -871,6 +954,7 @@ onUnmounted(() => {
 .reader-btn--active:hover {
   background: var(--primary-strong);
   border-color: var(--primary-strong);
+  color: #fff;
 }
 
 .reader-btn--primary {
@@ -1326,6 +1410,14 @@ onUnmounted(() => {
 @media (max-width: 600px) {
   .reader-backdrop { padding: 0; }
   .reader { border-radius: 0; max-height: 100vh; width: 100vw; }
+  .reader-header { position: relative; flex-direction: column; gap: 10px; padding: 12px; }
+  .reader-header__info { width: 100%; min-width: 0; padding-right: 40px; }
+  .reader-header__actions { width: 100%; flex-shrink: 1; gap: 6px; }
+  .reader-header__actions [title="Close (Esc)"] { position: absolute; top: 12px; right: 12px; }
+  .reader-header__actions .reader-btn { padding-inline: 0.65rem; }
+  .reader-glossary { padding-inline: 12px; }
+  .reader-glossary__heading label { width: 100%; }
+  .reader-glossary__heading select { flex: 1; }
   .reader-footer { gap: 10px; flex-wrap: wrap; }
   .reader-footer span { font-size: 0.6rem; }
   .reader-nav { width: 36px; height: 36px; }

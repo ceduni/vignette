@@ -1,7 +1,11 @@
 import {flushPromises, mount} from "@vue/test-utils";
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ref} from "vue";
+import {useAuth} from "@/composables/useAuth";
 import HomeView from "@/views/HomeView.vue";
 import {fetchScenarios, fetchScenarioThumbnails} from "@/api/scenarios";
+
+vi.mock("@/composables/useAuth", () => ({useAuth: vi.fn()}));
 
 vi.mock("@/api/scenarios", () => ({
     fetchScenarios: vi.fn(),
@@ -17,6 +21,7 @@ function mountHome() {
         global: {
             stubs: {
                 GlobePolaroids: true,
+                ScenarioReaderModal: true,
                 RouterLink: {
                     props: ["to"],
                     template: '<a :href="to"><slot /></a>',
@@ -28,11 +33,12 @@ function mountHome() {
 
 describe("HomeView community scenarios", () => {
     beforeEach(() => {
+        useAuth.mockReturnValue({currentUser: ref(null), loadMe: vi.fn()});
         fetchScenarios.mockReset();
         fetchScenarioThumbnails.mockReset();
     });
 
-    it("renders real published scenarios and links every card to its storyboard", async () => {
+    it("opens other authors’ published scenarios in the viewer", async () => {
         fetchScenarios.mockResolvedValue([
             {
                 id: 41,
@@ -67,13 +73,30 @@ describe("HomeView community scenarios", () => {
 
         const cards = wrapper.findAll(".home-card:not(.home-card--skel)");
         expect(cards).toHaveLength(2);
-        expect(cards[0].attributes("href")).toBe("/scenarios/41");
-        expect(cards[1].attributes("href")).toBe("/scenarios/42");
+        expect(cards[0].element.tagName).toBe("BUTTON");
+        await cards[0].trigger("click");
+        expect(wrapper.findComponent({name: "ScenarioReaderModal"}).props("scenario")).toMatchObject({id: "41"});
         expect(cards[0].text()).toContain("Une soirée qui rassemble");
         expect(cards[0].text()).toContain("demo_amelie");
         expect(cards[0].text()).toContain("3 scenes");
         expect(cards[0].find("img").attributes("src")).toBe("/api/thumbnails/500/content");
         expect(wrapper.text()).not.toContain("Private draft");
+    });
+
+    it("keeps the author’s own vignette linked to the studio", async () => {
+        useAuth.mockReturnValue({currentUser: ref({username: "alice"}), loadMe: vi.fn()});
+        fetchScenarios.mockResolvedValue([
+            {id: 41, title: "My story", authorUsername: "alice", visibilityStatus: "PUBLISHED"},
+            {id: 42, title: "Their story", authorUsername: "bob", visibilityStatus: "PUBLISHED"},
+        ]);
+        fetchScenarioThumbnails.mockResolvedValue([]);
+        const wrapper = mountHome();
+        await flushPromises();
+        const cards = wrapper.findAll(".home-card");
+        expect(cards[0].attributes("href")).toBe("/scenarios/41");
+        expect(cards[1].element.tagName).toBe("BUTTON");
+        await cards[1].trigger("click");
+        expect(wrapper.findComponent({name: "ScenarioReaderModal"}).props("scenario")).toMatchObject({id: "42"});
     });
 
     it("shows a useful catalogue link if the API cannot be reached", async () => {

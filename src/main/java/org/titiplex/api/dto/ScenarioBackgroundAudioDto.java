@@ -19,6 +19,8 @@ public record ScenarioBackgroundAudioDto(
         @Schema(description = "Optional source URL", example = "https://freesound.org/s/12345/")
         String sourceUrl,
         @Schema(description = "Whether this audio is used by the scenario player")
-        boolean active
+        boolean active,
+        Integer volume,
+        Boolean loop
 ) {
 }

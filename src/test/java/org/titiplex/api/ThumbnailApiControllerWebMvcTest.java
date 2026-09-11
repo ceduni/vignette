@@ -99,17 +99,20 @@ class ThumbnailApiControllerWebMvcTest {
     }
 
     @Test
-    void content_isPublicAndReturnsHeaders() throws Exception {
+    void content_checksScenarioVisibilityAndReturnsHeaders() throws Exception {
         Resource resource = new ByteArrayResource(new byte[]{1, 2, 3, 4});
         MediaContent media = new MediaContent(resource, "image/png", 4L, "\"thumb-etag\"");
 
+        Thumbnail thumbnail = new Thumbnail();
+        thumbnail.setScenarioId(9L);
+        when(thumbnailService.getThumbnailById(8L)).thenReturn(thumbnail);
         when(thumbnailService.loadContent(8L)).thenReturn(media);
 
         mvc.perform(get("/api/thumbnails/8/content"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "image/png"))
                 .andExpect(header().string("ETag", "\"thumb-etag\""))
-                .andExpect(header().string("Cache-Control", "public, max-age=3600"))
+                .andExpect(header().string("Cache-Control", "private, no-store"))
                 .andExpect(header().longValue("Content-Length", 4L));
     }
 

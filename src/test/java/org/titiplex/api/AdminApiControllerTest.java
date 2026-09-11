@@ -143,7 +143,7 @@ class AdminApiControllerTest {
                 "NONE",
                 null,
                 null,
-                null, false
+                null, false, null
         );
 
         when(scenarioService.listAllScenarios()).thenReturn(List.of());

@@ -58,6 +58,21 @@ public class Audio {
     @Column(name = "source_url", length = 512)
     private String sourceUrl;
 
+    @Column(name = "background_volume")
+    private Integer backgroundVolume;
+
+    @Column(name = "background_loop")
+    private Boolean backgroundLoop;
+
+    @Column(columnDefinition = "text")
+    private String transcription;
+
+    @Column(columnDefinition = "text")
+    private String gloss;
+
+    @Column(name = "free_translation", columnDefinition = "text")
+    private String freeTranslation;
+
     @Column(name = "marker_x")
     private Double markerX;
 

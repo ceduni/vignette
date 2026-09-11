@@ -22,10 +22,7 @@ describe("ambienceSynth", () => {
         const preset = {id: "rain-window", profile: "rain"};
         const {samples} = renderAmbiencePresetSamples(preset, "rain-seed");
 
-        for (const sample of samples) {
-            expect(sample).toBeGreaterThanOrEqual(-1);
-            expect(sample).toBeLessThanOrEqual(1);
-        }
+        expect(samples.every(sample => sample >= -1 && sample <= 1)).toBe(true);
     });
 
     it("handles an unknown profile without throwing (silent buffer)", () => {

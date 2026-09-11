@@ -2,6 +2,7 @@
 import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {RouterLink, useRoute, useRouter} from "vue-router";
 import {fetchLanguage} from "../api/languages";
+import ScenarioLocationForm from "../components/scenario/ScenarioLocationForm.vue";
 import {
   approveFork,
   deleteAudio as apiDeleteAudio,
@@ -627,6 +628,7 @@ const {
   backgroundSourceLabel,
   backgroundSourceUrl,
   backgroundVolume,
+  saveBackgroundSettings,
   backgroundLoop,
   backgroundUploading,
   presetAudioGenerating,
@@ -1491,6 +1493,14 @@ onBeforeUnmount(() => {
               <p v-else class="si-desc__text">{{ scenario.description?.trim() || "No description." }}</p>
             </div>
 
+            <div class="si-desc">
+              <p class="si-desc__label">Story location</p>
+              <ScenarioLocationForm v-if="canEditScenario && !isPublished" :scenario-id="scenario.id"
+                :location="scenario.location" :sandbox="studioSandboxMode"
+                @saved="scenario = {...scenario, location: $event}"/>
+              <p v-else class="si-desc__text">{{ scenario.location?.name || (scenario.location ? `${scenario.location.latitude}, ${scenario.location.longitude}` : 'Uses the language location on the globe.') }}</p>
+            </div>
+
             <div v-if="scenario.parentScenarioId && reviewStatus !== 'NONE'" class="si-desc">
               <p class="si-desc__label">Fork review</p>
               <p class="si-desc__text">
@@ -1521,13 +1531,13 @@ onBeforeUnmount(() => {
         <div v-if="updateConfirmOpen" class="dialog-backdrop" @click.self="cancelUpdateConfirm">
           <div class="ms-confirm" style="z-index:210">
             <p class="ms-confirm__eyebrow">Publication update</p>
-            <h2 class="ms-confirm__title">Update the live version?</h2>
-            <p class="ms-confirm__body">Your changes are saved. Confirm that the current version is ready for the published scenario.</p>
+            <h2 class="ms-confirm__title">Confirm this revision?</h2>
+            <p class="ms-confirm__body">Your saved changes are already visible to readers. Confirm this revision to update its publication date.</p>
             <div class="ms-confirm__actions">
               <button type="button" class="ms-confirm__cancel" @click="cancelUpdateConfirm">Keep editing</button>
               <button type="button" class="ms-confirm__delete" :disabled="publishing" @click="confirmUpdatePublished">
                 <template v-if="publishing"><span class="ms-spin"></span> Updating…</template>
-                <template v-else>Yes, update live version</template>
+                <template v-else>Confirm revision</template>
               </button>
             </div>
           </div>
@@ -1818,12 +1828,12 @@ onBeforeUnmount(() => {
                       <div class="side-settings side-settings--ambient amb-mix-row">
                         <label>
                           <span>Volume</span>
-                          <input v-model="backgroundVolume" type="range" min="0" max="100"/>
+                          <input v-model="backgroundVolume" type="range" min="0" max="100" @change="saveBackgroundSettings"/>
                           <strong>{{ backgroundVolume }}%</strong>
                         </label>
                         <label class="switch-row">
                           <span>Loop</span>
-                          <input v-model="backgroundLoop" type="checkbox"/>
+                          <input v-model="backgroundLoop" type="checkbox" @change="saveBackgroundSettings"/>
                           <strong>{{ backgroundLoop ? "On" : "Off" }}</strong>
                         </label>
                       </div>
@@ -2063,7 +2073,7 @@ onBeforeUnmount(() => {
                         <div>
                           <strong>{{ isPublished ? "Published" : "Draft (private)" }}</strong>
                           <small>
-                            {{ isPublished && hasUnpublishedEdits ? "Changes saved since the last publication update" : isPublished ? "Visible to the community" : "Only you can see this" }}
+                            {{ isPublished && hasUnpublishedEdits ? "Saved changes are already visible to readers" : isPublished ? "Visible to the community" : "Only you can see this" }}
                           </small>
                         </div>
                       </div>
@@ -2090,7 +2100,7 @@ onBeforeUnmount(() => {
                           :disabled="publishing"
                           @click="openUpdateConfirm"
                       >
-                        {{ publishing ? "Updating…" : "Update live version →" }}
+                        {{ publishing ? "Updating…" : "Confirm revision →" }}
                       </button>
                     </div>
                     <p v-if="isOwner && !isPublished && isForkPending" class="ss-pub__blocked">
@@ -2498,9 +2508,9 @@ onBeforeUnmount(() => {
                         :disabled="publishing"
                         @click="openUpdateConfirm"
                     >
-                      {{ publishing ? "Updating…" : "Update live version →" }}
+                      {{ publishing ? "Updating…" : "Confirm revision →" }}
                     </button>
-                    <span v-else-if="isPublished" class="vg-status vg-status--pub">Published</span>
+                    <span v-else-if="isPublished" class="vg-status vg-status--pub">{{ canEditScenario ? "Published · edits save live" : "Published" }}</span>
                     <span v-else-if="isOwner && isForkPending" class="vg-status vg-status--review">Pending review</span>
                     <span v-else-if="isOwner && isForkRejected" class="vg-status vg-status--rejected">Fork rejected</span>
                     <span v-else-if="!canEditScenario" class="vg-status">Read-only</span>

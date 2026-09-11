@@ -12,7 +12,7 @@ const toast = useToast();
 
 const pendingDraftAudioId = route.query.draftAudio ? String(route.query.draftAudio) : "";
 
-const form = ref({title: route.query.draftTitle ? String(route.query.draftTitle) : "", description: "", languageId: "", tags: [], audience: "community", allowComments: true, allowTranscription: true, allowDownload: false});
+const form = ref({title: route.query.draftTitle ? String(route.query.draftTitle) : "", description: "", languageId: "", tags: []});
 const languages = ref([]);
 const langQuery = ref("");
 const selectedLanguage = ref(null);
@@ -87,10 +87,6 @@ async function submit() {
       description: form.value.description,
       languageId: form.value.languageId,
       tags: form.value.tags,
-      audience: form.value.audience,
-      allowComments: form.value.allowComments,
-      allowTranscription: form.value.allowTranscription,
-      allowDownload: form.value.allowDownload,
     });
     toast.success("Scenario created!");
     const studioPath = pendingDraftAudioId
@@ -239,62 +235,8 @@ onUnmounted(() => {
         </div>
 
         <div class="cs-field">
-          <label class="cs-label">
-            Audience
-            <span class="cs-opt">optional</span>
-          </label>
-          <div class="cs-audience">
-            <button
-                type="button"
-                class="cs-audience-btn"
-                :class="{ active: form.audience === 'private' }"
-                @click="form.audience = 'private'"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
-                <path fill-rule="evenodd" d="M10 2a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1V6a4 4 0 0 0-4-4Zm-2 6V6a2 2 0 1 1 4 0v2H8Z" clip-rule="evenodd"/>
-              </svg>
-              <strong>Private</strong>
-              <small>Only visible to me</small>
-            </button>
-            <button
-                type="button"
-                class="cs-audience-btn"
-                :class="{ active: form.audience === 'group' }"
-                @click="form.audience = 'group'"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
-                <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z"/>
-              </svg>
-              <strong>Group</strong>
-              <small>My class or circle</small>
-            </button>
-            <button
-                type="button"
-                class="cs-audience-btn"
-                :class="{ active: form.audience === 'community' }"
-                @click="form.audience = 'community'"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-2.489-8.396a.75.75 0 1 0-1.022-1.098L5 9.996V8.5a.75.75 0 0 0-1.5 0v3a.75.75 0 0 0 .75.75h3a.75.75 0 0 0 0-1.5H6.06l1.45-1.146ZM13.5 11.5a.75.75 0 0 0 0 1.5h1.44l-1.45 1.146a.75.75 0 1 0 1.022 1.098L16 13.754V15.5a.75.75 0 0 0 1.5 0v-3a.75.75 0 0 0-.75-.75h-3Z" clip-rule="evenodd"/>
-              </svg>
-              <strong>Community</strong>
-              <small>The whole platform</small>
-            </button>
-          </div>
-          <div class="cs-toggles">
-            <label class="cs-toggle">
-              <input type="checkbox" v-model="form.allowComments"/>
-              <span>Allow comments</span>
-            </label>
-            <label class="cs-toggle">
-              <input type="checkbox" v-model="form.allowTranscription"/>
-              <span>Show transcription</span>
-            </label>
-            <label class="cs-toggle">
-              <input type="checkbox" v-model="form.allowDownload"/>
-              <span>Allow download</span>
-            </label>
-          </div>
+          <p class="cs-label">Visibility</p>
+          <p>A new story starts as a private draft. Publishing makes its images, recordings and any annotations public. You can invite collaborators from the studio.</p>
         </div>
 
         <BaseAlert v-if="error" type="error">{{ error }}</BaseAlert>

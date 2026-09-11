@@ -38,6 +38,23 @@ class ThumbnailServiceTest {
     private ThumbnailService thumbnailService;
 
     @Test
+    void reorderPersistsOrderAndRejectsInvalidMembershipBeforeMutation() {
+        Thumbnail first = new Thumbnail(); first.setId(1L); first.setIdx(1);
+        Thumbnail second = new Thumbnail(); second.setId(2L); second.setIdx(2);
+        when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(5L)).thenReturn(List.of(first, second));
+        for (var ids : List.of(List.of(1L), List.of(1L, 1L), List.of(1L, 99L))) {
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> thumbnailService.reorder(5L, ids));
+        }
+        assertEquals(1, first.getIdx());
+        verify(thumbnailRepository, never()).saveAll(any());
+        when(thumbnailRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        assertEquals(List.of(second, first), thumbnailService.reorder(5L, List.of(2L, 1L)));
+        assertEquals(1, second.getIdx());
+        assertEquals(2, first.getIdx());
+    }
+
+    @Test
     void save_buildsThumbnailFromInputs() throws Exception {
         Scenario scenario = new Scenario();
         scenario.setId(5L);

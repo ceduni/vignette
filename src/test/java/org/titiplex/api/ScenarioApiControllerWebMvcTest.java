@@ -100,7 +100,7 @@ class ScenarioApiControllerWebMvcTest {
                 "NONE",
                 null,
                 null,
-                null, false
+                null, false, null
         );
 
         when(scenarioService.listVisibleScenarioDtos(any())).thenReturn(List.of(dto));
@@ -146,7 +146,7 @@ class ScenarioApiControllerWebMvcTest {
                 "NONE",
                 null,
                 null,
-                null, false
+                null, false, null
         );
 
         when(scenarioService.getVisibleScenario(eq(11L), any())).thenReturn(scenario);
@@ -278,7 +278,7 @@ class ScenarioApiControllerWebMvcTest {
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(),
                 21L,
-                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null, false
+                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null, false, null
         );
 
         when(scenarioService.reviewFork(eq(30L), eq(true), any(), any())).thenReturn(approved);
@@ -306,7 +306,7 @@ class ScenarioApiControllerWebMvcTest {
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(),
                 21L,
-                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough", false
+                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough", false, null
         );
 
         when(scenarioService.reviewFork(eq(31L), eq(false), any(), any())).thenReturn(rejected);
@@ -363,7 +363,7 @@ class ScenarioApiControllerWebMvcTest {
                 "PRESET", "GRID_3", 3,
                 List.of(),
                 null,
-                "NONE", null, null, null, false
+                "NONE", null, null, null, false, null
         );
 
         when(scenarioSecurity.isAuthor(eq(21L), eq("alice"))).thenReturn(true);

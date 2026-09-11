@@ -1,4 +1,5 @@
 import {computed, ref, watch} from "vue";
+import {updateAudioAmbience} from "../api/scenarios";
 import {buildApiUrl} from "../api/rest";
 import {useToast} from "./useToast";
 import {renderAmbiencePresetBlob} from "../utils/ambienceSynth";
@@ -238,6 +239,26 @@ export function useBackgroundAmbience({
         }
     }
 
+    async function saveBackgroundSettings() {
+        const audio = selectedBackgroundAudio.value;
+        if (!audio) return;
+        const settings = {volume: Number(backgroundVolume.value), loop: !!backgroundLoop.value};
+        try {
+            if (!studioSandboxMode.value && !String(audio.id).startsWith("background-local-")) {
+                await updateAudioAmbience(audio.id, settings);
+            }
+            Object.assign(audio, settings);
+        } catch (e) {
+            toast.error(e.message || "Could not save ambience settings.");
+        }
+    }
+
+    watch(selectedBackgroundAudio, (audio) => {
+        if (!audio) return;
+        backgroundVolume.value = audio.volume ?? 22;
+        backgroundLoop.value = audio.loop ?? true;
+    });
+
     function openBackgroundAudioFile() {
         backgroundAudioFileInput.value?.click?.();
     }
@@ -306,6 +327,7 @@ export function useBackgroundAmbience({
             fd.append("audio", uploadFile, uploadFile.name || "background-audio");
 
             const response = await uploadScenarioBackgroundAudio(getScenarioId(), fd);
+            await updateAudioAmbience(response.id, {volume: Number(backgroundVolume.value), loop: !!backgroundLoop.value});
             await loadBackgroundAudios(response?.id);
             backgroundTitle.value = "";
             backgroundSourceLabel.value = "";
@@ -475,6 +497,7 @@ export function useBackgroundAmbience({
     watch([backgroundVolume, backgroundLoop], applyBackgroundPlayerSettings);
 
     return {
+        saveBackgroundSettings,
         ambiencePanelOpen,
         ambienceAdvancedOpen,
         selectedAmbiencePresetId,

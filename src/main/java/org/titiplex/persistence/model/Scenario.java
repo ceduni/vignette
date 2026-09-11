@@ -20,6 +20,12 @@ public class Scenario {
     private String title;
     @Column(length = 500)
     private String description;
+    @Column(name = "location_name", length = 200)
+    private String locationName;
+    @Column(name = "latitude")
+    private Double latitude;
+    @Column(name = "longitude")
+    private Double longitude;
     @Column
     private Instant createdAt;
     @Column(name = "author_id")

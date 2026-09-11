@@ -192,21 +192,11 @@ export function useThumbnailLifecycle(options = {}) {
         const thumbnailIds = ordered.map((thumb) => thumb.id);
         if (!thumbnailIds.every(isPersistableThumbnailId)) return;
 
-        try {
-            const persistedRows = await reorderScenarioThumbnails(
-                getScenarioId(),
-                thumbnailIds.map((id) => Number(id))
-            );
-            mergePersistedThumbnailRows(persistedRows);
-        } catch (e) {
-            const message = String(e?.message || "");
-            const routeMissing = message.includes("No static resource") || message.includes("HTTP 404");
-            if (!routeMissing) {
-                throw e;
-            }
-
-            console.warn("Thumbnail reorder endpoint is not available on the running backend yet.", e);
-        }
+        const persistedRows = await reorderScenarioThumbnails(
+            getScenarioId(),
+            thumbnailIds.map((id) => Number(id))
+        );
+        mergePersistedThumbnailRows(persistedRows);
     }
 
     async function applyThumbnailOrder(nextOrdered, message = "Scene reordered.") {

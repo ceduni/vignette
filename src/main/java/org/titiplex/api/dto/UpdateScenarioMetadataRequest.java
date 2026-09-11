@@ -11,6 +11,8 @@ public record UpdateScenarioMetadataRequest(
         @Schema(description = "Scenario description.", example = "Updated description for the scenario.")
         String description,
         @Schema(description = "Tags to associate with the scenario.")
-        List<String> tags
+        List<String> tags,
+        @Schema(description = "Story location. Omit to retain it; an empty object clears it.")
+        ScenarioLocationDto location
 ) {
 }

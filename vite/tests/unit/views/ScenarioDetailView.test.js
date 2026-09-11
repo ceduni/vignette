@@ -556,10 +556,12 @@ describe("ScenarioDetailView", () => {
 
         const secondMount = await mountScenarioView({scenario: publishedScenario});
         await flushPromises();
-        expect(secondMount.wrapper.text()).toContain("Update live version");
+        expect(secondMount.wrapper.text()).toContain("Confirm revision");
 
-        await clickButtonByText(secondMount.wrapper, "Update live version");
-        await clickButtonByText(secondMount.wrapper, "Yes, update live version");
+        await clickButtonByText(secondMount.wrapper, "Confirm revision");
+        expect(secondMount.wrapper.text()).toContain("Your saved changes are already visible to readers");
+        await secondMount.wrapper.find(".ms-confirm__delete").trigger("click");
+        await flushPromises();
 
         expect(localStorage.getItem("vignette:scenario:77:publication-edit")).toBeNull();
         expect(apiMocks.toastSuccess).toHaveBeenCalledWith("Live scenario updated.");

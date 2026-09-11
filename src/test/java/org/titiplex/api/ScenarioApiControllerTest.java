@@ -98,7 +98,7 @@ class ScenarioApiControllerTest {
                 "NONE",
                 null,
                 null,
-                null, false
+                null, false, null
         );
 
         when(scenarioService.getVisibleScenario(9L, auth)).thenReturn(scenario);
@@ -154,7 +154,7 @@ class ScenarioApiControllerTest {
                 Instant.parse("2026-03-20T10:15:30Z"),
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(), null,
-                "NONE", null, null, null, false
+                "NONE", null, null, null, false, null
         );
         ScenarioDto dto2 = new ScenarioDto(
                 2L, "Second", "D2", "kiche", "bob",
@@ -163,7 +163,7 @@ class ScenarioApiControllerTest {
                 "CUSTOM", "MANGA", 4,
                 List.of(),
                 null,
-                "NONE", null, null, null, false
+                "NONE", null, null, null, false, null
         );
 
         when(scenarioService.listVisibleScenarioDtos(auth)).thenReturn(List.of(dto1, dto2));
@@ -188,7 +188,7 @@ class ScenarioApiControllerTest {
                 "DRAFT", null, "CUSTOM", "MANGA", 4,
                 List.of(),
                 null,
-                "NONE", null, null, null, false
+                "NONE", null, null, null, false, null
         );
 
         UpdateScenarioStoryboardRequest request = new UpdateScenarioStoryboardRequest("CUSTOM", "MANGA", 4);
@@ -218,7 +218,7 @@ class ScenarioApiControllerTest {
                 "PRESET", "GRID_3", 3,
                 List.of(),
                 null,
-                "NONE", null, null, null, false
+                "NONE", null, null, null, false, null
         );
 
         when(scenarioService.publishScenario(21L, auth)).thenReturn(published);
@@ -243,7 +243,7 @@ class ScenarioApiControllerTest {
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(),
                 21L,
-                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null, false
+                "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null, false, null
         );
 
         when(scenarioService.reviewFork(eq(30L), eq(true), eq((String) null), eq(auth))).thenReturn(approved);
@@ -269,7 +269,7 @@ class ScenarioApiControllerTest {
                 "DRAFT", null, "PRESET", "GRID_3", 3,
                 List.of(),
                 21L,
-                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough", false
+                "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough", false, null
         );
 
         ScenarioApiController.ReviewRequest body = new ScenarioApiController.ReviewRequest("Not accurate enough");
@@ -312,7 +312,7 @@ class ScenarioApiControllerTest {
 
         ScenarioDto dto = new ScenarioDto(
                 1L, "Mine", null, "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null,
-                "NONE", null, null, null, false
+                "NONE", null, null, null, false, null
         );
 
         when(scenarioService.listMyScenarioDtos(auth)).thenReturn(List.of(dto));
@@ -333,7 +333,7 @@ class ScenarioApiControllerTest {
 
         ScenarioDto dto = new ScenarioDto(
                 5L, "Shared", null, "fra", "alice", null, "PUBLISHED", null, "PRESET", "GRID_3", 3, List.of(), null,
-                "NONE", null, null, null, true
+                "NONE", null, null, null, true, null
         );
 
         when(scenarioService.listSharedWithMeScenarioDtos(auth)).thenReturn(List.of(dto));
@@ -350,7 +350,7 @@ class ScenarioApiControllerTest {
     void listPublishedScenariosWorkedOnByUsername_delegatesToService() {
         ScenarioDto dto = new ScenarioDto(
                 6L, "Worked on", null, "fra", "alice", null, "PUBLISHED", null, "PRESET", "GRID_3", 3, List.of(), null,
-                "NONE", null, null, null, false
+                "NONE", null, null, null, false, null
         );
 
         when(scenarioService.listPublishedScenariosWorkedOnByUsername("alice")).thenReturn(List.of(dto));
@@ -369,7 +369,7 @@ class ScenarioApiControllerTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        UpdateScenarioMetadataRequest req = new UpdateScenarioMetadataRequest("New title", "New description", List.of());
+        UpdateScenarioMetadataRequest req = new UpdateScenarioMetadataRequest("New title", "New description", List.of(), null);
 
         Scenario updated = new Scenario();
         updated.setId(5L);
@@ -379,7 +379,7 @@ class ScenarioApiControllerTest {
         when(scenarioService.toDto(updated)).thenReturn(new ScenarioDto(
                 5L, "New title", "New description", "fra", "alice", null, "DRAFT", null, "PRESET", "GRID_3", 3, List.of(), null,
                 "NONE", null, null, null, false
-        ));
+        , null));
 
         ScenarioDto result = controller.updateMetadata(5L, req, auth);
 
@@ -395,7 +395,7 @@ class ScenarioApiControllerTest {
                         "PUBLISHED", null, "PRESET", "GRID_3", 3,
                         List.of(), null,
                         "NONE", null, null, null, false
-                )
+                , null)
         ));
 
         List<ScenarioDto> result = controller.listByFamily("indo1319", 10);

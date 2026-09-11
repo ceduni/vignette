@@ -24,6 +24,8 @@ import org.titiplex.api.dto.LanguagePreviewAudioDto;
 import org.titiplex.api.dto.ScenarioBackgroundAudioDto;
 import org.titiplex.api.dto.SelectScenarioBackgroundAudioRequest;
 import org.titiplex.api.dto.UpdateMarkerRequest;
+import org.titiplex.api.dto.UpdateAudioGlossRequest;
+import org.titiplex.api.dto.UpdateAmbienceRequest;
 import org.titiplex.api.security.*;
 import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.service.AudioService;
@@ -188,7 +190,8 @@ public class AudioApiController {
             summary = "Retrieves the content of an audio file.",
             description = "Returns the audio file content, with appropriate MIME type and caching headers."
     )
-    @PublicOperation
+    @org.titiplex.api.security.ApiAccess(level = org.titiplex.api.security.ApiAccessLevel.PUBLIC,
+            rule = "Published media is public. Draft media requires permission to view its scenario.")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -207,16 +210,39 @@ public class AudioApiController {
     @GetMapping("/audios/{id}/content")
     public ResponseEntity<Resource> content(
             @Parameter(description = "ID of the audio file to retrieve", required = true)
-            @PathVariable Long id
+            @PathVariable Long id,
+            @Parameter(hidden = true) Authentication auth
     ) {
+        var scenario = scenarioService.getRequiredScenario(audioService.getScenarioIdForAudio(id));
+        scenarioService.assertCanViewScenario(scenario, auth);
         var media = audioService.loadContent(id);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(media.contentType()))
                 .contentLength(media.sizeBytes())
                 .eTag(media.etag())
-                .header("Cache-Control", "private, max-age=3600")
+                .header("Cache-Control", "private, no-store")
                 .body(media.resource());
+    }
+
+    @Operation(summary = "Save background ambience volume and loop settings")
+    @OwnerOrAdminOperation(resource = ProtectedResource.AUDIO, param = "audioId")
+    @PatchMapping("/audios/{audioId}/ambience")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateAmbience(@PathVariable Long audioId, @RequestBody UpdateAmbienceRequest request) {
+        audioService.updateAmbience(audioId, request.volume(), request.loop());
+    }
+
+    @Operation(summary = "Save transcription, linguistic gloss and free translation")
+    @OwnerOrAdminOperation(resource = ProtectedResource.AUDIO, param = "audioId")
+    @PatchMapping("/audios/{audioId}/gloss")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateGloss(@PathVariable Long audioId, @RequestBody UpdateAudioGlossRequest request,
+                            Authentication auth) {
+        audioService.updateGloss(audioId, request.transcription(), request.gloss(), request.freeTranslation());
+        Long actorId = userService.getUserByUsername(auth.getName()).getId();
+        scenarioHistoryService.record(audioService.getScenarioIdForAudio(audioId), actorId,
+                ScenarioHistoryAction.AUDIO_UPDATED, "Updated an audio gloss");
     }
 
     @OwnerOrAdminOperation(

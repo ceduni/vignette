@@ -1,8 +1,7 @@
 import { ref } from "vue";
 
-const activeScenario = ref(null); // { id, title, authorUsername }
-
 export function useScenarioReader() {
+  const activeScenario = ref(null);
   function openReader(scenario) {
     activeScenario.value = {
       id: String(scenario.id),

@@ -276,6 +276,29 @@ public class AudioService {
     }
 
     @Transactional
+    public void updateAmbience(Long audioId, Integer volume, Boolean loop) {
+        if (volume == null || volume < 0 || volume > 100 || loop == null) {
+            throw new IllegalArgumentException("Volume must be between 0 and 100 and loop must be provided");
+        }
+        Audio audio = getAudioOrThrow(audioId);
+        if (audio.getScope() != AudioScope.BACKGROUND) {
+            throw new IllegalArgumentException("Audio is not a background track");
+        }
+        audio.setBackgroundVolume(volume);
+        audio.setBackgroundLoop(loop);
+        audios.save(audio);
+    }
+
+    @Transactional
+    public void updateGloss(Long audioId, String transcription, String gloss, String freeTranslation) {
+        Audio audio = getAudioOrThrow(audioId);
+        audio.setTranscription(normalizeOptional(transcription, 20000, "Transcription"));
+        audio.setGloss(normalizeOptional(gloss, 20000, "Gloss"));
+        audio.setFreeTranslation(normalizeOptional(freeTranslation, 20000, "Free translation"));
+        audios.save(audio);
+    }
+
+    @Transactional
     public void updateMarker(Long audioId, Double markerX, Double markerY, String markerLabel) {
         if (markerX != null && (markerX < 0.0 || markerX > 100.0)) {
             throw new IllegalArgumentException("markerX must be between 0 and 100");
@@ -351,7 +374,10 @@ public class AudioService {
                 a.getMime(),
                 a.getMarkerX(),
                 a.getMarkerY(),
-                a.getMarkerLabel()
+                a.getMarkerLabel(),
+                a.getTranscription(),
+                a.getGloss(),
+                a.getFreeTranslation()
         );
     }
 
@@ -364,7 +390,9 @@ public class AudioService {
                 "/api/audios/" + a.getId() + "/content",
                 a.getSourceLabel(),
                 a.getSourceUrl(),
-                Objects.equals(a.getId(), activeAudioId)
+                Objects.equals(a.getId(), activeAudioId),
+                a.getBackgroundVolume() == null ? 22 : a.getBackgroundVolume(),
+                a.getBackgroundLoop() == null ? true : a.getBackgroundLoop()
         );
     }
 }

@@ -97,6 +97,8 @@ test("scenario page loads, selects scenes, and opens the studio player", async (
                     title: "Forest ambience",
                     contentUrl: "/api/audios/901/content",
                     active: true,
+                    volume: 35,
+                    loop: true,
                 },
             ]),
         });
@@ -137,6 +139,9 @@ test("scenario page loads, selects scenes, and opens the studio player", async (
                     markerX: 20,
                     markerY: 30,
                     markerLabel: "A",
+                    transcription: "Hola",
+                    gloss: "hello",
+                    freeTranslation: "Good morning",
                 },
                 {
                     id: 501,
@@ -145,6 +150,8 @@ test("scenario page loads, selects scenes, and opens the studio player", async (
                     markerX: 60,
                     markerY: 30,
                     markerLabel: "B",
+                    transcription: "Adiós",
+                    gloss: "goodbye",
                 },
             ]),
         });
@@ -198,6 +205,9 @@ test("scenario page loads, selects scenes, and opens the studio player", async (
     await expect(page.getByRole("button", {name: "Ambience on"})).toBeVisible();
     await expect(page.locator("audio[data-reader-ambience]")).toHaveAttribute("src", "/api/audios/901/content");
 
+    await expect(page.locator("#reader-glossary")).toContainText("Good morning");
+    await expect(page.locator("#reader-glossary")).toContainText("Adiós");
+
     await page.locator("audio[data-reader-voice]").evaluate((audio) => {
         window.readerVoiceSources = [audio.getAttribute("src")];
         audio.addEventListener("loadstart", () => {
@@ -207,9 +217,40 @@ test("scenario page loads, selects scenes, and opens the studio player", async (
 
     await page.getByRole("button", {name: "Play from start"}).click();
     await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => !audio.paused)).toBe(true);
-    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => audio.volume)).toBeCloseTo(0.22, 2);
+    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => audio.volume)).toBeCloseTo(0.35, 2);
     await expect.poll(async () => {
         const sources = await page.evaluate(() => window.readerVoiceSources || []);
         return [...new Set(sources.map((source) => Number(source.match(/\/audios\/(\d+)\/content/)?.[1])).filter(Boolean))];
     }, {timeout: 6000}).toEqual([500, 501, 1000]);
+    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => audio.paused)).toBe(true);
+    await page.locator("#reader-glossary").getByRole("button", {name: "First · Take 1"}).click();
+    await expect(page.locator("#reader-glossary")).toContainText("Hola");
+    await expect(page.locator("#reader-glossary")).not.toContainText("Adiós");
+    await page.getByLabel("Glossary take").selectOption("1");
+    await expect(page.locator("#reader-glossary")).toContainText("Adiós");
+    await expect(page.locator("#reader-glossary")).not.toContainText("Hola");
+    await page.getByRole("button", {name: "Glossary", exact: true}).click();
+    await expect(page.locator("#reader-glossary")).toHaveCount(0);
+    await page.getByRole("button", {name: "Ambience on", exact: true}).click();
+    await expect(page.getByRole("button", {name: "Ambience off", exact: true})).toBeVisible();
+    await page.getByRole("button", {name: "Close (Esc)", exact: true}).click();
+    await expect(page.locator(".reader")).toHaveCount(0);
+
+    // A published story can have ambiance and images without any voice takes.
+    await page.route("**/api/thumbnails/*/audios", (route) => route.fulfill({
+        status: 200, contentType: "application/json", body: "[]",
+    }));
+    await page.locator('button[title="Preview scenario"]').click();
+    await expect(page.locator(".reader-grid")).toBeVisible();
+    await expect(page.getByRole("button", {name: "Glossary", exact: true})).toHaveCount(0);
+    await page.getByRole("button", {name: "Play from start"}).click();
+    await expect(page.locator(".reader-scene")).toBeVisible();
+    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => !audio.paused)).toBe(true);
+    await page.getByRole("button", {name: "Ambience on", exact: true}).click();
+    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => audio.paused)).toBe(true);
+    await page.getByRole("button", {name: "Ambience off", exact: true}).click();
+    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => !audio.paused)).toBe(true);
+    await page.getByRole("button", {name: "Stop", exact: true}).click();
+    await expect.poll(() => page.locator("audio[data-reader-ambience]").evaluate((audio) => audio.paused)).toBe(true);
+    await page.getByRole("button", {name: "Close (Esc)", exact: true}).click();
 });
