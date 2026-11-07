@@ -170,7 +170,7 @@ cd ..
 **2. Start PostgreSQL**
 
 ```bash
-brew services start postgresql@16
+brew services start postgresql@18
 ```
 
 (or start Postgres with your usual method)
