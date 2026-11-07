@@ -221,7 +221,7 @@ public class ScenarioService {
     }
 
     public List<Scenario> listAllScenarios() {
-        return repo.findAllByOrderByCreatedAtDesc();
+        return repo.findAllWithTagsOrderByCreatedAtDesc();
     }
 
     public long countAllScenarios() {
@@ -324,7 +324,7 @@ public class ScenarioService {
             if (!title.equals(scenario.getTitle())
                     && repo.existsByTitleAndAuthorUsernameAndLanguageId(
                     title,
-                    authentication.getName(),
+                    userService.getUserById(scenario.getAuthor_id()).getUsername(),
                     scenario.getLanguage_id()
             )) {
                 throw new IllegalArgumentException("Scenario already exists for this user and language");
