@@ -8,6 +8,7 @@ import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.UserRepository;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,8 +26,15 @@ public class UserService {
     }
 
     public User register(String username, String email, String rawPassword) {
-        if (users.existsByUsername(username)) throw new IllegalArgumentException("username taken");
-        if (users.existsByEmail(email)) throw new IllegalArgumentException("email taken");
+        username = username == null ? null : username.trim();
+        email = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+
+        if (username == null || username.isBlank()) throw new IllegalArgumentException("username required");
+        if (email == null || email.isBlank()) throw new IllegalArgumentException("email required");
+
+        // Uniqueness is case-insensitive: "Alice" and "alice" are the same account.
+        if (users.existsByUsernameIgnoreCase(username)) throw new IllegalStateException("username already used");
+        if (users.existsByEmailIgnoreCase(email)) throw new IllegalStateException("email already used");
 
         Role userRole = roles.getUserRole();
 
@@ -84,14 +92,6 @@ public class UserService {
         }
 
         return users.save(user);
-    }
-
-    public boolean existsByUsername(String username) {
-        return users.existsByUsername(username);
-    }
-
-    public boolean existsByEmail(String email) {
-        return users.existsByEmail(email);
     }
 
     public List<User> searchByUsername(String query, String excludeUsername) {

@@ -32,12 +32,24 @@ class UserServiceTest {
 
     @Test
     void register_throwsWhenUsernameAlreadyTaken() {
-        when(userRepository.existsByUsername("alice")).thenReturn(true);
+        when(userRepository.existsByUsernameIgnoreCase("alice")).thenReturn(true);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> userService.register("alice", "alice@mail.com", "pass"));
 
-        assertEquals("username taken", ex.getMessage());
+        assertEquals("username already used", ex.getMessage());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void register_throwsWhenEmailAlreadyUsedWithDifferentCase() {
+        when(userRepository.existsByUsernameIgnoreCase("bob")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("alice@mail.com")).thenReturn(true);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> userService.register("  bob ", " Alice@Mail.COM ", "pass"));
+
+        assertEquals("email already used", ex.getMessage());
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -46,15 +58,16 @@ class UserServiceTest {
         Role role = new Role();
         role.setName("ROLE_USER");
 
-        when(userRepository.existsByUsername("alice")).thenReturn(false);
-        when(userRepository.existsByEmail("alice@mail.com")).thenReturn(false);
+        when(userRepository.existsByUsernameIgnoreCase("alice")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("alice@mail.com")).thenReturn(false);
         when(rolesService.getUserRole()).thenReturn(role);
         when(passwordEncoder.encode("secret")).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        User result = userService.register("alice", "alice@mail.com", "secret");
+        User result = userService.register(" alice ", "Alice@Mail.com", "secret");
 
         assertEquals("alice", result.getUsername());
+        assertEquals("alice@mail.com", result.getEmail());
         assertEquals("alice", result.getDisplayName());
         assertEquals("encoded", result.getPasswordHash());
         assertTrue(result.getRoles().contains(role));

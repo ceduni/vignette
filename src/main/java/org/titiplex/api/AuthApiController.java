@@ -287,19 +287,11 @@ public class AuthApiController {
             )
             @RequestBody RegisterRequest req
     ) {
-        if (req.username() == null || req.username().isBlank()) throw new IllegalArgumentException("username required");
-        if (req.email() == null || req.email().isBlank()) throw new IllegalArgumentException("email required");
         if (req.password() == null || req.password().length() < 8)
             throw new IllegalArgumentException("password too short");
 
-        if (users.existsByUsername(req.username())) throw new IllegalArgumentException("username already used");
-        if (users.existsByEmail(req.email())) throw new IllegalArgumentException("email already used");
-
-        var username = req.username().trim();
-        var email = req.email().trim();
-        var pwd = req.password();
-
-        User u = users.register(username, email, pwd);
+        // Normalization, required fields and uniqueness checks live in UserService.register.
+        User u = users.register(req.username(), req.email(), req.password());
         return new RegisterResponse(u.getId(), u.getUsername());
     }
 

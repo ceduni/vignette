@@ -106,7 +106,7 @@ public class BootstrapData implements ApplicationRunner {
             return;
         }
 
-        if (userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             System.out.println("Bootstrap admin skipped: email already used by another account.");
             return;
         }

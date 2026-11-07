@@ -76,8 +76,6 @@ class AuthApiControllerWebMvcTest {
         created.setId(12L);
         created.setUsername("alice");
 
-        when(users.existsByUsername("alice")).thenReturn(false);
-        when(users.existsByEmail("alice@example.com")).thenReturn(false);
         when(users.register("alice", "alice@example.com", "password123")).thenReturn(created);
 
         mvc.perform(post("/api/auth/register")
