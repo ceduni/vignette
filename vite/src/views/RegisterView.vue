@@ -34,7 +34,7 @@ const emailError = computed(() => {
 
 const passwordError = computed(() => {
   if (!form.value.password) return "Password is required.";
-  if (form.value.password.length < 6) return "Minimum 6 characters.";
+  if (form.value.password.length < 8) return "Minimum 8 characters.";
   return "";
 });
 
