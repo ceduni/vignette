@@ -156,6 +156,7 @@ public class AudioApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) throws Exception {
+        scenarioService.assertCanEditScenarioById(scenarioId, auth);
         Long authorId = userService.getUserByUsername(auth.getName()).getId();
         Long id = audioService.createBackgroundAudio(scenarioId, title, sourceLabel, sourceUrl, authorId, audio);
         return new CreateAudioResponse(id);
@@ -173,8 +174,10 @@ public class AudioApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void selectBackground(
             @PathVariable Long scenarioId,
-            @RequestBody SelectScenarioBackgroundAudioRequest request
+            @RequestBody SelectScenarioBackgroundAudioRequest request,
+            @Parameter(hidden = true) Authentication auth
     ) {
+        scenarioService.assertCanEditScenarioById(scenarioId, auth);
         audioService.selectBackgroundAudio(scenarioId, request.audioId());
     }
 
@@ -229,7 +232,9 @@ public class AudioApiController {
     @OwnerOrAdminOperation(resource = ProtectedResource.AUDIO, param = "audioId")
     @PatchMapping("/audios/{audioId}/ambience")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void updateAmbience(@PathVariable Long audioId, @RequestBody UpdateAmbienceRequest request) {
+    public void updateAmbience(@PathVariable Long audioId, @RequestBody UpdateAmbienceRequest request,
+                               @Parameter(hidden = true) Authentication auth) {
+        scenarioService.assertCanEditScenarioById(audioService.getScenarioIdForAudio(audioId), auth);
         audioService.updateAmbience(audioId, request.volume(), request.loop());
     }
 
@@ -238,7 +243,8 @@ public class AudioApiController {
     @PatchMapping("/audios/{audioId}/gloss")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateGloss(@PathVariable Long audioId, @RequestBody UpdateAudioGlossRequest request,
-                            Authentication auth) {
+                            @Parameter(hidden = true) Authentication auth) {
+        scenarioService.assertCanEditScenarioById(audioService.getScenarioIdForAudio(audioId), auth);
         audioService.updateGloss(audioId, request.transcription(), request.gloss(), request.freeTranslation());
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
         scenarioHistoryService.record(audioService.getScenarioIdForAudio(audioId), actorId,
@@ -257,6 +263,7 @@ public class AudioApiController {
             Authentication auth
     ) throws Exception {
         Long scenarioId = audioService.getScenarioIdForAudio(audioId);
+        scenarioService.assertCanEditScenarioById(scenarioId, auth);
         Long id = audioService.replaceAudio(audioId, title, audio);
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
         scenarioHistoryService.record(
@@ -314,7 +321,6 @@ public class AudioApiController {
 //            ownerResource = "thumbnail"
 //    )
 //    @SecurityRequirement(name = "bearerAuth")
-//    @PreAuthorize("hasRole('USER') and @scenarioSecurity.isOwnerByThumbnailId(#thumbId, authentication.name)")
     @PostMapping(value = "/thumbnails/{thumbId}/audios", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public CreateAudioResponse upload(
@@ -343,6 +349,7 @@ public class AudioApiController {
             Authentication auth
     ) throws Exception {
 
+        scenarioService.assertCanEditScenarioById(thumbnailService.getThumbnailById(thumbId).getScenarioId(), auth);
         Long authorId = userService.getUserByUsername(auth.getName()).getId();
         Long id = audioService.createAudio(thumbId, title, idx, authorId, audio, markerX, markerY, markerLabel);
 
@@ -394,7 +401,6 @@ public class AudioApiController {
 //            ownerResource = "audio"
 //    )
 //    @SecurityRequirement(name = "bearerAuth")
-//    @PreAuthorize("hasRole('USER') and @scenarioSecurity.isOwnerByAudioId(#audioId, authentication.name, @audioService)")
     @PatchMapping("/audios/{audioId}/marker")
     public void updateMarker(
             @Parameter(description = "ID of the audio file whose marker is to be updated", required = true)
@@ -413,6 +419,7 @@ public class AudioApiController {
             Authentication auth
     ) {
         Long scenarioId = audioService.getScenarioIdForAudio(audioId);
+        scenarioService.assertCanEditScenarioById(scenarioId, auth);
         audioService.updateMarker(audioId, req.markerX(), req.markerY(), req.markerLabel());
 
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
@@ -444,7 +451,6 @@ public class AudioApiController {
             ownerResource = "audio"
     )
 //    @SecurityRequirement(name = "bearerAuth")
-//    @PreAuthorize("hasRole('USER') and @scenarioSecurity.isOwnerByAudioId(#audioId, authentication.name, @audioService)")
     @DeleteMapping("/audios/{audioId}")
     public void delete(
             @Parameter(description = "ID of the audio file to delete", required = true)
@@ -454,6 +460,7 @@ public class AudioApiController {
             Authentication auth
     ) {
         Long scenarioId = audioService.getScenarioIdForAudio(audioId);
+        scenarioService.assertCanEditScenarioById(scenarioId, auth);
         audioService.deleteAudio(audioId);
 
         Long actorId = userService.getUserByUsername(auth.getName()).getId();

@@ -239,6 +239,22 @@ class ThumbnailApiControllerTest {
         verify(scenarioHistoryService).record(9L, 12L, org.titiplex.persistence.model.ScenarioHistoryAction.THUMBNAIL_DELETED, "Deleted a thumbnail");
     }
 
+    @Test
+    void delete_refusedWithoutEditAccess() {
+        Authentication auth = auth("stranger", "ROLE_USER");
+
+        Thumbnail existing = new Thumbnail();
+        existing.setId(8L);
+        existing.setScenarioId(9L);
+        when(thumbnailService.getThumbnailById(8L)).thenReturn(existing);
+        org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException("no"))
+                .when(scenarioService).assertCanEditScenarioById(9L, auth);
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> controller.delete(8L, auth));
+        verify(thumbnailService, org.mockito.Mockito.never()).delete(org.mockito.ArgumentMatchers.any());
+    }
+
     private Authentication auth(String username, String... authorities) {
         return new UsernamePasswordAuthenticationToken(
                 username,

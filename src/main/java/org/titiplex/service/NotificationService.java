@@ -1,7 +1,6 @@
 package org.titiplex.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import static org.titiplex.security.AuthUtils.*;
 
 @Service
 public class NotificationService {
@@ -424,11 +425,5 @@ public class NotificationService {
                 "read",        n.isRead(),
                 "createdAt",   n.getCreatedAt().toString()
         );
-    }
-
-    private void requireAuthenticated(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
     }
 }

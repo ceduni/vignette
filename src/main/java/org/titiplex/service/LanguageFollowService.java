@@ -1,7 +1,6 @@
 package org.titiplex.service;
 
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.titiplex.persistence.model.Language;
@@ -10,6 +9,8 @@ import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.LanguageFollowRepository;
 
 import java.util.List;
+
+import static org.titiplex.security.AuthUtils.*;
 
 @Service
 public class LanguageFollowService {
@@ -56,7 +57,7 @@ public class LanguageFollowService {
     }
 
     public boolean isFollowing(String languageId, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) return false;
+        if (!isAuthenticated(authentication)) return false;
         User user = userService.getUserByUsername(authentication.getName());
         return repo.existsByLanguageIdAndUserId(languageId, user.getId());
     }
@@ -78,11 +79,5 @@ public class LanguageFollowService {
 
     public long countFollowers(String languageId) {
         return repo.countByLanguageId(languageId);
-    }
-
-    private void requireAuthenticated(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
     }
 }

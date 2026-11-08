@@ -3,8 +3,6 @@ package org.titiplex.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -33,7 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AudioApiController.class)
-@Import({SecurityConfig.class, AudioApiControllerWebMvcTest.TestBeans.class})
+@Import(SecurityConfig.class)
 class AudioApiControllerWebMvcTest {
 
     @Autowired
@@ -57,27 +55,6 @@ class AudioApiControllerWebMvcTest {
     @MockitoBean
     private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
 
-    @TestConfiguration
-    static class TestBeans {
-        @Bean("scenarioSecurity")
-        ScenarioSecurityStub scenarioSecurity() {
-            return new ScenarioSecurityStub();
-        }
-    }
-
-    static class ScenarioSecurityStub {
-        public boolean isOwner(Long scenarioId, String username) {
-            return true;
-        }
-
-        public boolean isOwnerByThumbnailId(Long thumbnailId, String username) {
-            return true;
-        }
-
-        public boolean isOwnerByAudioId(Long audioId, String username, Object audioService) {
-            return true;
-        }
-    }
 
     @Test
     void list_isPublic() throws Exception {
@@ -170,6 +147,10 @@ class AudioApiControllerWebMvcTest {
         user.setUsername("alice");
 
         when(userService.getUserByUsername("alice")).thenReturn(user);
+        Thumbnail ownerThumbnail = new Thumbnail();
+        ownerThumbnail.setId(9L);
+        ownerThumbnail.setScenarioId(11L);
+        when(thumbnailService.getThumbnailById(9L)).thenReturn(ownerThumbnail);
         when(audioService.createAudio(9L, "Greeting", 2, 12L, audio, 10.0, 20.0, "speaker"))
                 .thenReturn(42L);
 

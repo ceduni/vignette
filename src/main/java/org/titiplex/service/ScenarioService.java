@@ -4,7 +4,6 @@ import org.springframework.data.domain.PageRequest;
 import org.titiplex.api.dto.ScenarioLocationDto;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.titiplex.api.dto.ScenarioDto;
@@ -41,6 +40,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
+import static org.titiplex.security.AuthUtils.*;
 
 @Service
 public class ScenarioService {
@@ -154,17 +155,13 @@ public class ScenarioService {
     }
 
     public List<Scenario> listMyScenarios(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
+        requireAuthenticated(authentication);
 
         return repo.findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc(authentication.getName());
     }
 
     public List<Scenario> listSharedWithMeScenarios(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
+        requireAuthenticated(authentication);
 
         Long userId = userService.getUserByUsername(authentication.getName()).getId();
         List<Long> scenarioIds = collaboratorRepo.findByUserIdAndStatus(userId, CollaborationStatus.ACCEPTED)
@@ -425,9 +422,7 @@ public class ScenarioService {
     }
 
     public void assertCanDeleteScenario(Scenario scenario, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
+        requireAuthenticated(authentication);
         if (isAdmin(authentication)) {
             return;
         }
@@ -479,9 +474,7 @@ public class ScenarioService {
     }
 
     public void assertCanEditScenario(Scenario scenario, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
+        requireAuthenticated(authentication);
         if (isAdmin(authentication)) {
             return;
         }
@@ -498,10 +491,13 @@ public class ScenarioService {
         throw new AccessDeniedException("You are not allowed to edit this scenario");
     }
 
+    /** {@link #assertCanEditScenario(Scenario, Authentication)} from a scenario id (thumbnails, audios). */
+    public void assertCanEditScenarioById(Long scenarioId, Authentication authentication) {
+        assertCanEditScenario(getRequiredScenario(scenarioId), authentication);
+    }
+
     public void assertCanPublishScenario(Scenario scenario, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
+        requireAuthenticated(authentication);
         if (isAdmin(authentication)) {
             return;
         }
@@ -537,20 +533,6 @@ public class ScenarioService {
                 .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
                 .filter(c -> c.getRole() == CollaboratorRole.OWNER || c.getRole() == CollaboratorRole.EDITOR)
                 .isPresent();
-    }
-
-    private boolean isAdmin(Authentication authentication) {
-        return authentication != null
-                && authentication.getAuthorities() != null
-                && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
-    }
-
-    private String authenticatedUsername(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return null;
-        }
-        return authentication.getName();
     }
 
     public ScenarioDto toDto(Scenario s) {
@@ -660,9 +642,7 @@ public class ScenarioService {
     }
 
     public Scenario forkScenario(Long originalId, String requestedTitle, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
+        requireAuthenticated(authentication);
 
         Scenario original = getRequiredScenario(originalId);
 
@@ -794,9 +774,7 @@ public class ScenarioService {
 
     @Transactional
     public Scenario reviewFork(Long forkId, boolean approve, String comment, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
+        requireAuthenticated(authentication);
 
         Scenario fork = getRequiredScenario(forkId);
 

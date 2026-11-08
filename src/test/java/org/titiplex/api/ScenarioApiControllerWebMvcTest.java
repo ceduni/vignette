@@ -3,19 +3,13 @@ package org.titiplex.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.titiplex.api.dto.ScenarioDto;
-import org.titiplex.api.security.OwnerOrAdminAspect;
 import org.titiplex.config.SecurityConfig;
-import org.titiplex.config.components.AudioSecurity;
-import org.titiplex.config.components.OwnershipSecurityServiceImpl;
-import org.titiplex.config.components.ScenarioSecurity;
-import org.titiplex.config.components.ThumbnailSecurity;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.User;
 import org.titiplex.service.LanguageService;
@@ -37,8 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ScenarioApiController.class)
-@EnableAspectJAutoProxy(proxyTargetClass = true)
-@Import({SecurityConfig.class, OwnerOrAdminAspect.class, OwnershipSecurityServiceImpl.class})
+@Import(SecurityConfig.class)
 class ScenarioApiControllerWebMvcTest {
 
     @Autowired
@@ -59,14 +52,6 @@ class ScenarioApiControllerWebMvcTest {
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
-    @MockitoBean(name = "scenarioSecurity")
-    private ScenarioSecurity scenarioSecurity;
-
-    @MockitoBean
-    private ThumbnailSecurity thumbnailSecurity;
-
-    @MockitoBean
-    private AudioSecurity audioSecurity;
 
     @Test
     void listAll_isPublic() throws Exception {
@@ -341,7 +326,9 @@ class ScenarioApiControllerWebMvcTest {
 
     @Test
         void publish_deniedForNonAuthorCollaborator() throws Exception {
-        when(scenarioSecurity.isAuthor(eq(21L), eq("bob"))).thenReturn(false);
+        // The author-only rule lives in ScenarioService.publishScenario (assertCanPublishScenario).
+        when(scenarioService.publishScenario(eq(21L), any()))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("author only"));
 
         mvc.perform(post("/api/scenarios/21/publish")
                         .with(user("bob").roles("USER"))
@@ -364,7 +351,6 @@ class ScenarioApiControllerWebMvcTest {
                 "NONE", null, null, null, false, null
         );
 
-        when(scenarioSecurity.isAuthor(eq(21L), eq("alice"))).thenReturn(true);
         when(scenarioService.publishScenario(eq(21L), any())).thenReturn(published);
         when(scenarioService.toDto(published)).thenReturn(dto);
 

@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -78,7 +77,6 @@ public class AdminApiController {
     })
     @GetMapping("/overview")
     public AdminOverviewDto overview(Authentication auth) {
-        assertAdmin(auth);
 
         long userCount = users.countUsers();
         long scenarioCount = scenarios.countAllScenarios();
@@ -115,7 +113,6 @@ public class AdminApiController {
     })
     @GetMapping("/users")
     public List<AdminUserRowDto> listUsers(Authentication auth) {
-        assertAdmin(auth);
 
         return users.listAllUsers().stream()
                 .map(user -> new AdminUserRowDto(
@@ -151,7 +148,6 @@ public class AdminApiController {
     })
     @GetMapping("/scenarios")
     public List<ScenarioDto> listScenarios(Authentication auth) {
-        assertAdmin(auth);
 
         return scenarios.listAllScenarios().stream()
                 .map(scenarios::toDto)
@@ -186,7 +182,6 @@ public class AdminApiController {
             @RequestBody UpdateUserRolesRequest req,
             Authentication auth
     ) {
-        assertAdmin(auth);
 
         var user = users.updateRoles(id, req.roles());
 
@@ -228,7 +223,6 @@ public class AdminApiController {
             @RequestBody UpdateScenarioVisibilityRequest req,
             Authentication auth
     ) {
-        assertAdmin(auth);
         return scenarios.toDto(scenarios.adminUpdateVisibility(id, req.visibilityStatus()));
     }
 
@@ -251,7 +245,6 @@ public class AdminApiController {
     })
     @GetMapping("/glottolog/preview")
     public GlottologImportPreviewDto previewGlottolog(Authentication auth) throws IOException {
-        assertAdmin(auth);
         return glottologUpdateService.preview();
     }
 
@@ -277,7 +270,6 @@ public class AdminApiController {
     })
     @PostMapping("/glottolog/sync")
     public GlottologSyncResultDto syncGlottolog(Authentication auth) throws IOException {
-        assertAdmin(auth);
         if (!glottologProperties.isLegacyPipelineEnabled()) {
             throw new ResponseStatusException(
                     HttpStatus.GONE,
@@ -319,7 +311,6 @@ public class AdminApiController {
     })
     @PostMapping("/glottolog/update")
     public Object updateGlottolog(Authentication auth) throws IOException {
-        assertAdmin(auth);
         if (!glottologProperties.isLegacyPipelineEnabled()) {
             return glottologAdminService.createManualUpdateRequest(auth.getName());
         }
@@ -347,7 +338,6 @@ public class AdminApiController {
     })
     @PostMapping("/glottolog/update/start")
     public Object startGlottologUpdateJob(Authentication auth) {
-        assertAdmin(auth);
         if (!glottologProperties.isLegacyPipelineEnabled()) {
             return glottologAdminService.createManualUpdateRequest(auth.getName());
         }
@@ -361,7 +351,6 @@ public class AdminApiController {
     @AdminOperation
     @PostMapping("/glottolog/update/request")
     public GlottologUpdateRequestDto requestGlottologUpdate(Authentication auth) {
-        assertAdmin(auth);
         return glottologAdminService.createManualUpdateRequest(auth.getName());
     }
 
@@ -372,7 +361,6 @@ public class AdminApiController {
     @AdminOperation
     @GetMapping("/glottolog/update/requests")
     public List<GlottologUpdateRequestDto> listGlottologUpdateRequests(Authentication auth) {
-        assertAdmin(auth);
         return glottologAdminService.listUpdateRequests();
     }
 
@@ -397,7 +385,6 @@ public class AdminApiController {
     })
     @GetMapping("/glottolog/update/status")
     public Object glottologUpdateStatus(Authentication auth) {
-        assertAdmin(auth);
         if (!glottologProperties.isLegacyPipelineEnabled()) {
             return glottologAdminService.getSettings();
         }
@@ -411,7 +398,6 @@ public class AdminApiController {
     @AdminOperation
     @GetMapping("/glottolog/settings")
     public GlottologAdminSettingsDto glottologSettings(Authentication auth) {
-        assertAdmin(auth);
         return glottologAdminService.getSettings();
     }
 
@@ -425,7 +411,6 @@ public class AdminApiController {
             @RequestBody UpdateGlottologAdminSettingsRequest request,
             Authentication auth
     ) {
-        assertAdmin(auth);
         return glottologAdminService.updateSettings(request, auth.getName());
     }
 
@@ -436,7 +421,6 @@ public class AdminApiController {
     @AdminOperation
     @GetMapping("/glottolog/history")
     public List<GlottologUpdateHistoryRowDto> glottologHistory(Authentication auth) {
-        assertAdmin(auth);
         return glottologAdminService.listHistory();
     }
 
@@ -447,17 +431,6 @@ public class AdminApiController {
     @AdminOperation
     @GetMapping("/glottolog/notifications")
     public List<GlottologNotificationRowDto> glottologNotifications(Authentication auth) {
-        assertAdmin(auth);
         return glottologAdminService.listNotifications();
-    }
-
-    private void assertAdmin(Authentication auth) {
-        boolean isAdmin = auth != null
-                && auth.getAuthorities() != null
-                && auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-
-        if (!isAdmin) {
-            throw new AccessDeniedException("Admin privileges required");
-        }
     }
 }

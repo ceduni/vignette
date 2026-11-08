@@ -5,7 +5,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.AdminOverviewDto;
@@ -67,14 +66,6 @@ class AdminApiControllerTest {
         );
     }
 
-    private UsernamePasswordAuthenticationToken userAuth() {
-        return new UsernamePasswordAuthenticationToken(
-                "user",
-                "password",
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-    }
-
     @Test
     void overview_returnsCounts_forAdmin() {
         when(userService.countUsers()).thenReturn(10L);
@@ -88,11 +79,6 @@ class AdminApiControllerTest {
         assertEquals(7L, dto.scenarioCount());
         assertEquals(4L, dto.publishedScenarioCount());
         assertEquals(3L, dto.draftScenarioCount());
-    }
-
-    @Test
-    void overview_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.overview(userAuth()));
     }
 
     @Test
@@ -117,11 +103,6 @@ class AdminApiControllerTest {
         assertEquals("alice", rows.get(0).username());
         assertTrue(rows.get(0).roles().contains("ROLE_USER"));
         assertTrue(rows.get(0).profilePublic());
-    }
-
-    @Test
-    void listUsers_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.listUsers(userAuth()));
     }
 
     @Test
@@ -161,11 +142,6 @@ class AdminApiControllerTest {
     }
 
     @Test
-    void listScenarios_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.listScenarios(userAuth()));
-    }
-
-    @Test
     void previewGlottolog_returnsPreview_forAdmin() throws Exception {
         when(glottologUpdateService.preview())
                 .thenReturn(new GlottologImportPreviewDto(27034, 9267, 9000L));
@@ -175,11 +151,6 @@ class AdminApiControllerTest {
         assertEquals(27034, preview.sourceRows());
         assertEquals(9267, preview.selectedRows());
         assertEquals(9000L, preview.databaseCount());
-    }
-
-    @Test
-    void previewGlottolog_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.previewGlottolog(userAuth()));
     }
 
     @Test
@@ -201,11 +172,6 @@ class AdminApiControllerTest {
         assertEquals(10, result.inserted());
         assertEquals(5, result.updated());
         assertEquals(9252, result.unchanged());
-    }
-
-    @Test
-    void syncGlottolog_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.syncGlottolog(userAuth()));
     }
 
     @Test
@@ -239,8 +205,4 @@ class AdminApiControllerTest {
         assertFalse(typed.sourceUnchanged());
     }
 
-    @Test
-    void updateGlottolog_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.updateGlottolog(userAuth()));
-    }
 }

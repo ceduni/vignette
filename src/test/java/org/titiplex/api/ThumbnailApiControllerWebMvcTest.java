@@ -3,8 +3,6 @@ package org.titiplex.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -33,7 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ThumbnailApiController.class)
-@Import({SecurityConfig.class, ThumbnailApiControllerWebMvcTest.TestBeans.class})
+@Import(SecurityConfig.class)
 class ThumbnailApiControllerWebMvcTest {
 
     @Autowired
@@ -54,27 +52,6 @@ class ThumbnailApiControllerWebMvcTest {
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
-    @TestConfiguration
-    static class TestBeans {
-        @Bean("scenarioSecurity")
-        ScenarioSecurityStub scenarioSecurity() {
-            return new ScenarioSecurityStub();
-        }
-    }
-
-    static class ScenarioSecurityStub {
-        public boolean isOwner(Long scenarioId, String username) {
-            return true;
-        }
-
-        public boolean isOwnerByThumbnailId(Long thumbnailId, String username) {
-            return true;
-        }
-
-        public boolean isOwnerByAudioId(Long audioId, String username, Object audioService) {
-            return true;
-        }
-    }
 
     @Test
     void list_isPublic() throws Exception {

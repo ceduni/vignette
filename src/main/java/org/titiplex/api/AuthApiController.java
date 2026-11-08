@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.titiplex.security.AuthUtils;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -47,7 +48,7 @@ public class AuthApiController {
     }
 
     private Authentication requireAuthenticated(Authentication auth) {
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(String.valueOf(auth.getPrincipal()))) {
+        if (!AuthUtils.isAuthenticated(auth)) {
             throw new UnauthenticatedException();
         }
         return auth;

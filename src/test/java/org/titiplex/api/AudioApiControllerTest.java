@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,9 +60,81 @@ class AudioApiControllerTest {
 
     @Test
     void selectBackground_updatesTheScenarioPlayerSelection() {
-        controller.selectBackground(12L, new SelectScenarioBackgroundAudioRequest(99L));
+        Authentication auth = auth("alice", "ROLE_USER");
 
-        verify(audioService).selectBackgroundAudio(12L, 99L);
+        controller.selectBackground(12L, new SelectScenarioBackgroundAudioRequest(99L), auth);
+
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(scenarioService, audioService);
+        order.verify(scenarioService).assertCanEditScenarioById(12L, auth);
+        order.verify(audioService).selectBackgroundAudio(12L, 99L);
+    }
+
+    // ── Access is enforced in the controller via ScenarioService (single source of truth) ──
+
+    private void denyEditOnScenario(long scenarioId, Authentication auth) {
+        org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException("no"))
+                .when(scenarioService).assertCanEditScenarioById(scenarioId, auth);
+    }
+
+    @Test
+    void selectBackground_refusedWithoutEditAccess() {
+        Authentication auth = auth("stranger", "ROLE_USER");
+        denyEditOnScenario(12L, auth);
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> controller.selectBackground(12L, new SelectScenarioBackgroundAudioRequest(99L), auth));
+        org.mockito.Mockito.verify(audioService, org.mockito.Mockito.never()).selectBackgroundAudio(any(), any());
+    }
+
+    @Test
+    void uploadBackground_refusedWithoutEditAccess() throws Exception {
+        Authentication auth = auth("stranger", "ROLE_USER");
+        denyEditOnScenario(12L, auth);
+        MockMultipartFile file = new MockMultipartFile("audio", "a.webm", "audio/webm", new byte[]{1});
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> controller.uploadBackground(12L, "", "", "", file, auth));
+        org.mockito.Mockito.verifyNoInteractions(audioService);
+    }
+
+    @Test
+    void upload_refusedWithoutEditAccessOnTheThumbnailScenario() throws Exception {
+        Authentication auth = auth("stranger", "ROLE_USER");
+        Thumbnail thumbnail = new Thumbnail();
+        thumbnail.setId(7L);
+        thumbnail.setScenarioId(12L);
+        when(thumbnailService.getThumbnailById(7L)).thenReturn(thumbnail);
+        denyEditOnScenario(12L, auth);
+        MockMultipartFile file = new MockMultipartFile("audio", "a.webm", "audio/webm", new byte[]{1});
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> controller.upload(7L, "t", null, null, null, "", file, auth));
+        org.mockito.Mockito.verify(audioService, org.mockito.Mockito.never())
+                .createAudio(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void audioActions_refusedWithoutEditAccess() throws Exception {
+        Authentication auth = auth("stranger", "ROLE_USER");
+        when(audioService.getScenarioIdForAudio(3L)).thenReturn(12L);
+        denyEditOnScenario(12L, auth);
+        MockMultipartFile file = new MockMultipartFile("audio", "a.webm", "audio/webm", new byte[]{1});
+        var denied = org.springframework.security.access.AccessDeniedException.class;
+
+        org.junit.jupiter.api.Assertions.assertThrows(denied, () -> controller.updateAmbience(
+                3L, new org.titiplex.api.dto.UpdateAmbienceRequest(50, true), auth));
+        org.junit.jupiter.api.Assertions.assertThrows(denied, () -> controller.updateGloss(
+                3L, new org.titiplex.api.dto.UpdateAudioGlossRequest("t", "g", "f"), auth));
+        org.junit.jupiter.api.Assertions.assertThrows(denied, () -> controller.replace(3L, "", file, auth));
+        org.junit.jupiter.api.Assertions.assertThrows(denied, () -> controller.updateMarker(
+                3L, new UpdateMarkerRequest(10.0, 10.0, "x"), auth));
+        org.junit.jupiter.api.Assertions.assertThrows(denied, () -> controller.delete(3L, auth));
+
+        org.mockito.Mockito.verify(audioService, org.mockito.Mockito.never()).updateAmbience(any(), any(), any());
+        org.mockito.Mockito.verify(audioService, org.mockito.Mockito.never()).updateGloss(any(), any(), any(), any());
+        org.mockito.Mockito.verify(audioService, org.mockito.Mockito.never()).replaceAudio(any(), any(), any());
+        org.mockito.Mockito.verify(audioService, org.mockito.Mockito.never()).updateMarker(any(), any(), any(), any());
+        org.mockito.Mockito.verify(audioService, org.mockito.Mockito.never()).deleteAudio(any());
     }
 
     @Test
@@ -124,6 +197,10 @@ class AudioApiControllerTest {
         );
 
         when(userService.getUserByUsername("alice")).thenReturn(user);
+        Thumbnail ownerThumbnail = new Thumbnail();
+        ownerThumbnail.setId(9L);
+        ownerThumbnail.setScenarioId(11L);
+        when(thumbnailService.getThumbnailById(9L)).thenReturn(ownerThumbnail);
         when(audioService.createAudio(9L, "Greeting", 2, 12L, audio, 10.0, 20.0, "speaker"))
                 .thenReturn(42L);
 

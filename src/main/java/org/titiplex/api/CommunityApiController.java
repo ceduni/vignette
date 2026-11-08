@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.titiplex.security.AuthUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.titiplex.api.dto.*;
@@ -530,7 +531,7 @@ public class CommunityApiController {
     private boolean canManage(AccreditationScopeType scopeType,
                               String targetId,
                               Authentication auth) {
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = AuthUtils.isAdmin(auth);
 
         if (scopeType == AccreditationScopeType.GLOBAL) {
             return isAdmin;
@@ -555,7 +556,7 @@ public class CommunityApiController {
     }
 
     private boolean canReview(AccreditationScopeType scopeType, Long scenarioId, Authentication auth) {
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = AuthUtils.isAdmin(auth);
         if (scopeType == AccreditationScopeType.GLOBAL) {
             return isAdmin;
         }

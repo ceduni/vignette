@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.titiplex.security.AuthUtils;
 import org.springframework.web.bind.annotation.*;
 import org.titiplex.api.dto.*;
 import org.titiplex.api.security.OwnerOrAdminOperation;
@@ -182,7 +183,7 @@ public class ScenarioApiController {
             Authentication auth
     ) {
         Scenario s = scenarioService.getVisibleScenario(id, auth);
-        String viewerUsername = (auth != null && auth.isAuthenticated()) ? auth.getName() : null;
+        String viewerUsername = AuthUtils.authenticatedUsername(auth);
 
         return scenarioService.toDto(s, viewerUsername);
     }
@@ -732,7 +733,7 @@ public class ScenarioApiController {
             description = "Deletes a scenario and all its associated data (thumbnails, audios, etc.)."
     )
     @OwnerOrAdminOperation(
-            resource = ProtectedResource.SCENARIO
+            resource = ProtectedResource.SCENARIO_AUTHOR_ONLY
     )
     @ApiResponses({
             @ApiResponse(

@@ -192,7 +192,6 @@ public class ThumbnailApiController {
 //            ownerResource = "scenario"
 //    )
 //    @SecurityRequirement(name = "bearerAuth")
-//    @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and @scenarioSecurity.isOwner(#scenarioId, authentication.name))")
     @PostMapping(value = "/scenarios/{scenarioId}/thumbnails", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public UploadResponse upload(
@@ -454,6 +453,7 @@ public class ThumbnailApiController {
         Thumbnail thumbnail = thumbnailService.getThumbnailById(id);
         Long scenarioId = thumbnail.getScenarioId();
 
+        scenarioService.assertCanEditScenarioById(scenarioId, auth);
         thumbnailService.delete(id);
 
         Long actorId = userService.getUserByUsername(auth.getName()).getId();

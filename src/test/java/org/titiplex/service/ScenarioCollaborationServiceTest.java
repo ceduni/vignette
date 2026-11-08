@@ -80,56 +80,6 @@ class ScenarioCollaborationServiceTest {
         return c;
     }
 
-    // ── getUserRole / canEdit / canView ─────────────────────────────────
-
-    @Test
-    void getUserRole_returnsOwner_forScenarioAuthor_withoutHittingRepository() {
-        Scenario scenario = scenarioOwnedBy(1L, 5L);
-
-        CollaboratorRole role = service.getUserRole(scenario, 5L);
-
-        assertEquals(CollaboratorRole.OWNER, role);
-        verifyNoInteractions(collaboratorRepo);
-    }
-
-    @Test
-    void getUserRole_returnsRole_whenAccepted() {
-        Scenario scenario = scenarioOwnedBy(1L, 5L);
-        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L))
-                .thenReturn(Optional.of(collaborator(1L, 2L, CollaboratorRole.EDITOR, CollaborationStatus.ACCEPTED)));
-
-        assertEquals(CollaboratorRole.EDITOR, service.getUserRole(scenario, 2L));
-    }
-
-    @Test
-    void getUserRole_returnsNull_whenPending() {
-        Scenario scenario = scenarioOwnedBy(1L, 5L);
-        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L))
-                .thenReturn(Optional.of(collaborator(1L, 2L, CollaboratorRole.EDITOR, CollaborationStatus.PENDING)));
-
-        assertNull(service.getUserRole(scenario, 2L));
-    }
-
-    @Test
-    void getUserRole_returnsNull_whenNoRelation() {
-        Scenario scenario = scenarioOwnedBy(1L, 5L);
-        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 9L)).thenReturn(Optional.empty());
-
-        assertNull(service.getUserRole(scenario, 9L));
-    }
-
-    @Test
-    void canEdit_trueForEditor_falseForViewer() {
-        Scenario scenario = scenarioOwnedBy(1L, 5L);
-        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L))
-                .thenReturn(Optional.of(collaborator(1L, 2L, CollaboratorRole.EDITOR, CollaborationStatus.ACCEPTED)));
-        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 3L))
-                .thenReturn(Optional.of(collaborator(1L, 3L, CollaboratorRole.VIEWER, CollaborationStatus.ACCEPTED)));
-
-        assertTrue(service.canEdit(scenario, 2L));
-        assertFalse(service.canEdit(scenario, 3L));
-    }
-
     // ── inviteByUsername ─────────────────────────────────────────────────
 
     @Test

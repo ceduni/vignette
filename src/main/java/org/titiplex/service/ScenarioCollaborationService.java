@@ -1,7 +1,6 @@
 package org.titiplex.service;
 
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +16,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import static org.titiplex.security.AuthUtils.*;
 
 @Service
 public class ScenarioCollaborationService {
@@ -43,32 +44,6 @@ public class ScenarioCollaborationService {
         this.inviteLinkRepo = inviteLinkRepo;
         this.userService = userService;
         this.notificationService = notificationService;
-    }
-
-    // ── Role resolution (used by ScenarioService for permission checks) ────
-
-    /**
-     * Returns the effective role of a user on a scenario, or null if they
-     * have no relationship to it. The original author is always OWNER,
-     * even without a row in scenario_collaborator.
-     */
-    public CollaboratorRole getUserRole(Scenario scenario, Long userId) {
-        if (userId == null) return null;
-        if (userId.equals(scenario.getAuthor_id())) return CollaboratorRole.OWNER;
-
-        return collaboratorRepo.findByScenarioIdAndUserId(scenario.getId(), userId)
-                .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
-                .map(ScenarioCollaborator::getRole)
-                .orElse(null);
-    }
-
-    public boolean canEdit(Scenario scenario, Long userId) {
-        CollaboratorRole role = getUserRole(scenario, userId);
-        return role == CollaboratorRole.OWNER || role == CollaboratorRole.EDITOR;
-    }
-
-    public boolean canView(Scenario scenario, Long userId) {
-        return getUserRole(scenario, userId) != null;
     }
 
     // ── Listing ──────────────────────────────────────────────────────────
@@ -364,11 +339,5 @@ public class ScenarioCollaborationService {
             throw new AccessDeniedException("Only the scenario owner can perform this action");
         }
         return userId;
-    }
-
-    private void requireAuthenticated(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("Authentication required");
-        }
     }
 }
