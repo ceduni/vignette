@@ -111,11 +111,20 @@ public class ScenarioCollaborationService {
         if (target.getId().equals(scenario.getAuthor_id())) {
             throw new IllegalArgumentException("This user is already the owner of the scenario");
         }
-        if (collaboratorRepo.existsByScenarioIdAndUserId(scenarioId, target.getId())) {
+        // A DECLINED or EXPIRED invitation keeps its row (unique on scenario_id + user_id),
+        // so reuse it to re-invite instead of blocking forever.
+        ScenarioCollaborator collaborator = collaboratorRepo
+                .findByScenarioIdAndUserId(scenarioId, target.getId())
+                .orElseGet(ScenarioCollaborator::new);
+
+        boolean stillActive = collaborator.getStatus() == CollaborationStatus.ACCEPTED
+                || (collaborator.getStatus() == CollaborationStatus.PENDING
+                    && collaborator.getExpiresAt() != null
+                    && collaborator.getExpiresAt().isAfter(Instant.now()));
+        if (stillActive) {
             throw new IllegalStateException("This user is already a collaborator or has a pending invitation");
         }
 
-        ScenarioCollaborator collaborator = new ScenarioCollaborator();
         collaborator.setScenarioId(scenarioId);
         collaborator.setUserId(target.getId());
         collaborator.setRole(role);
@@ -123,6 +132,7 @@ public class ScenarioCollaborationService {
         collaborator.setInvitedById(inviterId);
         collaborator.setInvitedAt(Instant.now());
         collaborator.setExpiresAt(Instant.now().plus(INVITE_EXPIRY));
+        collaborator.setRespondedAt(null);
 
         ScenarioCollaborator saved = collaboratorRepo.save(collaborator);
         notificationService.notifyCollaborationInvite(target.getId(), scenario, inviterId, role.name());
@@ -240,7 +250,7 @@ public class ScenarioCollaborationService {
         requireAuthenticated(authentication);
         Long userId = userService.getUserByUsername(authentication.getName()).getId();
 
-        ScenarioInviteLink link = inviteLinkRepo.findByToken(token)
+        ScenarioInviteLink link = inviteLinkRepo.findByTokenForUpdate(token)
                 .orElseThrow(() -> new NoSuchElementException("Invalid invite link"));
 
         if (!link.isActive()) {

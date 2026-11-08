@@ -3,6 +3,7 @@ package org.titiplex.persistence.repo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import org.titiplex.persistence.model.LanguageFollow;
 
 import java.util.List;
@@ -22,5 +23,6 @@ public interface LanguageFollowRepository extends JpaRepository<LanguageFollow, 
 
     long countByLanguageId(String languageId);
 
+    @Transactional
     void deleteByLanguageIdAndUserId(String languageId, Long userId);
 }

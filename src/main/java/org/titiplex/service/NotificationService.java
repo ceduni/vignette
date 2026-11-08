@@ -100,6 +100,22 @@ public class NotificationService {
         }
     }
 
+    /**
+     * Saves and pushes a notification, unless the exact same one (same recipient, type,
+     * reference and message) is still waiting unread: a repeated action (double click,
+     * re-sent invitation) then does not pile up identical notifications. Once the user has
+     * read it, a new occurrence is notified again (e.g. a re-invitation after a decline).
+     */
+    private void saveAndPush(Notification notif) {
+        Long userId = notif.getUser().getId();
+        if (repo.existsByUserIdAndTypeAndReferenceIdAndMessageAndReadFalse(
+                userId, notif.getType(), notif.getReferenceId(), notif.getMessage())) {
+            return;
+        }
+        repo.save(notif);
+        pushToUser(userId, notif);
+    }
+
     private void pushToUser(Long userId, Notification notification) {
         CopyOnWriteArrayList<SseEmitter> list = emitters.get(userId);
         if (list == null || list.isEmpty()) return;
@@ -192,9 +208,7 @@ public class NotificationService {
             notif.setMessage(forkerUsername + " made a copy of \"" + original.getTitle() + "\" that needs your approval before it can be published");
             notif.setTargetUrl("/scenarios/" + fork.getId());
             notif.setReferenceId(fork.getId());
-            repo.save(notif);
-
-            pushToUser(originalAuthorId, notif);
+            saveAndPush(notif);
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
                 .error("Failed to send fork review requested notification for scenario {}: {}", fork.getId(), e.getMessage());
@@ -218,9 +232,7 @@ public class NotificationService {
                     : "Your copy \"" + fork.getTitle() + "\" was not approved for publication");
             notif.setTargetUrl("/scenarios/" + fork.getId());
             notif.setReferenceId(fork.getId());
-            repo.save(notif);
-
-            pushToUser(forkerId, notif);
+            saveAndPush(notif);
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
                 .error("Failed to send fork review outcome notification for scenario {}: {}", fork.getId(), e.getMessage());
@@ -243,9 +255,7 @@ public class NotificationService {
             notif.setMessage(inviterUsername + " invited you to collaborate on \"" + scenario.getTitle() + "\" as " + role.toLowerCase());
             notif.setTargetUrl("/invitations");
             notif.setReferenceId(scenario.getId());
-            repo.save(notif);
-
-            pushToUser(invitedUserId, notif);
+            saveAndPush(notif);
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
                 .error("Failed to send collaboration invite notification for scenario {}: {}", scenario.getId(), e.getMessage());
@@ -268,9 +278,7 @@ public class NotificationService {
             notif.setMessage(accepterUsername + " accepted your invitation to collaborate on \"" + scenario.getTitle() + "\"");
             notif.setTargetUrl("/scenarios/" + scenario.getId());
             notif.setReferenceId(scenario.getId());
-            repo.save(notif);
-
-            pushToUser(ownerId, notif);
+            saveAndPush(notif);
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
                 .error("Failed to send invite accepted notification for scenario {}: {}", scenario.getId(), e.getMessage());
@@ -304,9 +312,7 @@ public class NotificationService {
                 notif.setTargetUrl(withDiscussionHighlight(
                         discussionTargetUrl(message.getTargetType(), message.getTargetId()), message.getId()));
                 notif.setReferenceId(message.getId());
-                repo.save(notif);
-
-                pushToUser(parentAuthor.getId(), notif);
+                saveAndPush(notif);
                 alreadyNotified.add(parentAuthor.getId());
             }
 
@@ -331,9 +337,7 @@ public class NotificationService {
                         notif.setMessage(author.getUsername() + " commented on \"" + scenario.getTitle() + "\"");
                         notif.setTargetUrl(withDiscussionHighlight("/scenarios/" + scenarioId, message.getId()));
                         notif.setReferenceId(message.getId());
-                        repo.save(notif);
-
-                        pushToUser(recipientId, notif);
+                        saveAndPush(notif);
                     }
                 }
             }

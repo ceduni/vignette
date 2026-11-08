@@ -24,4 +24,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // Avoid duplicate notifications for same user+type+reference
     boolean existsByUserIdAndTypeAndReferenceId(Long userId, String type, Long referenceId);
+
+    // Same notification still waiting unread (the message carries the actor's name,
+    // so two different people accepting an invitation are not merged)
+    boolean existsByUserIdAndTypeAndReferenceIdAndMessageAndReadFalse(
+            Long userId, String type, Long referenceId, String message);
 }

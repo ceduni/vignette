@@ -133,6 +133,10 @@ class AudioServiceTest {
         Long id = audioService.createAudio(6L, "  ", 1, 4L, multipartFile, 0.0, 0.0, " ");
 
         assertEquals(88L, id);
+        // The thumbnail row is locked before the idx is checked.
+        org.mockito.InOrder order = inOrder(thumbnailService, audioRepository);
+        order.verify(thumbnailService).lockThumbnail(6L);
+        order.verify(audioRepository).existsByThumbnailIdAndIdx(6L, 1);
 
         ArgumentCaptor<Audio> captor = ArgumentCaptor.forClass(Audio.class);
         verify(audioRepository).save(captor.capture());
@@ -181,6 +185,10 @@ class AudioServiceTest {
         assertEquals(22L, id);
         assertEquals(22L, scenario.getActiveBackgroundAudioId());
         verify(scenarioRepository).save(scenario);
+        // The scenario row is locked before the next background idx is computed.
+        org.mockito.InOrder order = inOrder(scenarioRepository, audioRepository);
+        order.verify(scenarioRepository).lockById(10L);
+        order.verify(audioRepository).maxBackgroundIdx(10L);
     }
 
     @Test

@@ -148,6 +148,8 @@ public class AudioService {
         Long scenarioId = t.getScenarioId();
         Scenario s = scenarioService.getRequiredScenario(scenarioId);
 
+        // Lock the thumbnail so that concurrent uploads compute max(idx) + 1 one after the other.
+        thumbnailService.lockThumbnail(thumbnailId);
         int effectiveIdx = (idx != null) ? idx : (audios.maxIdx(thumbnailId) + 1);
         if (audios.existsByThumbnailIdAndIdx(thumbnailId, effectiveIdx)) {
             throw new IllegalArgumentException("idx already used for this thumbnail");
@@ -209,6 +211,8 @@ public class AudioService {
         }
 
         Scenario s = scenarioService.getRequiredScenario(scenarioId);
+        // Lock the scenario so that concurrent uploads compute max(idx) + 1 one after the other.
+        scenarioRepository.lockById(scenarioId);
         int effectiveIdx = audios.maxBackgroundIdx(scenarioId) + 1;
         String effectiveTitle = resolveAudioTitle(
                 title,

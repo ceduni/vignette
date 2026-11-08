@@ -13,6 +13,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
+
+    /**
+     * Locks the scenario row until the end of the current transaction. Used to serialize
+     * "next idx = max(idx) + 1" computations for media attached to the scenario.
+     */
+    @Query(value = "SELECT id FROM scenario WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Long lockById(@Param("id") Long id);
     Scenario findByTitle(String title);
 
     boolean existsByIdAndAuthorUsername(Long scenarioId, String username);

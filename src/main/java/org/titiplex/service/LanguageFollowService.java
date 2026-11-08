@@ -1,9 +1,9 @@
 package org.titiplex.service;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.model.LanguageFollow;
 import org.titiplex.persistence.model.User;
@@ -28,8 +28,12 @@ public class LanguageFollowService {
         this.languageService = languageService;
     }
 
-    /** Toggle follow — returns true if now following, false if unfollowed */
-    @Transactional
+    /**
+     * Toggle follow — returns true if now following, false if unfollowed.
+     * Not @Transactional on purpose: the insert runs in its own transaction so that a
+     * unique-constraint violation from a concurrent request (double click, two tabs)
+     * can be handled instead of failing the whole request.
+     */
     public boolean toggleFollow(String languageId, Authentication authentication) {
         requireAuthenticated(authentication);
         User user = userService.getUserByUsername(authentication.getName());
@@ -43,7 +47,11 @@ public class LanguageFollowService {
         LanguageFollow follow = new LanguageFollow();
         follow.setLanguage(language);
         follow.setUser(user);
-        repo.save(follow);
+        try {
+            repo.saveAndFlush(follow);
+        } catch (DataIntegrityViolationException alreadyFollowing) {
+            // A concurrent request inserted the same follow first: the user is following.
+        }
         return true;
     }
 

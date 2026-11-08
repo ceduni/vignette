@@ -25,6 +25,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -58,6 +60,56 @@ class NotificationServiceTest {
         user.setId(id);
         user.setUsername(username);
         return user;
+    }
+
+    @Test
+    void notifyCollaborationInvite_skipsWhenSameNotificationStillUnread() {
+        Scenario scenario = new Scenario();
+        scenario.setId(12L);
+        scenario.setTitle("Story");
+        when(userService.getUserById(2L)).thenReturn(userWithId(2L, "bob"));
+        when(userService.getUserById(5L)).thenReturn(userWithId(5L, "alice"));
+        when(repo.existsByUserIdAndTypeAndReferenceIdAndMessageAndReadFalse(
+                eq(2L), eq("COLLABORATION_INVITE"), eq(12L), any())).thenReturn(true);
+
+        notificationService.notifyCollaborationInvite(2L, scenario, 5L, "EDITOR");
+
+        verify(repo, never()).save(any());
+    }
+
+    @Test
+    void notifyCollaborationInvite_sendsWhenNoUnreadDuplicate() {
+        Scenario scenario = new Scenario();
+        scenario.setId(12L);
+        scenario.setTitle("Story");
+        when(userService.getUserById(2L)).thenReturn(userWithId(2L, "bob"));
+        when(userService.getUserById(5L)).thenReturn(userWithId(5L, "alice"));
+        when(repo.existsByUserIdAndTypeAndReferenceIdAndMessageAndReadFalse(
+                eq(2L), eq("COLLABORATION_INVITE"), eq(12L), any())).thenReturn(false);
+
+        notificationService.notifyCollaborationInvite(2L, scenario, 5L, "EDITOR");
+
+        verify(repo, times(1)).save(any(Notification.class));
+    }
+
+    @Test
+    void notifyInviteAccepted_differentAcceptersAreNotMerged() {
+        Scenario scenario = new Scenario();
+        scenario.setId(12L);
+        scenario.setTitle("Story");
+        when(userService.getUserById(5L)).thenReturn(userWithId(5L, "alice"));
+        when(userService.getUserById(2L)).thenReturn(userWithId(2L, "bob"));
+        when(userService.getUserById(3L)).thenReturn(userWithId(3L, "carol"));
+        // Bob's acceptance is still unread; Carol's is a different message, so it must be sent.
+        when(repo.existsByUserIdAndTypeAndReferenceIdAndMessageAndReadFalse(
+                eq(5L), any(), eq(12L), org.mockito.ArgumentMatchers.contains("bob"))).thenReturn(true);
+
+        notificationService.notifyInviteAccepted(5L, scenario, 2L);
+        notificationService.notifyInviteAccepted(5L, scenario, 3L);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(repo, times(1)).save(captor.capture());
+        assertTrue(captor.getValue().getMessage().startsWith("carol"));
     }
 
     @Test

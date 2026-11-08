@@ -9,6 +9,7 @@ import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.AudioRepository;
+import org.titiplex.persistence.repo.ScenarioRepository;
 import org.titiplex.persistence.repo.ThumbnailRepository;
 import org.titiplex.service.storage.FileStorageService;
 import org.titiplex.service.storage.MediaContent;
@@ -26,21 +27,38 @@ public class ThumbnailService {
     private final ThumbnailRepository repo;
     private final AudioRepository audioRepo;
     private final FileStorageService storage;
+    private final ScenarioRepository scenarioRepo;
 
-    public ThumbnailService(ThumbnailRepository repo, AudioRepository audioRepo, FileStorageService storage) {
+    public ThumbnailService(ThumbnailRepository repo,
+                            AudioRepository audioRepo,
+                            FileStorageService storage,
+                            ScenarioRepository scenarioRepo) {
         this.repo = repo;
         this.audioRepo = audioRepo;
         this.storage = storage;
+        this.scenarioRepo = scenarioRepo;
     }
 
     @Transactional
     public Thumbnail save(String title, MultipartFile image, Scenario scenario, User user) throws Exception {
+        // Lock the scenario so that concurrent uploads compute max(idx) + 1 one after the other.
+        scenarioRepo.lockById(scenario.getId());
         int nextIdx = repo.maxIdx(scenario.getId()) + 1;
         String effectiveTitle = (title == null || title.isBlank()) ? "Image " + nextIdx : title.trim();
         if (effectiveTitle.length() > 255) {
             throw new IllegalArgumentException("Scene title must be 255 characters or fewer");
         }
         StoredFile stored = storage.storeThumbnail(image, scenario.getId());
+        // Storage is content-addressed (path derived from the SHA-256), so a duplicate upload
+        // lands on the file the existing scene already uses: nothing to clean up on refusal.
+        // The scenario lock above also makes this check safe against concurrent uploads.
+        if (repo.existsByScenarioIdAndImageSha256(scenario.getId(), stored.sha256())) {
+            // Same bytes but a different extension produce a new path: drop that orphan file.
+            if (!repo.existsByStoragePathAndIdNot(stored.relativePath(), -1L)) {
+                storage.deleteQuietly(stored.relativePath());
+            }
+            throw new IllegalStateException("This image is already used in this scenario");
+        }
 
         Thumbnail thumbnail = new Thumbnail();
         thumbnail.setTitle(effectiveTitle);
@@ -89,6 +107,11 @@ public class ThumbnailService {
             ordered.add(row);
         }
         return repo.saveAll(ordered);
+    }
+
+    /** Locks the thumbnail row until the end of the current transaction. */
+    public void lockThumbnail(Long id) {
+        repo.lockById(id);
     }
 
     public Thumbnail getThumbnailById(Long id) {

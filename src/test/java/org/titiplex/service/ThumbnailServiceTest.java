@@ -34,6 +34,8 @@ class ThumbnailServiceTest {
     private FileStorageService storage;
     @Mock
     private MultipartFile image;
+    @Mock
+    private org.titiplex.persistence.repo.ScenarioRepository scenarioRepository;
     @InjectMocks
     private ThumbnailService thumbnailService;
 
@@ -55,6 +57,46 @@ class ThumbnailServiceTest {
     }
 
     @Test
+    void save_rejectsImageAlreadyUsedInScenario() throws Exception {
+        Scenario scenario = new Scenario();
+        scenario.setId(5L);
+        User user = new User();
+        user.setId(7L);
+        StoredFile stored = new StoredFile("thumbnails/scenario-5/ab/cd/hash.png", "hash", 3L, "image/png", "thumb.png");
+        when(storage.storeThumbnail(image, 5L)).thenReturn(stored);
+        when(thumbnailRepository.maxIdx(5L)).thenReturn(1);
+        when(thumbnailRepository.existsByScenarioIdAndImageSha256(5L, "hash")).thenReturn(true);
+        // The existing scene already points at this file: it must not be deleted.
+        when(thumbnailRepository.existsByStoragePathAndIdNot("thumbnails/scenario-5/ab/cd/hash.png", -1L)).thenReturn(true);
+
+        IllegalStateException error = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> thumbnailService.save("thumb", image, scenario, user));
+
+        assertEquals("This image is already used in this scenario", error.getMessage());
+        verify(thumbnailRepository, never()).save(any());
+        verify(storage, never()).deleteQuietly(any());
+    }
+
+    @Test
+    void save_rejectsDuplicateAndDropsOrphanFileWithOtherExtension() throws Exception {
+        Scenario scenario = new Scenario();
+        scenario.setId(5L);
+        User user = new User();
+        user.setId(7L);
+        StoredFile stored = new StoredFile("thumbnails/scenario-5/ab/cd/hash.jpeg", "hash", 3L, "image/jpeg", "thumb.jpeg");
+        when(storage.storeThumbnail(image, 5L)).thenReturn(stored);
+        when(thumbnailRepository.maxIdx(5L)).thenReturn(1);
+        when(thumbnailRepository.existsByScenarioIdAndImageSha256(5L, "hash")).thenReturn(true);
+        when(thumbnailRepository.existsByStoragePathAndIdNot("thumbnails/scenario-5/ab/cd/hash.jpeg", -1L)).thenReturn(false);
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> thumbnailService.save("thumb", image, scenario, user));
+
+        verify(storage).deleteQuietly("thumbnails/scenario-5/ab/cd/hash.jpeg");
+        verify(thumbnailRepository, never()).save(any());
+    }
+
+    @Test
     void save_buildsThumbnailFromInputs() throws Exception {
         Scenario scenario = new Scenario();
         scenario.setId(5L);
@@ -70,6 +112,10 @@ class ThumbnailServiceTest {
         assertEquals(5L, result.getScenarioId());
         assertEquals(7L, result.getAuthorId());
         assertEquals(2, result.getIdx());
+        // The scenario row is locked before the next idx is computed.
+        org.mockito.InOrder order = inOrder(scenarioRepository, thumbnailRepository);
+        order.verify(scenarioRepository).lockById(5L);
+        order.verify(thumbnailRepository).maxIdx(5L);
         assertEquals("image/png", result.getContentType());
         assertEquals("hash", result.getImageSha256());
         assertEquals("thumbnails/scenario-5/ab/cd/hash.png", result.getStoragePath());

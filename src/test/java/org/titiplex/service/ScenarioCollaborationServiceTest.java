@@ -140,7 +140,7 @@ class ScenarioCollaborationServiceTest {
         when(scenarioRepo.findById(1L)).thenReturn(Optional.of(scenario));
         when(userService.getUserByUsername("owner")).thenReturn(userWithId("owner", 5L));
         when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
-        when(collaboratorRepo.existsByScenarioIdAndUserId(1L, 2L)).thenReturn(false);
+        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L)).thenReturn(Optional.empty());
         when(collaboratorRepo.save(any(ScenarioCollaborator.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ScenarioCollaborator result = service.inviteByUsername(1L, "bob", CollaboratorRole.EDITOR, auth);
@@ -185,10 +185,71 @@ class ScenarioCollaborationServiceTest {
         when(scenarioRepo.findById(1L)).thenReturn(Optional.of(scenario));
         when(userService.getUserByUsername("owner")).thenReturn(userWithId("owner", 5L));
         when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
-        when(collaboratorRepo.existsByScenarioIdAndUserId(1L, 2L)).thenReturn(true);
+        ScenarioCollaborator existing = new ScenarioCollaborator();
+        existing.setStatus(CollaborationStatus.ACCEPTED);
+        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L)).thenReturn(Optional.of(existing));
 
         assertThrows(IllegalStateException.class,
                 () -> service.inviteByUsername(1L, "bob", CollaboratorRole.EDITOR, auth));
+    }
+
+    @Test
+    void inviteByUsername_throwsIllegalState_whenPendingInvitationStillValid() {
+        Scenario scenario = scenarioOwnedBy(1L, 5L);
+        Authentication auth = authAs("owner");
+
+        when(scenarioRepo.findById(1L)).thenReturn(Optional.of(scenario));
+        when(userService.getUserByUsername("owner")).thenReturn(userWithId("owner", 5L));
+        when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
+        ScenarioCollaborator existing = new ScenarioCollaborator();
+        existing.setStatus(CollaborationStatus.PENDING);
+        existing.setExpiresAt(java.time.Instant.now().plusSeconds(3600));
+        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L)).thenReturn(Optional.of(existing));
+
+        assertThrows(IllegalStateException.class,
+                () -> service.inviteByUsername(1L, "bob", CollaboratorRole.EDITOR, auth));
+    }
+
+    @Test
+    void inviteByUsername_reinvitesAfterDecline() {
+        Scenario scenario = scenarioOwnedBy(1L, 5L);
+        Authentication auth = authAs("owner");
+
+        when(scenarioRepo.findById(1L)).thenReturn(Optional.of(scenario));
+        when(userService.getUserByUsername("owner")).thenReturn(userWithId("owner", 5L));
+        when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
+        ScenarioCollaborator existing = new ScenarioCollaborator();
+        existing.setScenarioId(1L);
+        existing.setUserId(2L);
+        existing.setStatus(CollaborationStatus.DECLINED);
+        existing.setRespondedAt(java.time.Instant.now().minusSeconds(60));
+        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L)).thenReturn(Optional.of(existing));
+        when(collaboratorRepo.save(any(ScenarioCollaborator.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ScenarioCollaborator result = service.inviteByUsername(1L, "bob", CollaboratorRole.EDITOR, auth);
+
+        assertSame(existing, result);
+        assertEquals(CollaborationStatus.PENDING, result.getStatus());
+        assertEquals(CollaboratorRole.EDITOR, result.getRole());
+        assertNull(result.getRespondedAt());
+    }
+
+    @Test
+    void inviteByUsername_reinvitesAfterExpiry() {
+        Scenario scenario = scenarioOwnedBy(1L, 5L);
+        Authentication auth = authAs("owner");
+
+        when(scenarioRepo.findById(1L)).thenReturn(Optional.of(scenario));
+        when(userService.getUserByUsername("owner")).thenReturn(userWithId("owner", 5L));
+        when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
+        ScenarioCollaborator existing = new ScenarioCollaborator();
+        existing.setStatus(CollaborationStatus.EXPIRED);
+        when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L)).thenReturn(Optional.of(existing));
+        when(collaboratorRepo.save(any(ScenarioCollaborator.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ScenarioCollaborator result = service.inviteByUsername(1L, "bob", CollaboratorRole.EDITOR, auth);
+
+        assertEquals(CollaborationStatus.PENDING, result.getStatus());
     }
 
     @Test
@@ -421,7 +482,7 @@ class ScenarioCollaborationServiceTest {
         link.setActive(true);
         link.setUseCount(0);
 
-        when(inviteLinkRepo.findByToken("abc123")).thenReturn(Optional.of(link));
+        when(inviteLinkRepo.findByTokenForUpdate("abc123")).thenReturn(Optional.of(link));
         when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
         when(scenarioRepo.findById(1L)).thenReturn(Optional.of(scenario));
         when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L)).thenReturn(Optional.empty());
@@ -445,7 +506,7 @@ class ScenarioCollaborationServiceTest {
         link.setToken("abc123");
         link.setActive(false);
 
-        when(inviteLinkRepo.findByToken("abc123")).thenReturn(Optional.of(link));
+        when(inviteLinkRepo.findByTokenForUpdate("abc123")).thenReturn(Optional.of(link));
 
         assertThrows(IllegalStateException.class, () -> service.joinViaLink("abc123", auth));
     }
@@ -460,7 +521,7 @@ class ScenarioCollaborationServiceTest {
         link.setActive(true);
         link.setExpiresAt(Instant.now().minusSeconds(60));
 
-        when(inviteLinkRepo.findByToken("abc123")).thenReturn(Optional.of(link));
+        when(inviteLinkRepo.findByTokenForUpdate("abc123")).thenReturn(Optional.of(link));
 
         assertThrows(IllegalStateException.class, () -> service.joinViaLink("abc123", auth));
     }
@@ -476,7 +537,7 @@ class ScenarioCollaborationServiceTest {
         link.setMaxUses(3);
         link.setUseCount(3);
 
-        when(inviteLinkRepo.findByToken("abc123")).thenReturn(Optional.of(link));
+        when(inviteLinkRepo.findByTokenForUpdate("abc123")).thenReturn(Optional.of(link));
 
         assertThrows(IllegalStateException.class, () -> service.joinViaLink("abc123", auth));
     }
@@ -491,7 +552,7 @@ class ScenarioCollaborationServiceTest {
         link.setToken("abc123");
         link.setActive(true);
 
-        when(inviteLinkRepo.findByToken("abc123")).thenReturn(Optional.of(link));
+        when(inviteLinkRepo.findByTokenForUpdate("abc123")).thenReturn(Optional.of(link));
         when(userService.getUserByUsername("owner")).thenReturn(userWithId("owner", 5L));
         when(scenarioRepo.findById(1L)).thenReturn(Optional.of(scenario));
 
@@ -511,7 +572,7 @@ class ScenarioCollaborationServiceTest {
 
         ScenarioCollaborator existing = collaborator(1L, 2L, CollaboratorRole.EDITOR, CollaborationStatus.ACCEPTED);
 
-        when(inviteLinkRepo.findByToken("abc123")).thenReturn(Optional.of(link));
+        when(inviteLinkRepo.findByTokenForUpdate("abc123")).thenReturn(Optional.of(link));
         when(userService.getUserByUsername("bob")).thenReturn(userWithId("bob", 2L));
         when(scenarioRepo.findById(1L)).thenReturn(Optional.of(scenario));
         when(collaboratorRepo.findByScenarioIdAndUserId(1L, 2L)).thenReturn(Optional.of(existing));

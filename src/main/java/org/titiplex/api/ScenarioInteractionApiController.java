@@ -49,7 +49,7 @@ public class ScenarioInteractionApiController {
             @PathVariable Long id,
             @Parameter(hidden = true) Authentication auth
     ) {
-        return interactionService.likeScenario(id, auth.getName());
+        return interactionService.likeScenario(id, auth);
     }
 
     @Operation(summary = "Unlike a scenario", description = "Removes the like from the specified scenario for the authenticated user.")
@@ -69,7 +69,7 @@ public class ScenarioInteractionApiController {
             @PathVariable Long id,
             @Parameter(hidden = true) Authentication auth
     ) {
-        return interactionService.unlikeScenario(id, auth.getName());
+        return interactionService.unlikeScenario(id, auth);
     }
 
     // ── Bookmarks ──────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ public class ScenarioInteractionApiController {
             @PathVariable Long id,
             @Parameter(hidden = true) Authentication auth
     ) {
-        return interactionService.bookmarkScenario(id, auth.getName());
+        return interactionService.bookmarkScenario(id, auth);
     }
 
     @Operation(summary = "Remove bookmark", description = "Removes the bookmark from the specified scenario for the authenticated user.")
@@ -111,7 +111,7 @@ public class ScenarioInteractionApiController {
             @PathVariable Long id,
             @Parameter(hidden = true) Authentication auth
     ) {
-        return interactionService.unbookmarkScenario(id, auth.getName());
+        return interactionService.unbookmarkScenario(id, auth);
     }
 
     // ── Status ─────────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ public class ScenarioInteractionApiController {
             @PathVariable Long id,
             @Parameter(hidden = true) Authentication auth
     ) {
-        return interactionService.getStatus(id, auth.getName());
+        return interactionService.getStatus(id, auth);
     }
 
     @Operation(
@@ -154,6 +154,6 @@ public class ScenarioInteractionApiController {
     public MyScenarioInteractionsDto getMyInteractions(
             @Parameter(hidden = true) Authentication auth
     ) {
-        return interactionService.getMyInteractions(auth.getName());
+        return interactionService.getMyInteractions(auth);
     }
 }
