@@ -700,69 +700,23 @@ public class ScenarioService {
         List<Thumbnail> originalThumbnails = thumbnailRepo.findByScenarioIdOrderByIdxAsc(original.getId());
 
         for (Thumbnail ot : originalThumbnails) {
-            Thumbnail copy = new Thumbnail();
-            copy.setTitle(ot.getTitle());
-            copy.setIdx(ot.getIdx());
-            copy.setContentType(ot.getContentType());
-            copy.setAuthorId(userId);
-            copy.setScenarioId(saved.getId());
-            copy.setStoragePath(ot.getStoragePath());
-            copy.setSizeBytes(ot.getSizeBytes());
-            copy.setOriginalFilename(ot.getOriginalFilename());
-            copy.setImageSha256(ot.getImageSha256());
-            copy.setGridColumn(ot.getGridColumn());
-            copy.setGridRow(ot.getGridRow());
-            copy.setGridColumnSpan(ot.getGridColumnSpan());
-            copy.setGridRowSpan(ot.getGridRowSpan());
-            copy.setImageWidth(ot.getImageWidth());
-            copy.setImageHeight(ot.getImageHeight());
-            Thumbnail savedThumb = thumbnailRepo.save(copy);
-
-            List<Audio> originalAudios = audioRepo.findByThumbnailIdOrderByIdxAsc(ot.getId());
-            for (Audio oa : originalAudios) {
-                Audio audioCopy = new Audio();
-                audioCopy.setStoragePath(oa.getStoragePath());
-                audioCopy.setSizeBytes(oa.getSizeBytes());
-                audioCopy.setOriginalFilename(oa.getOriginalFilename());
-                audioCopy.setAudioSha256(oa.getAudioSha256());
-                audioCopy.setTitle(oa.getTitle());
-                audioCopy.setIdx(oa.getIdx());
-                audioCopy.setMime(oa.getMime());
-                audioCopy.setAuthorId(userId);
-                audioCopy.setScenarioId(saved.getId());
-                audioCopy.setLanguageId(oa.getLanguageId());
-                audioCopy.setThumbnailId(savedThumb.getId());
-                audioCopy.setMarkerX(oa.getMarkerX());
-                audioCopy.setMarkerY(oa.getMarkerY());
-                audioCopy.setMarkerLabel(oa.getMarkerLabel());
-                audioCopy.setTranscription(oa.getTranscription());
-                audioCopy.setGloss(oa.getGloss());
-                audioCopy.setFreeTranslation(oa.getFreeTranslation());
-                audioRepo.save(audioCopy);
+            Thumbnail savedThumb = thumbnailRepo.save(copyThumbnail(ot, saved.getId(), userId));
+            for (Audio oa : audioRepo.findByThumbnailIdOrderByIdxAsc(ot.getId())) {
+                audioRepo.save(copyAudio(oa, saved.getId(), savedThumb.getId(), userId));
             }
         }
 
+        // Background audios: keep the original's selected track as the fork's selected track.
+        Long activeOriginalId = original.getActiveBackgroundAudioId();
         for (Audio originalAudio : audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(
                 original.getId(),
                 AudioScope.BACKGROUND
         )) {
-            Audio audioCopy = new Audio();
-            audioCopy.setStoragePath(originalAudio.getStoragePath());
-            audioCopy.setSizeBytes(originalAudio.getSizeBytes());
-            audioCopy.setOriginalFilename(originalAudio.getOriginalFilename());
-            audioCopy.setAudioSha256(originalAudio.getAudioSha256());
-            audioCopy.setTitle(originalAudio.getTitle());
-            audioCopy.setIdx(originalAudio.getIdx());
-            audioCopy.setMime(originalAudio.getMime());
-            audioCopy.setScope(AudioScope.BACKGROUND);
-            audioCopy.setAuthorId(userId);
-            audioCopy.setScenarioId(saved.getId());
-            audioCopy.setLanguageId(originalAudio.getLanguageId());
-            audioCopy.setSourceLabel(originalAudio.getSourceLabel());
-            audioCopy.setSourceUrl(originalAudio.getSourceUrl());
-            audioCopy.setBackgroundVolume(originalAudio.getBackgroundVolume());
-            audioCopy.setBackgroundLoop(originalAudio.getBackgroundLoop());
-            audioRepo.save(audioCopy);
+            Audio savedAudio = audioRepo.save(copyAudio(originalAudio, saved.getId(), null, userId));
+            if (activeOriginalId != null && activeOriginalId.equals(originalAudio.getId())) {
+                saved.setActiveBackgroundAudioId(savedAudio.getId());
+                repo.save(saved);
+            }
         }
 
         if (saved.getReviewStatus() == ReviewStatus.PENDING) {
@@ -805,6 +759,66 @@ public class ScenarioService {
         Scenario saved = repo.save(fork);
         notificationService.notifyForkReviewed(saved.getAuthor_id(), saved, approve);
         return saved;
+    }
+
+    /**
+     * Copies a scene image into another scenario. The physical file is shared
+     * (content-addressed storage): only a new row pointing at the same file is created.
+     */
+    private static Thumbnail copyThumbnail(Thumbnail source, Long scenarioId, Long authorId) {
+        Thumbnail copy = new Thumbnail();
+        copy.setScenarioId(scenarioId);
+        copy.setAuthorId(authorId);
+        copy.setTitle(source.getTitle());
+        copy.setIdx(source.getIdx());
+        copy.setContentType(source.getContentType());
+        copy.setStoragePath(source.getStoragePath());
+        copy.setSizeBytes(source.getSizeBytes());
+        copy.setOriginalFilename(source.getOriginalFilename());
+        copy.setImageSha256(source.getImageSha256());
+        copy.setGridColumn(source.getGridColumn());
+        copy.setGridRow(source.getGridRow());
+        copy.setGridColumnSpan(source.getGridColumnSpan());
+        copy.setGridRowSpan(source.getGridRowSpan());
+        copy.setImageWidth(source.getImageWidth());
+        copy.setImageHeight(source.getImageHeight());
+        return copy;
+    }
+
+    /**
+     * Copies an audio (scene or background) into another scenario. Every content field is
+     * copied, whatever the scope, so that scene and background audios cannot drift apart again.
+     * Only the owner/location fields change: scenario, thumbnail (null for background) and author.
+     */
+    private static Audio copyAudio(Audio source, Long scenarioId, Long thumbnailId, Long authorId) {
+        Audio copy = new Audio();
+        copy.setScenarioId(scenarioId);
+        copy.setThumbnailId(thumbnailId);
+        copy.setAuthorId(authorId);
+        copy.setScope(source.getScope());
+        copy.setLanguageId(source.getLanguageId());
+        // file
+        copy.setStoragePath(source.getStoragePath());
+        copy.setSizeBytes(source.getSizeBytes());
+        copy.setOriginalFilename(source.getOriginalFilename());
+        copy.setAudioSha256(source.getAudioSha256());
+        copy.setMime(source.getMime());
+        // metadata
+        copy.setTitle(source.getTitle());
+        copy.setIdx(source.getIdx());
+        copy.setSourceLabel(source.getSourceLabel());
+        copy.setSourceUrl(source.getSourceUrl());
+        copy.setBackgroundVolume(source.getBackgroundVolume());
+        copy.setBackgroundLoop(source.getBackgroundLoop());
+        // linguistic annotations
+        copy.setTranscription(source.getTranscription());
+        copy.setGloss(source.getGloss());
+        copy.setFreeTranslation(source.getFreeTranslation());
+        // marker on the image
+        copy.setMarkerX(source.getMarkerX());
+        copy.setMarkerY(source.getMarkerY());
+        copy.setMarkerLabel(source.getMarkerLabel());
+        return copy;
     }
 
     private String generateUniqueScenarioTitle(String baseTitle, String username, String languageId) {

@@ -20,6 +20,7 @@ import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioCollaborator;
 import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
+import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.AudioRepository;
 import org.titiplex.persistence.repo.ScenarioBookmarkRepository;
@@ -116,6 +117,101 @@ class ScenarioServiceTest {
         );
 
         assertEquals("Description must be 500 characters or fewer", error.getMessage());
+    }
+
+    private Scenario publishedOriginalForFork() {
+        Language language = new Language();
+        language.setId("fra");
+        Scenario original = new Scenario();
+        original.setId(3L);
+        original.setTitle("Original");
+        original.setAuthor_id(7L);
+        original.setLanguage_id("fra");
+        original.setLanguage(language);
+        original.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        original.setTags(Set.of());
+        return original;
+    }
+
+    private void stubForkSave(Scenario original) {
+        User user = author();
+        when(scenarioRepository.findByIdWithTags(3L)).thenReturn(Optional.of(original));
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+        when(userService.getUserById(7L)).thenReturn(user);
+        when(scenarioRepository.saveAndFlush(any(Scenario.class))).thenAnswer(invocation -> {
+            Scenario saved = invocation.getArgument(0);
+            saved.setId(44L);
+            return saved;
+        });
+    }
+
+    @Test
+    void forkScenario_keepsTheSelectedBackgroundAudio() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario original = publishedOriginalForFork();
+        original.setActiveBackgroundAudioId(15L);
+        Audio other = new Audio();
+        other.setId(14L);
+        other.setScope(AudioScope.BACKGROUND);
+        Audio selected = new Audio();
+        selected.setId(15L);
+        selected.setScope(AudioScope.BACKGROUND);
+        stubForkSave(original);
+        when(thumbnailRepo.findByScenarioIdOrderByIdxAsc(3L)).thenReturn(List.of());
+        when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(3L, AudioScope.BACKGROUND))
+                .thenReturn(List.of(other, selected));
+        // The copies of 14 and 15 get the new ids 114 and 115 (saved in that order)
+        java.util.concurrent.atomic.AtomicLong nextId = new java.util.concurrent.atomic.AtomicLong(114L);
+        when(audioRepo.save(any(Audio.class))).thenAnswer(invocation -> {
+            Audio copy = invocation.getArgument(0);
+            copy.setId(nextId.getAndIncrement());
+            return copy;
+        });
+
+        Scenario fork = scenarioService.forkScenario(3L, "My copy", auth);
+
+        assertEquals(115L, fork.getActiveBackgroundAudioId());
+    }
+
+    @Test
+    void forkScenario_sceneAudioKeepsSourceLabelAndVolume() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario original = publishedOriginalForFork();
+        Thumbnail scene = new Thumbnail();
+        scene.setId(8L);
+        scene.setScenarioId(3L);
+        Audio sceneAudio = new Audio();
+        sceneAudio.setId(20L);
+        sceneAudio.setThumbnailId(8L);
+        sceneAudio.setScope(AudioScope.SCENE);
+        sceneAudio.setSourceLabel("Interview, 2024");
+        sceneAudio.setSourceUrl("https://example.test/interview");
+        sceneAudio.setBackgroundVolume(40);
+        sceneAudio.setBackgroundLoop(true);
+        sceneAudio.setGloss("gloss");
+        stubForkSave(original);
+        when(thumbnailRepo.findByScenarioIdOrderByIdxAsc(3L)).thenReturn(List.of(scene));
+        when(thumbnailRepo.save(any(Thumbnail.class))).thenAnswer(invocation -> {
+            Thumbnail copy = invocation.getArgument(0);
+            copy.setId(80L);
+            return copy;
+        });
+        when(audioRepo.findByThumbnailIdOrderByIdxAsc(8L)).thenReturn(List.of(sceneAudio));
+        when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(3L, AudioScope.BACKGROUND)).thenReturn(List.of());
+
+        scenarioService.forkScenario(3L, "My copy", auth);
+
+        org.mockito.ArgumentCaptor<Audio> captor = org.mockito.ArgumentCaptor.forClass(Audio.class);
+        verify(audioRepo).save(captor.capture());
+        Audio copied = captor.getValue();
+        assertEquals(44L, copied.getScenarioId());
+        assertEquals(80L, copied.getThumbnailId());
+        assertEquals(AudioScope.SCENE, copied.getScope());
+        assertEquals("Interview, 2024", copied.getSourceLabel());
+        assertEquals("https://example.test/interview", copied.getSourceUrl());
+        assertEquals(40, copied.getBackgroundVolume());
+        assertEquals(true, copied.getBackgroundLoop());
+        assertEquals("gloss", copied.getGloss());
     }
 
     @Test
