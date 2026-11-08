@@ -19,7 +19,7 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
 
     boolean existsByTitle(String title);
 
-    boolean existsByTitleAndAuthorUsernameAndLanguageId(String title, String authorUsername, String languageId);
+    boolean existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(String title, String authorUsername, String languageId);
 
     List<Scenario> findAllByOrderByCreatedAtDesc();
 

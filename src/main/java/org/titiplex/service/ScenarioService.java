@@ -103,20 +103,21 @@ public class ScenarioService {
         return repo.existsByIdAndAuthorUsername(scenarioId, username);
     }
 
-    public boolean existsByTitleAndAuthorNameAndLanguageId(String title, String authorName, String languageId) {
-        return repo.existsByTitleAndAuthorUsernameAndLanguageId(title, authorName, languageId);
-    }
-
     public Scenario createScenario(String title, String description, Long authorId, String languageId, List<String> tags) {
         String normalizedTitle = validatedTitle(title);
         String normalizedDescription = validatedDescription(description);
+        User author = userService.getUserById(authorId);
+        if (repo.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(normalizedTitle, author.getUsername(), languageId)) {
+            throw new IllegalArgumentException("Scenario already exists for this user and language");
+        }
+
         Scenario scenario = new Scenario();
         scenario.setTitle(normalizedTitle);
         scenario.setDescription(normalizedDescription);
         scenario.setAuthor_id(authorId);
         scenario.setLanguage_id(languageId);
         scenario.setCreatedAt(Instant.now());
-        scenario.setAuthor(userService.getUserById(authorId));
+        scenario.setAuthor(author);
         scenario.setLanguage(languageService.getLanguage(languageId));
         scenario.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
         scenario.setStoryboardLayoutMode(StoryboardLayoutMode.PRESET);
@@ -321,8 +322,8 @@ public class ScenarioService {
 
         if (request.title() != null) {
             String title = validatedTitle(request.title());
-            if (!title.equals(scenario.getTitle())
-                    && repo.existsByTitleAndAuthorUsernameAndLanguageId(
+            if (!title.equalsIgnoreCase(scenario.getTitle())
+                    && repo.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(
                     title,
                     userService.getUserById(scenario.getAuthor_id()).getUsername(),
                     scenario.getLanguage_id()
@@ -675,7 +676,7 @@ public class ScenarioService {
         String title;
         if (requestedTitle != null && !requestedTitle.isBlank()) {
             title = validatedTitle(requestedTitle);
-            if (repo.existsByTitleAndAuthorUsernameAndLanguageId(title, username, original.getLanguage_id())) {
+            if (repo.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(title, username, original.getLanguage_id())) {
                 throw new IllegalArgumentException("Scenario already exists for this user and language");
             }
         } else {
@@ -707,7 +708,12 @@ public class ScenarioService {
 
         fork.setTags(new LinkedHashSet<>(original.getTags()));
 
-        Scenario saved = repo.save(fork);
+        Scenario saved;
+        try {
+            saved = repo.saveAndFlush(fork);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Scenario already exists for this user and language");
+        }
 
         // Deep copy: thumbnails + audios. Physical files are reused (content-addressed
         // storage), only new DB rows are created pointing at the same storagePath/hash.
@@ -827,7 +833,7 @@ public class ScenarioService {
         String normalizedBase = baseTitle == null ? "Untitled scenario" : baseTitle.trim();
         String candidate = copyTitle(normalizedBase, null);
         int counter = 2;
-        while (repo.existsByTitleAndAuthorUsernameAndLanguageId(candidate, username, languageId)) {
+        while (repo.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(candidate, username, languageId)) {
             candidate = copyTitle(normalizedBase, counter);
             counter++;
         }

@@ -149,7 +149,7 @@ class ScenarioServiceTest {
         when(scenarioRepository.findByIdWithTags(3L)).thenReturn(Optional.of(original));
         when(userService.getUserByUsername("alice")).thenReturn(user);
         when(userService.getUserById(7L)).thenReturn(user);
-        when(scenarioRepository.save(any(Scenario.class))).thenAnswer(invocation -> {
+        when(scenarioRepository.saveAndFlush(any(Scenario.class))).thenAnswer(invocation -> {
             Scenario saved = invocation.getArgument(0);
             saved.setId(44L);
             return saved;
@@ -177,9 +177,13 @@ class ScenarioServiceTest {
         scenario.setId(3L);
         scenario.setTitle("Current title");
         scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(9L);
+        User author = new User();
+        author.setUsername("alice");
+        when(userService.getUserById(9L)).thenReturn(author);
         when(scenarioRepository.findByIdWithTags(3L)).thenReturn(Optional.of(scenario));
         when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
-        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId("Taken title", "alice", "fra"))
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId("Taken title", "alice", "fra"))
                 .thenReturn(true);
 
         IllegalArgumentException error = assertThrows(
@@ -206,7 +210,7 @@ class ScenarioServiceTest {
     void listScenarios_returnsRepositoryList() {
         Scenario scenario = new Scenario();
         scenario.setTitle("Latest");
-        when(scenarioRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(scenario));
+        when(scenarioRepository.findAllWithTagsOrderByCreatedAtDesc()).thenReturn(List.of(scenario));
 
         List<Scenario> result = scenarioService.listAllScenarios();
 

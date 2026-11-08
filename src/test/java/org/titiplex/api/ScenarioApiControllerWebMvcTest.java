@@ -201,8 +201,6 @@ class ScenarioApiControllerWebMvcTest {
 
         when(languageService.existsById("chuj")).thenReturn(true);
         when(userService.getUserByUsername("alice")).thenReturn(user);
-        when(scenarioService.existsByTitleAndAuthorNameAndLanguageId("My scenario", "alice", "chuj"))
-                .thenReturn(false);
         when(scenarioService.createScenario(eq("My scenario"), eq("This is a test"), eq(12L), eq("chuj"), any()))
                 .thenReturn(created);
 

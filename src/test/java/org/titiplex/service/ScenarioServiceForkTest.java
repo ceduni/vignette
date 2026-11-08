@@ -113,7 +113,7 @@ class ScenarioServiceForkTest {
     }
 
     private void mockSaveAssignsId(long assignedId) {
-        when(scenarioRepository.save(any(Scenario.class))).thenAnswer(invocation -> {
+        when(scenarioRepository.saveAndFlush(any(Scenario.class))).thenAnswer(invocation -> {
             Scenario s = invocation.getArgument(0);
             s.setId(assignedId);
             return s;
@@ -131,7 +131,7 @@ class ScenarioServiceForkTest {
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
         mockSaveAssignsId(99L);
 
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of(originalThumb));
@@ -211,7 +211,7 @@ class ScenarioServiceForkTest {
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
         // First candidate title already taken (by this same user/language), second one is free
-        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId(anyString(), eq("bob"), eq("fra")))
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(anyString(), eq("bob"), eq("fra")))
                 .thenReturn(true, false);
         mockSaveAssignsId(100L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
@@ -220,7 +220,7 @@ class ScenarioServiceForkTest {
 
         assertTrue(fork.getTitle().contains("#2"));
         verify(scenarioRepository, times(2))
-                .existsByTitleAndAuthorUsernameAndLanguageId(anyString(), eq("bob"), eq("fra"));
+                .existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(anyString(), eq("bob"), eq("fra"));
     }
 
     @Test
@@ -232,7 +232,7 @@ class ScenarioServiceForkTest {
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId("My remix", "bob", "fra"))
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId("My remix", "bob", "fra"))
                 .thenReturn(false);
         mockSaveAssignsId(100L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
@@ -250,7 +250,7 @@ class ScenarioServiceForkTest {
         when(authentication.getName()).thenReturn("bob");
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId("Taken title", "bob", "fra"))
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId("Taken title", "bob", "fra"))
                 .thenReturn(true);
 
         assertThrows(IllegalArgumentException.class,
@@ -272,7 +272,7 @@ class ScenarioServiceForkTest {
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
         // "Copy of Original scenario" is already taken by ANOTHER user, but that must not
         // affect bob: the check is scoped to (title, author, language), not global.
-        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId("Copy of Original scenario", "bob", "fra"))
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId("Copy of Original scenario", "bob", "fra"))
                 .thenReturn(false);
         mockSaveAssignsId(101L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
@@ -291,7 +291,7 @@ class ScenarioServiceForkTest {
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
         mockSaveAssignsId(99L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
 
@@ -313,7 +313,7 @@ class ScenarioServiceForkTest {
         when(userService.getUserByUsername("bob")).thenReturn(bob());
         when(userService.getUserById(42L)).thenReturn(bob());
         when(scenarioRepository.findByIdWithTags(1L)).thenReturn(Optional.of(original));
-        when(scenarioRepository.existsByTitleAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(anyString(), anyString(), anyString())).thenReturn(false);
         mockSaveAssignsId(99L);
 
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of(originalThumb));

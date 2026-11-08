@@ -133,9 +133,6 @@ public class ScenarioApiController {
         Long userId = userService.getUserByUsername(username).getId();
 
         String title = req.title().trim();
-        if (scenarioService.existsByTitleAndAuthorNameAndLanguageId(title, username, req.languageId())) {
-            throw new IllegalArgumentException("Scenario already exists for this user and language");
-        }
 
         Long id = scenarioService.createScenario(
                 title,
