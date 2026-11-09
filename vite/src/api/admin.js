@@ -30,20 +30,11 @@ export function fetchGlottologPreview() {
     return apiFetch("/api/admin/glottolog/preview");
 }
 
-export function updateGlottologLanguages() {
-    return apiFetch("/api/admin/glottolog/update", {
+/** Deposits a manual update request; the Python worker picks it up. */
+export function requestGlottologUpdate() {
+    return apiFetch("/api/admin/glottolog/update/request", {
         method: "POST",
     });
-}
-
-export function startGlottologUpdateJob() {
-    return apiFetch("/api/admin/glottolog/update/start", {
-        method: "POST",
-    });
-}
-
-export function fetchGlottologUpdateStatus() {
-    return apiFetch("/api/admin/glottolog/update/status");
 }
 
 export function fetchGlottologAdminSettings() {

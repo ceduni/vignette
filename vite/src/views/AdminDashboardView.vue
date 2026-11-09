@@ -8,7 +8,7 @@ import {
   fetchGlottologPreview,
   fetchGlottologUpdateHistory,
   fetchGlottologUpdateRequests,
-  startGlottologUpdateJob,
+  requestGlottologUpdate,
   updateGlottologAdminSettings,
 } from "../api/admin";
 
@@ -19,7 +19,6 @@ const glottologPreview = ref(null);
 const glottologSettings = ref(null);
 const glottologHistory = ref([]);
 const glottologNotifications = ref([]);
-const glottologJob = ref(null);
 
 const glottologError = ref("");
 const glottologSuccess = ref("");
@@ -36,8 +35,6 @@ const pendingRequestId = ref(null);
 
 let glottologPollHandle = null;
 let glottologActivityPollHandle = null;
-
-const isLegacyPipeline = computed(() => !!glottologSettings.value?.legacyPipelineEnabled);
 
 const pipelineStatus = computed(() => glottologSettings.value?.pipelineStatus || "");
 const pipelineMessage = computed(
@@ -61,9 +58,6 @@ const latestSuccessfulHistoryEntry = computed(() =>
 const latestHistoryEntry = computed(() => glottologHistory.value[0] ?? null);
 
 const isGlottologJobRunning = computed(() => {
-  if (isLegacyPipeline.value) {
-    return glottologJob.value?.state === "RUNNING";
-  }
   if (glottologAwaitingResult.value || pendingRequestId.value != null) {
     return true;
   }
@@ -72,18 +66,10 @@ const isGlottologJobRunning = computed(() => {
   return PYTHON_ACTIVE_STATUSES.has(status);
 });
 
-const isGlottologSourceUnchanged = computed(() => {
-  if (isLegacyPipeline.value) {
-    return !!glottologJob.value?.result?.sourceUnchanged;
-  }
-  return pipelineStatus.value === "NO_CHANGE";
-});
+const isGlottologSourceUnchanged = computed(() => pipelineStatus.value === "NO_CHANGE");
 
-/** Progress 0–100 derived from Python pipeline stage (or legacy job %). */
+/** Progress 0–100 derived from the Python pipeline stage. */
 const glottologProgressPercent = computed(() => {
-  if (isLegacyPipeline.value) {
-    return Number(glottologJob.value?.progressPercent ?? 0);
-  }
   if (!isGlottologJobRunning.value) {
     return latestSuccessfulHistoryEntry.value || isGlottologSourceUnchanged.value ? 100 : 0;
   }
@@ -224,9 +210,6 @@ const glottologTimelineStageOrder = computed(() =>
 );
 
 function resolveActiveStage() {
-  if (isLegacyPipeline.value) {
-    return glottologJob.value?.stage || "";
-  }
   return pipelineStatus.value || "";
 }
 
@@ -234,19 +217,6 @@ const glottologActiveTimelineIndex = computed(() => {
   const steps = glottologTimelineStageOrder.value;
   const stage = resolveActiveStage();
 
-  if (isLegacyPipeline.value) {
-    const state = glottologJob.value?.state;
-    if (state === "SUCCEEDED") return steps.length;
-    if (state === "FAILED") {
-      const foundIndex = steps.findIndex((item) => item.stages.includes(stage));
-      return foundIndex >= 0 ? foundIndex : 0;
-    }
-    if (state !== "RUNNING") return latestSuccessfulHistoryEntry.value ? steps.length : -1;
-    const foundIndex = steps.findIndex((item) => item.stages.includes(stage));
-    return foundIndex >= 0 ? foundIndex : 0;
-  }
-
-  // Python path
   if (String(stage).startsWith("FAILED")) {
     const foundIndex = steps.findIndex((item) => item.stages.includes(stage));
     // Failures often happen mid-flight; map known failed_* to nearest step via message not stage list.
@@ -291,8 +261,6 @@ const glottologTimelineSteps = computed(() =>
       let detail = step.detailIdle || "Waiting";
       if (status === "active") {
         detail = pipelineMessage.value
-            || glottologJob.value?.stageLabel
-            || glottologJob.value?.message
             || (pendingRequestId.value != null && (!pipelineStatus.value || ["IDLE", "WAITING", "AUTO_DISABLED"].includes(pipelineStatus.value))
                 ? "Waiting for Python worker (same PostgreSQL DB)…"
                 : null)
@@ -314,14 +282,12 @@ const glottologTimelineSteps = computed(() =>
 const glottologStatusHeadline = computed(() => {
   if (isGlottologJobRunning.value) {
     return pipelineMessage.value
-        || glottologJob.value?.message
-        || glottologJob.value?.stageLabel
         || (pendingRequestId.value != null ? "Waiting for Python worker…" : "Update in progress…");
   }
   if (isGlottologSourceUnchanged.value) {
     return "No changes since the last update";
   }
-  if (glottologJob.value?.state === "SUCCEEDED" || pipelineStatus.value === "COMPLETED") {
+  if (pipelineStatus.value === "COMPLETED") {
     return "Sync completed successfully";
   }
   if (latestSuccessfulHistoryEntry.value) {
@@ -341,17 +307,16 @@ const glottologHeroStats = computed(() => {
 
   const languagesInDb = formatCount(
       glottologPreview.value?.databaseCount
-      ?? glottologJob.value?.databaseCount
       ?? live?.databaseCount
       ?? last?.databaseCount
   );
 
   // Same labels idle + during update. NO_CHANGE / missing counts → 0 when idle.
   const addedRaw = busy
-      ? (glottologJob.value?.inserted ?? live?.inserted)
+      ? live?.inserted
       : (last?.inserted ?? 0);
   const updatedRaw = busy
-      ? (glottologJob.value?.updated ?? live?.updated)
+      ? live?.updated
       : (last?.updated ?? 0);
 
   return [
@@ -473,21 +438,11 @@ async function runGlottologUpdate() {
   pendingRequestId.value = null;
 
   try {
-    const result = await startGlottologUpdateJob();
-    if (result?.state) {
-      // Legacy Java job shape
-      glottologJob.value = result;
-      await loadGlottologHistory();
-      await loadGlottologJobStatus();
-      if (glottologJob.value?.state === "RUNNING") {
-        startGlottologPolling();
-      }
-    } else {
-      pendingRequestId.value = result?.id ?? null;
-      await refreshGlottologSettings({syncForm: false});
-      await loadGlottologHistory();
-      startGlottologPolling();
-    }
+    const request = await requestGlottologUpdate();
+    pendingRequestId.value = request?.id ?? null;
+    await refreshGlottologSettings({syncForm: false});
+    await loadGlottologHistory();
+    startGlottologPolling();
   } catch (e) {
     glottologAwaitingResult.value = false;
     pendingRequestId.value = null;
@@ -915,10 +870,6 @@ onBeforeUnmount(() => {
           </ul>
         </details>
 
-        <details v-if="glottologJob?.recentLogLines?.length" class="developer-card">
-          <summary>Developer tools · Show logs</summary>
-          <pre>{{ glottologJob.recentLogLines.join("\n") }}</pre>
-        </details>
       </template>
     </div>
   </AdminWorkspaceShell>

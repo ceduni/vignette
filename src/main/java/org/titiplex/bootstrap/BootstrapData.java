@@ -3,21 +3,19 @@ package org.titiplex.bootstrap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.titiplex.config.GlottologProperties;
 import org.titiplex.persistence.model.User;
-import org.titiplex.persistence.repo.UserRepository;
 import org.titiplex.service.GlottologAdminService;
 import org.titiplex.service.GlottologPythonBootstrapService;
 import org.titiplex.service.RolesService;
+import org.titiplex.service.UserService;
 
 @Component
 public class BootstrapData implements ApplicationRunner {
 
     private final RolesService rolesService;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserService userService;
     private final GlottologProperties glottologProperties;
     private final GlottologPythonBootstrapService pythonBootstrapService;
     private final GlottologAdminService glottologAdminService;
@@ -36,15 +34,13 @@ public class BootstrapData implements ApplicationRunner {
 
     public BootstrapData(
             RolesService rolesService,
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder,
+            UserService userService,
             GlottologProperties glottologProperties,
             GlottologPythonBootstrapService pythonBootstrapService,
             GlottologAdminService glottologAdminService
     ) {
         this.rolesService = rolesService;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.userService = userService;
         this.glottologProperties = glottologProperties;
         this.pythonBootstrapService = pythonBootstrapService;
         this.glottologAdminService = glottologAdminService;
@@ -91,36 +87,23 @@ public class BootstrapData implements ApplicationRunner {
             return;
         }
 
-        User existingUser = userRepository.findByUsername(username).orElse(null);
+        User existingUser = userService.getUserByUsername(username);
         if (existingUser != null) {
-            boolean isAdmin = existingUser.getRoles().stream()
-                    .anyMatch(role -> "ROLE_ADMIN".equals(role.getName()));
-            if (!isAdmin) {
-                existingUser.getRoles().add(rolesService.getAdminRole());
-                if (existingUser.getRoles().stream().noneMatch(role -> "ROLE_USER".equals(role.getName()))) {
-                    existingUser.getRoles().add(rolesService.getUserRole());
-                }
-                userRepository.save(existingUser);
+            if (userService.grantAdminRole(existingUser)) {
                 System.out.println("Granted ROLE_ADMIN to existing bootstrap user: " + username);
             }
             return;
         }
 
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            System.out.println("Bootstrap admin skipped: email already used by another account.");
-            return;
+        // Same creation path as a normal sign-up (normalization, uniqueness, password hashing),
+        // then the admin role on top.
+        try {
+            User adminUser = userService.register(username, email, password);
+            userService.grantAdminRole(adminUser);
+            System.out.println("Created bootstrap admin user: " + username);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            System.out.println("Bootstrap admin skipped: " + e.getMessage());
         }
-
-        User adminUser = new User();
-        adminUser.setUsername(username);
-        adminUser.setEmail(email);
-        adminUser.setDisplayName(username);
-        adminUser.setPasswordHash(passwordEncoder.encode(password));
-        adminUser.getRoles().add(rolesService.getUserRole());
-        adminUser.getRoles().add(rolesService.getAdminRole());
-
-        userRepository.save(adminUser);
-        System.out.println("Created bootstrap admin user: " + username);
     }
 
     private static String trimmedOrEmpty(String value) {

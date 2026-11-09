@@ -48,6 +48,34 @@ public class UserService {
         return users.save(u);
     }
 
+    /**
+     * Gives an existing account the ADMIN role, keeping (or adding) ROLE_USER so the account
+     * stays usable. Used by the startup bootstrap only: the admin role cannot be granted
+     * from the API (see {@link #updateRoles}).
+     *
+     * @return true if the user was not admin before
+     */
+    public boolean grantAdminRole(User user) {
+        boolean wasAdmin = hasRole(user, "ROLE_ADMIN");
+        boolean changed = false;
+        if (!wasAdmin) {
+            user.getRoles().add(roles.getAdminRole());
+            changed = true;
+        }
+        if (!hasRole(user, "ROLE_USER")) {
+            user.getRoles().add(roles.getUserRole());
+            changed = true;
+        }
+        if (changed) {
+            users.save(user);
+        }
+        return !wasAdmin;
+    }
+
+    private static boolean hasRole(User user, String roleName) {
+        return user.getRoles().stream().anyMatch(role -> roleName.equals(role.getName()));
+    }
+
     public User getUserById(Long id) {
         User u = new User();
         u.setUsername("User not found");

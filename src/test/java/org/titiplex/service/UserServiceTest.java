@@ -135,4 +135,34 @@ class UserServiceTest {
         assertTrue(updated.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getName())));
         assertTrue(updated.getRoles().stream().anyMatch(r -> "ROLE_LINGUIST".equals(r.getName())));
     }
+
+    private static org.titiplex.persistence.model.Role role(String name) {
+        org.titiplex.persistence.model.Role r = new org.titiplex.persistence.model.Role();
+        r.setName(name);
+        return r;
+    }
+
+    @Test
+    void grantAdminRole_addsAdminAndKeepsUserRole() {
+        org.titiplex.persistence.model.User user = new org.titiplex.persistence.model.User();
+        user.getRoles().add(role("ROLE_USER"));
+        when(rolesService.getAdminRole()).thenReturn(role("ROLE_ADMIN"));
+
+        assertTrue(userService.grantAdminRole(user));
+
+        assertTrue(user.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getName())));
+        assertTrue(user.getRoles().stream().anyMatch(r -> "ROLE_USER".equals(r.getName())));
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void grantAdminRole_doesNothingWhenAlreadyAdmin() {
+        org.titiplex.persistence.model.User user = new org.titiplex.persistence.model.User();
+        user.getRoles().add(role("ROLE_USER"));
+        user.getRoles().add(role("ROLE_ADMIN"));
+
+        assertFalse(userService.grantAdminRole(user));
+
+        verify(userRepository, never()).save(any());
+    }
 }

@@ -8,12 +8,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.titiplex.config.GlottologProperties;
 import org.titiplex.config.SecurityConfig;
 import org.titiplex.service.GlottologAdminService;
-import org.titiplex.service.GlottologUpdateJobService;
-import org.titiplex.service.GlottologUpdateService;
-import org.titiplex.service.LanguageImportService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
 
@@ -40,15 +36,7 @@ class AdminApiControllerWebMvcTest {
     @MockitoBean
     private ScenarioService scenarioService;
     @MockitoBean
-    private LanguageImportService languageImportService;
-    @MockitoBean
-    private GlottologUpdateService glottologUpdateService;
-    @MockitoBean
-    private GlottologUpdateJobService glottologUpdateJobService;
-    @MockitoBean
     private GlottologAdminService glottologAdminService;
-    @MockitoBean
-    private GlottologProperties glottologProperties;
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
@@ -75,14 +63,14 @@ class AdminApiControllerWebMvcTest {
 
     // csrf() is added so that the 403 really comes from the admin check, not from a missing CSRF token.
     @ParameterizedTest
-    @ValueSource(strings = {"/api/admin/glottolog/sync", "/api/admin/glottolog/update"})
+    @ValueSource(strings = {"/api/admin/glottolog/update/request"})
     void postActionsRejectNonAdmin(String url) throws Exception {
         mvc.perform(post(url).with(csrf()).with(user("bob").roles("USER")))
                 .andExpect(status().isForbidden());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/api/admin/glottolog/sync", "/api/admin/glottolog/update"})
+    @ValueSource(strings = {"/api/admin/glottolog/update/request"})
     void postActionsRejectAnonymous(String url) throws Exception {
         mvc.perform(post(url).with(csrf()))
                 .andExpect(status().isUnauthorized());

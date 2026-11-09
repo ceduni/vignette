@@ -7,9 +7,12 @@
 > (`next_run_at`, checksums, statuts, retries, verrous) appartient à Python
 > (`glottolog_pipeline_state`). Voir `scripts/glottolog_worker/`.
 >
-> L’ancien chemin Java (`ProcessBuilder`, `@Scheduled`, import CSV) reste dans le
-> code derrière `app.glottolog.legacy-pipeline-enabled=false` (désactivé par défaut)
-> jusqu’à validation E2E complète.
+> L’ancien chemin Java (`ProcessBuilder`, `@Scheduled`, import CSV :
+> `LanguageImportService`, `GlottologUpdateService`, `GlottologUpdateJobService`,
+> `GlottologScheduledUpdateService`) a été **supprimé** ; il reste consultable dans
+> l’historique git. Les sections plus bas qui citent ces classes décrivent donc
+> l’ancien fonctionnement. Le script `scripts/download_glottolog_languoid.py` est
+> conservé : le worker Python le réutilise.
 >
 > ### Lancer le worker (PostgreSQL requis)
 >

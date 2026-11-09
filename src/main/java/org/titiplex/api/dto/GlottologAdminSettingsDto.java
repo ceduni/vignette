@@ -48,8 +48,6 @@ public record GlottologAdminSettingsDto(
         @Schema(description = "Current retry count.")
         Integer retryCount,
 
-        @Schema(description = "True when the legacy Java pipeline is still enabled.")
-        boolean legacyPipelineEnabled,
 
         @Schema(description = "Minimum allowed frequency days.")
         int frequencyDaysMin,

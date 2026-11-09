@@ -12,8 +12,8 @@ import org.titiplex.persistence.repo.GlottologNotificationRepository;
 import org.titiplex.persistence.repo.GlottologPipelineStateRepository;
 import org.titiplex.persistence.repo.GlottologUpdateHistoryRepository;
 import org.titiplex.persistence.repo.GlottologUpdateRequestRepository;
+import org.titiplex.persistence.repo.LanguageRepository;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +25,7 @@ public class GlottologAdminService {
     private static final long PIPELINE_STATE_SINGLETON_ID = 1L;
 
     private final GlottologProperties glottologProperties;
-    private final GlottologUpdateService glottologUpdateService;
+    private final LanguageRepository languageRepository;
     private final GlottologAdminSettingsRepository settingsRepository;
     private final GlottologUpdateHistoryRepository historyRepository;
     private final GlottologPipelineStateRepository pipelineStateRepository;
@@ -34,7 +34,7 @@ public class GlottologAdminService {
 
     public GlottologAdminService(
             GlottologProperties glottologProperties,
-            GlottologUpdateService glottologUpdateService,
+            LanguageRepository languageRepository,
             GlottologAdminSettingsRepository settingsRepository,
             GlottologUpdateHistoryRepository historyRepository,
             GlottologPipelineStateRepository pipelineStateRepository,
@@ -42,7 +42,7 @@ public class GlottologAdminService {
             GlottologNotificationRepository notificationRepository
     ) {
         this.glottologProperties = glottologProperties;
-        this.glottologUpdateService = glottologUpdateService;
+        this.languageRepository = languageRepository;
         this.settingsRepository = settingsRepository;
         this.historyRepository = historyRepository;
         this.pipelineStateRepository = pipelineStateRepository;
@@ -151,90 +151,10 @@ public class GlottologAdminService {
                 .toList();
     }
 
-    /**
-     * Legacy Java due-check. Only used when legacy pipeline + Java scheduler are enabled.
-     */
+    /** Summary shown on the admin dashboard: languages currently in the database. */
     @Transactional(readOnly = true)
-    public boolean isScheduledUpdateDue(Instant now) {
-        if (!glottologProperties.isLegacyPipelineEnabled()) {
-            return false;
-        }
-        GlottologAdminSettings settings = loadOrCreateSettings();
-        if (!settings.isAutoUpdateEnabled() || settings.getFrequencyDays() == null || settings.getFrequencyDays() <= 0) {
-            return false;
-        }
-        Optional<GlottologUpdateHistory> lastSuccess =
-                historyRepository.findTop1ByStatusOrderByFinishedAtDesc(GlottologUpdateHistoryStatus.SUCCEEDED);
-        if (lastSuccess.isEmpty() || lastSuccess.get().getFinishedAt() == null) {
-            return true;
-        }
-        Instant next = lastSuccess.get().getFinishedAt().plusSeconds(settings.getFrequencyDays() * 86400L);
-        return !now.isBefore(next);
-    }
-
-    @Transactional
-    public long recordUpdateStarted(String username) {
-        GlottologUpdateHistory history = new GlottologUpdateHistory();
-        history.setTriggeredByUsername(username == null || username.isBlank() ? "admin" : username);
-        history.setStatus(GlottologUpdateHistoryStatus.RUNNING);
-        history.setStartedAt(Instant.now());
-        history.setGlottologVersion(glottologProperties.getVersion());
-        return historyRepository.save(history).getId();
-    }
-
-    @Transactional
-    public void recordUpdateSucceeded(long historyId, GlottologUpdateResultDto result) {
-        GlottologUpdateHistory history = historyRepository.findById(historyId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Glottolog history row not found."));
-
-        history.setStatus(GlottologUpdateHistoryStatus.SUCCEEDED);
-        history.setFinishedAt(Instant.now());
-        history.setErrorMessage(null);
-        if (result != null) {
-            history.setGlottologVersion(result.glottologVersion());
-            history.setDownloadDurationMs(result.downloadDurationMs());
-            if (result.sync() != null) {
-                history.setSyncDurationMs(result.sync().durationMs());
-                history.setSourceRows(result.sync().sourceRows());
-                history.setSelectedRows(result.sync().selectedRows());
-                history.setInsertedCount(result.sync().inserted());
-                history.setUpdatedCount(result.sync().updated());
-                history.setUnchangedCount(result.sync().unchanged());
-                history.setDatabaseCount(result.sync().databaseCount());
-            }
-        }
-    }
-
-    @Transactional
-    public void recordUpdateFailed(long historyId, String errorMessage) {
-        GlottologUpdateHistory history = historyRepository.findById(historyId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Glottolog history row not found."));
-
-        history.setStatus(GlottologUpdateHistoryStatus.FAILED);
-        history.setFinishedAt(Instant.now());
-        history.setErrorMessage(errorMessage);
-    }
-
-    public GlottologUpdateResultDto runImmediateUpdate(String username) throws IOException {
-        assertLegacyPipelineEnabled();
-        long historyId = recordUpdateStarted(username);
-        try {
-            GlottologUpdateResultDto result = glottologUpdateService.downloadAndSync();
-            recordUpdateSucceeded(historyId, result);
-            return result;
-        } catch (IOException | RuntimeException ex) {
-            recordUpdateFailed(historyId, ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage());
-            throw ex;
-        }
-    }
-
-    private void assertLegacyPipelineEnabled() {
-        if (!glottologProperties.isLegacyPipelineEnabled()) {
-            throw new ResponseStatusException(
-                    HttpStatus.GONE,
-                    "Legacy Java Glottolog pipeline is disabled. Deposit a manual update request instead."
-            );
-        }
+    public GlottologImportPreviewDto preview() {
+        return new GlottologImportPreviewDto(languageRepository.count());
     }
 
     private int validateFrequencyDays(int days) {
@@ -305,7 +225,6 @@ public class GlottologAdminService {
                 pipeline == null ? null : pipeline.getLastImportedChecksum(),
                 pipeline == null ? null : pipeline.getLastError(),
                 pipeline == null ? null : pipeline.getRetryCount(),
-                glottologProperties.isLegacyPipelineEnabled(),
                 glottologProperties.getFrequencyDaysMin(),
                 glottologProperties.getFrequencyDaysMax(),
                 settings.getNotificationEmail()
