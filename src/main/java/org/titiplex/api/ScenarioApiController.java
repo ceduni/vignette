@@ -13,6 +13,11 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.ConflictResponse;
+import org.titiplex.api.docs.ForbiddenResponse;
+import org.titiplex.api.docs.NotFoundResponse;
+import org.titiplex.api.docs.UnauthorizedResponse;
 import org.titiplex.security.AuthUtils;
 import org.springframework.web.bind.annotation.*;
 import org.titiplex.api.dto.*;
@@ -23,6 +28,7 @@ import org.titiplex.api.security.UserOperation;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.service.LanguageService;
 import org.titiplex.service.ScenarioHistoryService;
+import org.titiplex.service.ScenarioForkService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
 
@@ -40,17 +46,20 @@ public class ScenarioApiController {
     private final UserService userService;
     private final LanguageService languageService;
     private final ScenarioHistoryService scenarioHistoryService;
+    private final ScenarioForkService scenarioForks;
 
     public ScenarioApiController(
             ScenarioService scenarioService,
             UserService userService,
             LanguageService languageService,
-            ScenarioHistoryService scenarioHistoryService
+            ScenarioHistoryService scenarioHistoryService,
+            ScenarioForkService scenarioForks
     ) {
         this.scenarioService = scenarioService;
         this.userService = userService;
         this.languageService = languageService;
         this.scenarioHistoryService = scenarioHistoryService;
+        this.scenarioForks = scenarioForks;
     }
 
     /**
@@ -67,6 +76,11 @@ public class ScenarioApiController {
             description = "Creates a new scenario for the authenticated user."
     )
     @UserOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
+    @ConflictResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "201",
@@ -79,31 +93,6 @@ public class ScenarioApiController {
                                     value = "{\"id\": 42}"
                             )
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid input : missing required fields, unknown language ID, or duplicate scenario",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "User not authenticated",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Access denied : USER role required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "Conflict : scenario with same title, language, and author already exists",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping
@@ -156,6 +145,7 @@ public class ScenarioApiController {
             description = "Retrieves detailed information about a specific scenario including its thumbnails and metadata."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -164,11 +154,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ScenarioDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}")
@@ -199,6 +184,7 @@ public class ScenarioApiController {
             description = "Returns the chronological list of edits made to a scenario (metadata, storyboard, thumbnails, audio, publish events), most recent first. Visible to anyone who can view the scenario."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -207,11 +193,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioHistoryEntryDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}/history")
@@ -275,6 +256,7 @@ public class ScenarioApiController {
                     """
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -283,11 +265,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language family not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/by-family/{familyId}")
@@ -309,6 +286,7 @@ public class ScenarioApiController {
                     """
     )
     @PublicOperation
+    @BadRequestResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -317,11 +295,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid country code",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/by-country/{isoA3}")
@@ -351,6 +324,10 @@ public class ScenarioApiController {
     @OwnerOrAdminOperation(
             resource = ProtectedResource.SCENARIO
     )
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -359,26 +336,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ScenarioDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid storyboard settings",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "User is not allowed to edit this scenario",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PatchMapping("/{id}/storyboard")
@@ -428,6 +385,9 @@ public class ScenarioApiController {
     @OwnerOrAdminOperation(
             resource = ProtectedResource.SCENARIO_AUTHOR_ONLY
     )
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -436,21 +396,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ScenarioDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "User is not the original author, or fork review is pending/rejected",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping("/{id}/publish")
@@ -477,6 +422,10 @@ public class ScenarioApiController {
                     """
     )
     @UserOperation
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
+    @ConflictResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -485,26 +434,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ScenarioDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Only the original author can approve this fork",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "Scenario is not a fork pending review",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping("/{id}/review/approve")
@@ -523,7 +452,7 @@ public class ScenarioApiController {
             Authentication auth
     ) {
         String comment = body != null ? body.comment() : null;
-        return scenarioService.toDto(scenarioService.reviewFork(id, true, comment, auth));
+        return scenarioService.toDto(scenarioForks.reviewFork(id, true, comment, auth));
     }
 
     @Operation(
@@ -535,6 +464,10 @@ public class ScenarioApiController {
                     """
     )
     @UserOperation
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
+    @ConflictResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -543,26 +476,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ScenarioDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Only the original author can reject this fork",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "Scenario is not a fork pending review",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping("/{id}/review/reject")
@@ -581,7 +494,7 @@ public class ScenarioApiController {
             Authentication auth
     ) {
         String comment = body != null ? body.comment() : null;
-        return scenarioService.toDto(scenarioService.reviewFork(id, false, comment, auth));
+        return scenarioService.toDto(scenarioForks.reviewFork(id, false, comment, auth));
     }
 
     @Schema(name = "ReviewRequest", description = "Optional comment attached to a fork review decision")
@@ -592,6 +505,7 @@ public class ScenarioApiController {
             description = "Returns all scenarios authored by the current authenticated user, including drafts."
     )
     @UserOperation
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -600,11 +514,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/mine")
@@ -620,6 +529,7 @@ public class ScenarioApiController {
             description = "Returns all scenarios where the current authenticated user is an accepted collaborator (not the author)."
     )
     @UserOperation
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -628,11 +538,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/shared-with-me")
@@ -648,6 +553,7 @@ public class ScenarioApiController {
             description = "Returns all published scenarios where the given user is the author or an accepted collaborator. Drafts are always excluded."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -656,11 +562,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "User not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/by-author/{username}")
@@ -682,6 +583,10 @@ public class ScenarioApiController {
     @OwnerOrAdminOperation(
             resource = ProtectedResource.SCENARIO
     )
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -690,26 +595,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ScenarioDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid metadata payload",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "User is not allowed to edit this scenario",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PatchMapping("/{id}/metadata")
@@ -735,25 +620,13 @@ public class ScenarioApiController {
     @OwnerOrAdminOperation(
             resource = ProtectedResource.SCENARIO_AUTHOR_ONLY
     )
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "204",
                     description = "Scenario deleted successfully"
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "User not authenticated",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Forbidden : user is not the owner or admin",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @DeleteMapping("/{id}")
@@ -776,6 +649,9 @@ public class ScenarioApiController {
             description = "Creates a copy of a published scenario for the authenticated user."
     )
     @UserOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "201",
@@ -784,21 +660,6 @@ public class ScenarioApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = CreateScenarioResponse.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Scenario is not published",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping("/{id}/fork")
@@ -818,7 +679,7 @@ public class ScenarioApiController {
             Authentication auth
     ) {
         String requestedTitle = req != null ? req.title() : null;
-        Long forkId = scenarioService.forkScenario(id, requestedTitle, auth).getId();
+        Long forkId = scenarioForks.forkScenario(id, requestedTitle, auth).getId();
         return new CreateScenarioResponse(forkId);
     }
 }

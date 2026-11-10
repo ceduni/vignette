@@ -16,6 +16,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.ForbiddenResponse;
+import org.titiplex.api.docs.NotFoundResponse;
+import org.titiplex.api.docs.UnauthorizedResponse;
 import org.titiplex.api.dto.ApiError;
 import org.titiplex.api.dto.ThumbnailRowDto;
 import org.titiplex.api.dto.UpdateThumbnailLayoutRequest;
@@ -29,6 +33,7 @@ import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
 import org.titiplex.service.ScenarioHistoryService;
+import org.titiplex.service.ScenarioAccessService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
@@ -46,17 +51,20 @@ public class ThumbnailApiController {
     private final ThumbnailService thumbnailService;
     private final UserService userService;
     private final ScenarioService scenarioService;
+    private final ScenarioAccessService scenarioAccess;
     private final ScenarioHistoryService scenarioHistoryService;
 
     public ThumbnailApiController(
             ThumbnailService thumbnailService,
             UserService userService,
             ScenarioService scenarioService,
+            ScenarioAccessService scenarioAccess,
             ScenarioHistoryService scenarioHistoryService
     ) {
         this.thumbnailService = thumbnailService;
         this.userService = userService;
         this.scenarioService = scenarioService;
+        this.scenarioAccess = scenarioAccess;
         this.scenarioHistoryService = scenarioHistoryService;
     }
 
@@ -71,6 +79,7 @@ public class ThumbnailApiController {
             description = "Returns all thumbnails associated with a specific scenario, ordered by their index."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -83,11 +92,6 @@ public class ThumbnailApiController {
                                     value = "[{\"id\": 1, \"title\": \"Scene 1\", \"idx\": 1}, {\"id\": 2, \"title\": \"Scene 2\", \"idx\": 2}]"
                             )
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/scenarios/{scenarioId}/thumbnails")
@@ -102,7 +106,7 @@ public class ThumbnailApiController {
             Authentication auth
     ) {
         Scenario scenario = scenarioService.getRequiredScenario(scenarioId);
-        scenarioService.assertCanViewScenario(scenario, auth);
+        scenarioAccess.assertCanViewScenario(scenario, auth);
 
         return thumbnailService.listByScenarioId(scenarioId).stream()
                 .map(t -> new ThumbnailRowDto(
@@ -142,6 +146,10 @@ public class ThumbnailApiController {
             resource = ProtectedResource.SCENARIO,
             param = "scenarioId"
     )
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "201",
@@ -154,26 +162,6 @@ public class ThumbnailApiController {
                                     value = "{\"id\": 42}"
                             )
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid input : missing or empty image file",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "User not authenticated",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Forbidden : user is not the scenario owner or admin",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Scenario not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             ),
             @ApiResponse(
                     responseCode = "415",
@@ -222,7 +210,7 @@ public class ThumbnailApiController {
 
         User user = userService.getUserByUsername(auth.getName());
         Scenario scenario = scenarioService.getRequiredScenario(scenarioId);
-        scenarioService.assertCanEditScenario(scenario, auth);
+        scenarioAccess.assertCanEditScenario(scenario, auth);
 
         Thumbnail saved = thumbnailService.save(title, image, scenario, user);
 
@@ -274,7 +262,7 @@ public class ThumbnailApiController {
     ) {
         var thumbnail = thumbnailService.getThumbnailById(id);
         var scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
-        scenarioService.assertCanViewScenario(scenario, auth);
+        scenarioAccess.assertCanViewScenario(scenario, auth);
         var media = thumbnailService.loadContent(id);
 
         return ResponseEntity.ok()
@@ -302,6 +290,10 @@ public class ThumbnailApiController {
     @OwnerOrAdminOperation(
             resource = ProtectedResource.THUMBNAIL
     )
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -310,26 +302,6 @@ public class ThumbnailApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ThumbnailRowDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid layout request",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "User is not allowed to edit this thumbnail layout",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Thumbnail or parent scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PatchMapping("/thumbnails/{id}/layout")
@@ -366,7 +338,7 @@ public class ThumbnailApiController {
     ) {
         Thumbnail thumbnail = thumbnailService.getThumbnailById(id);
         Scenario scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
-        scenarioService.assertCanEditScenario(scenario, auth);
+        scenarioAccess.assertCanEditScenario(scenario, auth);
 
         Thumbnail saved = thumbnailService.updateLayout(id, req);
 
@@ -392,7 +364,7 @@ public class ThumbnailApiController {
     public List<ThumbnailRowDto> reorder(@PathVariable Long scenarioId,
             @RequestBody ReorderRequest request, Authentication auth) {
         Scenario scenario = scenarioService.getRequiredScenario(scenarioId);
-        scenarioService.assertCanEditScenario(scenario, auth);
+        scenarioAccess.assertCanEditScenario(scenario, auth);
         var rows = thumbnailService.reorder(scenarioId, request.thumbnailIds());
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
         scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.THUMBNAIL_UPDATED, "Reordered scenes");
@@ -409,7 +381,7 @@ public class ThumbnailApiController {
     ) {
         Thumbnail thumbnail = thumbnailService.getThumbnailById(id);
         Scenario scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
-        scenarioService.assertCanEditScenario(scenario, auth);
+        scenarioAccess.assertCanEditScenario(scenario, auth);
 
         Thumbnail saved = thumbnailService.updateTitle(id, req.title());
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
@@ -435,11 +407,11 @@ public class ThumbnailApiController {
     @OwnerOrAdminOperation(
             resource = ProtectedResource.THUMBNAIL
     )
+    @UnauthorizedResponse
+    @ForbiddenResponse
+    @NotFoundResponse
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Thumbnail successfully deleted"),
-            @ApiResponse(responseCode = "401", description = "Authentication required", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden : not the scenario owner or admin", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Thumbnail not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "204", description = "Thumbnail successfully deleted")
     })
     @DeleteMapping("/thumbnails/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -453,7 +425,7 @@ public class ThumbnailApiController {
         Thumbnail thumbnail = thumbnailService.getThumbnailById(id);
         Long scenarioId = thumbnail.getScenarioId();
 
-        scenarioService.assertCanEditScenarioById(scenarioId, auth);
+        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
         thumbnailService.delete(id);
 
         Long actorId = userService.getUserByUsername(auth.getName()).getId();

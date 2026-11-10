@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.titiplex.api.docs.BadRequestResponse;
 import org.titiplex.api.dto.ApiError;
 import org.titiplex.api.dto.ScenarioTagSuggestionDto;
 import org.titiplex.api.security.PublicOperation;
@@ -40,6 +41,7 @@ public class ScenarioTagApiController {
                     """
     )
     @PublicOperation
+    @BadRequestResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -49,13 +51,6 @@ public class ScenarioTagApiController {
                             array = @ArraySchema(
                                     schema = @Schema(implementation = ScenarioTagSuggestionDto.class)
                             )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid query parameters",
-                    content = @Content(
-                            schema = @Schema(implementation = ApiError.class)
                     )
             ),
             @ApiResponse(

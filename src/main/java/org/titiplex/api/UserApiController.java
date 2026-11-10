@@ -11,7 +11,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.titiplex.api.dto.ApiError;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.NotFoundResponse;
+import org.titiplex.api.docs.UnauthorizedResponse;
 import org.titiplex.api.dto.PublicUserProfileResponse;
 import org.titiplex.api.dto.UpdateUserProfileRequest;
 import org.titiplex.api.dto.UserProfileResponse;
@@ -50,6 +52,8 @@ public class UserApiController {
             description = "Returns the complete private profile of the current authenticated user."
     )
     @AuthenticatedOperation
+    @UnauthorizedResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -75,16 +79,6 @@ public class UserApiController {
                                             """
                             )
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "User not authenticated",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Authenticated user not found in database",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/me/profile")
@@ -112,6 +106,9 @@ public class UserApiController {
             description = "Updates the private profile of the current authenticated user."
     )
     @AuthenticatedOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -120,21 +117,6 @@ public class UserApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = UserProfileResponse.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid input : malformed request data",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "User not authenticated",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Authenticated user not found in database",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PutMapping("/me/profile")
@@ -197,6 +179,7 @@ public class UserApiController {
             description = "Returns the public profile of a user."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -220,11 +203,6 @@ public class UserApiController {
                                             """
                             )
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "User not found or profile is not public",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}/profile")

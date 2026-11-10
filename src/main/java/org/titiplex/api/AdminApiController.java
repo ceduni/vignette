@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.ForbiddenResponse;
 import org.titiplex.api.dto.*;
 import org.titiplex.api.security.AdminOperation;
 import org.titiplex.persistence.model.Role;
@@ -44,16 +46,12 @@ public class AdminApiController {
             description = "Returns global counters for the administration dashboard."
     )
     @AdminOperation
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Overview retrieved successfully",
                     content = @Content(schema = @Schema(implementation = AdminOverviewDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/overview")
@@ -77,6 +75,7 @@ public class AdminApiController {
             description = "Returns all users for administration purposes."
     )
     @AdminOperation
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -85,11 +84,6 @@ public class AdminApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = AdminUserRowDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/users")
@@ -112,6 +106,7 @@ public class AdminApiController {
             description = "Returns all scenarios for administration purposes, including drafts."
     )
     @AdminOperation
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -120,11 +115,6 @@ public class AdminApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/scenarios")
@@ -140,21 +130,13 @@ public class AdminApiController {
             description = "Replaces the roles of a given user. Admin only."
     )
     @AdminOperation
+    @BadRequestResponse
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "User roles updated successfully",
                     content = @Content(schema = @Schema(implementation = AdminUserRowDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid request",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PatchMapping("/users/{id}/roles")
@@ -181,21 +163,13 @@ public class AdminApiController {
             description = "Updates scenario visibility for administration purposes. Admin only."
     )
     @AdminOperation
+    @BadRequestResponse
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Scenario visibility updated successfully",
                     content = @Content(schema = @Schema(implementation = ScenarioDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid request",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PatchMapping("/scenarios/{id}/visibility")
@@ -212,16 +186,12 @@ public class AdminApiController {
             description = "Returns the number of languages currently in the database (imported by the Python worker)."
     )
     @AdminOperation
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Preview generated successfully",
                     content = @Content(schema = @Schema(implementation = GlottologImportPreviewDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/glottolog/preview")

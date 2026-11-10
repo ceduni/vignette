@@ -1,11 +1,16 @@
 package org.titiplex.service;
 
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.titiplex.persistence.model.*;
 import org.titiplex.persistence.repo.*;
 
 import java.time.Instant;
 import java.util.List;
+
+import static org.titiplex.security.AuthUtils.authenticatedUsername;
+import static org.titiplex.security.AuthUtils.isAdmin;
 
 @Service
 public class CommunityService {
@@ -204,8 +209,37 @@ public class CommunityService {
         );
     }
 
-    public boolean isScenarioOwner(Long scenarioId, String username) {
-        return scenarioRepository.existsByIdAndAuthorUsername(scenarioId, username);
+    /**
+     * Who may read and manage accreditations (requests, grants) for a scope:
+     * <ul>
+     *   <li>GLOBAL, LANGUAGE, LANGUAGE_FAMILY: admins only;</li>
+     *   <li>SCENARIO: admins, and the author of that scenario.</li>
+     * </ul>
+     */
+    public boolean canManageAccreditations(AccreditationScopeType scopeType, String targetId, Authentication auth) {
+        if (isAdmin(auth)) {
+            return scopeType != null;
+        }
+        if (scopeType != AccreditationScopeType.SCENARIO || targetId == null || targetId.isBlank()) {
+            return false;
+        }
+        String username = authenticatedUsername(auth);
+        if (username == null) {
+            return false;
+        }
+        try {
+            return scenarioRepository.existsByIdAndAuthorUsername(Long.parseLong(targetId.trim()), username);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /** Throws 403 with {@code deniedMessage} unless {@link #canManageAccreditations} allows it. */
+    public void assertCanManageAccreditations(AccreditationScopeType scopeType, String targetId,
+                                              Authentication auth, String deniedMessage) {
+        if (!canManageAccreditations(scopeType, targetId, auth)) {
+            throw new AccessDeniedException(deniedMessage);
+        }
     }
 
     private void validateTarget(DiscussionTargetType targetType, String targetId) {

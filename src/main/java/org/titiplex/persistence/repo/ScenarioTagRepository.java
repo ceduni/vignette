@@ -11,8 +11,6 @@ public interface ScenarioTagRepository extends JpaRepository<ScenarioTag, Long> 
 
     Optional<ScenarioTag> findByNormalizedName(String normalizedName);
 
-    boolean existsByNormalizedName(String normalizedName);
-
     @Query("""
             select t
             from ScenarioTag t

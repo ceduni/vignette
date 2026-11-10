@@ -31,8 +31,6 @@ public interface AudioRepository extends JpaRepository<Audio, Long> {
 
     List<Audio> findByScenarioIdAndScopeOrderByIdxAscIdAsc(Long scenarioId, AudioScope scope);
 
-    List<Audio> findAllByLanguageId(String languageId);
-
     @Query("""
             select a
             from Audio a

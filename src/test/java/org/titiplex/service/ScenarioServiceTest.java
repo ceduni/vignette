@@ -83,8 +83,19 @@ class ScenarioServiceTest {
     @Mock
     private FileStorageService storage;
 
-    @InjectMocks
     private ScenarioService scenarioService;
+    private ScenarioForkService forks;
+
+    /** Real access rules on top of the mocked repositories, so service tests exercise them too. */
+    @org.junit.jupiter.api.BeforeEach
+    void wireService() {
+        ScenarioAccessService access = new ScenarioAccessService(scenarioRepository, userService, collaboratorRepo);
+        scenarioService = new ScenarioService(
+                scenarioRepository, userService, languageService, scenarioTagService, notificationService,
+                thumbnailRepo, audioRepo, collaboratorRepo, scenarioHistoryService, likeRepo, bookmarkRepo,
+                inviteLinkRepo, historyRepo, thumbnailService, storage, access);
+        forks = new ScenarioForkService(scenarioRepository, scenarioService, userService, notificationService, thumbnailRepo, audioRepo);
+    }
 
     @Test
     void createScenario_buildsScenarioWithAuthorAndLanguage() {
@@ -168,7 +179,7 @@ class ScenarioServiceTest {
             return copy;
         });
 
-        Scenario fork = scenarioService.forkScenario(3L, "My copy", auth);
+        Scenario fork = forks.forkScenario(3L, "My copy", auth);
 
         assertEquals(115L, fork.getActiveBackgroundAudioId());
     }
@@ -199,7 +210,7 @@ class ScenarioServiceTest {
         when(audioRepo.findByThumbnailIdOrderByIdxAsc(8L)).thenReturn(List.of(sceneAudio));
         when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(3L, AudioScope.BACKGROUND)).thenReturn(List.of());
 
-        scenarioService.forkScenario(3L, "My copy", auth);
+        forks.forkScenario(3L, "My copy", auth);
 
         org.mockito.ArgumentCaptor<Audio> captor = org.mockito.ArgumentCaptor.forClass(Audio.class);
         verify(audioRepo).save(captor.capture());
@@ -254,7 +265,7 @@ class ScenarioServiceTest {
         when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(3L, AudioScope.BACKGROUND))
                 .thenReturn(List.of(background));
 
-        scenarioService.forkScenario(3L, "My copy", auth);
+        forks.forkScenario(3L, "My copy", auth);
 
         org.mockito.ArgumentCaptor<Audio> captor = org.mockito.ArgumentCaptor.forClass(Audio.class);
         verify(audioRepo).save(captor.capture());
@@ -434,63 +445,6 @@ class ScenarioServiceTest {
     }
 
     @Test
-    void hasContentEditAccess_trueOncePublishedForAuthor() {
-        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
-
-        assertEquals(true, scenarioService.hasContentEditAccess(3L, "alice"));
-    }
-
-    @Test
-    void hasContentEditAccess_trueForAuthorWhileDraft() {
-        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
-
-        assertEquals(true, scenarioService.hasContentEditAccess(3L, "alice"));
-    }
-
-    @Test
-    void hasEditAccess_stillTrueForAuthorOncePublished() {
-        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
-
-        assertEquals(true, scenarioService.hasEditAccess(3L, "alice"));
-    }
-
-    @Test
-    void assertCanEditScenario_allowsAuthorOncePublished() {
-        Authentication auth = authOf("alice", "ROLE_USER");
-        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
-
-        Scenario scenario = new Scenario();
-        scenario.setId(3L);
-        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
-
-        assertDoesNotThrow(() -> scenarioService.assertCanEditScenario(scenario, auth));
-    }
-
-    @Test
-    void assertCanEditScenario_allowsAdminEvenWhenPublished() {
-        Authentication auth = authOf("admin", "ROLE_ADMIN");
-
-        Scenario scenario = new Scenario();
-        scenario.setId(3L);
-        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
-
-        assertDoesNotThrow(() -> scenarioService.assertCanEditScenario(scenario, auth));
-    }
-
-    @Test
-    void assertCanEditScenario_allowsAuthorWhileDraft() {
-        Authentication auth = authOf("alice", "ROLE_USER");
-
-        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
-
-        Scenario scenario = new Scenario();
-        scenario.setId(3L);
-        scenario.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
-
-        assertDoesNotThrow(() -> scenarioService.assertCanEditScenario(scenario, auth));
-    }
-
-    @Test
     void listPublishedScenariosWorkedOnByUsername_throwsWhenUserNotFound() {
         when(userService.getUserByUsername("ghost")).thenReturn(null);
 
@@ -650,45 +604,6 @@ class ScenarioServiceTest {
     }
 
     @Test
-    void assertCanDeleteScenario_allowsAuthor() {
-        Authentication auth = authOf("alice", "ROLE_USER");
-
-        Scenario scenario = new Scenario();
-        scenario.setId(42L);
-        scenario.setAuthor_id(1L);
-
-        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "alice")).thenReturn(true);
-
-        assertDoesNotThrow(() -> scenarioService.assertCanDeleteScenario(scenario, auth));
-    }
-
-    @Test
-    void assertCanDeleteScenario_deniesAcceptedEditorCollaborator() {
-        Authentication auth = authOf("bob", "ROLE_USER");
-
-        Scenario scenario = new Scenario();
-        scenario.setId(42L);
-        scenario.setAuthor_id(1L);
-
-        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "bob")).thenReturn(false);
-
-        assertThrows(AccessDeniedException.class, () -> scenarioService.assertCanDeleteScenario(scenario, auth));
-    }
-
-    @Test
-    void assertCanDeleteScenario_deniesUserWithNoRelationToScenario() {
-        Authentication auth = authOf("stranger", "ROLE_USER");
-
-        Scenario scenario = new Scenario();
-        scenario.setId(42L);
-        scenario.setAuthor_id(1L);
-
-        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "stranger")).thenReturn(false);
-
-        assertThrows(AccessDeniedException.class, () -> scenarioService.assertCanDeleteScenario(scenario, auth));
-    }
-
-    @Test
     void deleteScenario_keepsSharedBackgroundAudioFile() {
         Authentication auth = authOf("alice", "ROLE_USER");
         Scenario scenario = new Scenario();
@@ -701,7 +616,7 @@ class ScenarioServiceTest {
 
         when(scenarioRepository.findByIdWithTags(42L)).thenReturn(Optional.of(scenario));
         when(scenarioRepository.existsByIdAndAuthorUsername(42L, "alice")).thenReturn(true);
-        when(thumbnailRepo.getThumbnailsByScenarioId(42L)).thenReturn(List.of());
+        when(thumbnailRepo.findByScenarioIdOrderByIdxAsc(42L)).thenReturn(List.of());
         when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(42L, AudioScope.BACKGROUND))
                 .thenReturn(List.of(audio));
         when(audioRepo.existsByStoragePathAndIdNot("audios/shared-background.webm", 15L)).thenReturn(true);

@@ -641,4 +641,49 @@ class CommunityServiceTest {
         assertEquals(AccreditationScopeType.SCENARIO, created.getScopeType());
         assertEquals("12", created.getTargetId());
     }
+
+    // ── Who may manage accreditations ──────────────────────────────────
+
+    private static org.springframework.security.core.Authentication user(String name, String... roles) {
+        return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(name, "n/a",
+                java.util.Arrays.stream(roles).map(org.springframework.security.core.authority.SimpleGrantedAuthority::new).toList());
+    }
+
+    @Test
+    void canManageAccreditations_adminForEveryScope() {
+        var admin = user("root", "ROLE_ADMIN");
+        for (AccreditationScopeType scope : AccreditationScopeType.values()) {
+            assertTrue(service.canManageAccreditations(scope, "9", admin), scope.name());
+        }
+    }
+
+    @Test
+    void canManageAccreditations_scenarioAuthorOnlyForTheirScenario() {
+        var owner = user("owner", "ROLE_USER");
+        when(scenarioRepository.existsByIdAndAuthorUsername(9L, "owner")).thenReturn(true);
+
+        assertTrue(service.canManageAccreditations(AccreditationScopeType.SCENARIO, "9", owner));
+        assertFalse(service.canManageAccreditations(AccreditationScopeType.GLOBAL, null, owner));
+        assertFalse(service.canManageAccreditations(AccreditationScopeType.LANGUAGE, "fra", owner));
+    }
+
+    @Test
+    void canManageAccreditations_deniesStrangerAndBadTarget() {
+        var stranger = user("stranger", "ROLE_USER");
+        when(scenarioRepository.existsByIdAndAuthorUsername(9L, "stranger")).thenReturn(false);
+
+        assertFalse(service.canManageAccreditations(AccreditationScopeType.SCENARIO, "9", stranger));
+        assertFalse(service.canManageAccreditations(AccreditationScopeType.SCENARIO, "not-a-number", stranger));
+        assertFalse(service.canManageAccreditations(AccreditationScopeType.SCENARIO, null, stranger));
+        assertFalse(service.canManageAccreditations(AccreditationScopeType.SCENARIO, "9", null));
+    }
+
+    @Test
+    void assertCanManageAccreditations_throwsWithTheGivenMessage() {
+        var stranger = user("stranger", "ROLE_USER");
+
+        var ex = assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> service.assertCanManageAccreditations(AccreditationScopeType.GLOBAL, null, stranger, "Nope"));
+        assertEquals("Nope", ex.getMessage());
+    }
 }

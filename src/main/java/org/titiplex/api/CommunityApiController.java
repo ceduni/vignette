@@ -8,11 +8,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
-import org.titiplex.security.AuthUtils;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.ForbiddenResponse;
+import org.titiplex.api.docs.NotFoundResponse;
+import org.titiplex.api.docs.UnauthorizedResponse;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.titiplex.api.dto.*;
 import org.titiplex.api.security.PublicOperation;
 import org.titiplex.api.security.UserOperation;
@@ -57,6 +58,8 @@ public class CommunityApiController {
                     """
     )
     @PublicOperation
+    @BadRequestResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -65,16 +68,6 @@ public class CommunityApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = DiscussionMessageDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid discussion target type or target id",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Discussion target does not exist",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/discussions")
@@ -106,6 +99,8 @@ public class CommunityApiController {
                     """
     )
     @UserOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -114,16 +109,6 @@ public class CommunityApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = DiscussionMessageDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid request body, unknown target, invalid parent message, or blank content",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping("/discussions")
@@ -183,6 +168,8 @@ public class CommunityApiController {
                     """
     )
     @UserOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -191,16 +178,6 @@ public class CommunityApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = AccreditationRequestDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid scope, missing scenarioId, blank motivation, or duplicate pending request",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping("/accreditation-requests")
@@ -250,6 +227,9 @@ public class CommunityApiController {
                     """
     )
     @UserOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -258,21 +238,6 @@ public class CommunityApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = AccreditationRequestDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid scope or missing scenarioId",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Not allowed to read accreditation requests for this scope",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/accreditation-requests")
@@ -300,9 +265,7 @@ public class CommunityApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        if (!canManage(scopeType, targetId, auth)) {
-            throw forbidden("Not allowed to read these accreditation requests");
-        }
+        communityService.assertCanManageAccreditations(scopeType, targetId, auth, "Not allowed to read these accreditation requests");
 
         return communityService.listRequests(permissionType, scopeType, targetId).stream().map(this::toDto).toList();
     }
@@ -318,6 +281,9 @@ public class CommunityApiController {
                     """
     )
     @UserOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -326,21 +292,6 @@ public class CommunityApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = AccreditationRequestDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Unknown request or request already reviewed",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Not allowed to review this accreditation request",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping("/accreditation-requests/{requestId}/review")
@@ -376,9 +327,7 @@ public class CommunityApiController {
         Long reviewerUserId = userService.getUserByUsername(auth.getName()).getId();
         AccreditationRequest request = communityService.getRequest(requestId);
 
-        if (!canManage(request.getScopeType(), request.getTargetId(), auth)) {
-            throw forbidden("Not allowed to review this request");
-        }
+        communityService.assertCanManageAccreditations(request.getScopeType(), request.getTargetId(), auth, "Not allowed to review this request");
 
         AccreditationRequest reviewed = communityService.reviewRequest(requestId, reviewerUserId, req.approved(), req.reviewNote());
         return toDto(reviewed);
@@ -395,6 +344,9 @@ public class CommunityApiController {
                     """
     )
     @UserOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -403,21 +355,6 @@ public class CommunityApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = CommunityAccreditationDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid scope or missing scenarioId",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Not allowed to list accreditations for this scope",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/accreditations")
@@ -445,9 +382,7 @@ public class CommunityApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        if (!canManage(scopeType, targetId, auth)) {
-            throw forbidden("Not allowed to list accreditations for this scope");
-        }
+        communityService.assertCanManageAccreditations(scopeType, targetId, auth, "Not allowed to list accreditations for this scope");
         return communityService.listAccreditations(permissionType, scopeType, targetId).stream().map(this::toDto).toList();
     }
 
@@ -462,6 +397,9 @@ public class CommunityApiController {
                     """
     )
     @UserOperation
+    @BadRequestResponse
+    @UnauthorizedResponse
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -470,21 +408,6 @@ public class CommunityApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = CommunityAccreditationDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid scope, missing scenarioId, or unknown target user",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Not allowed to grant accreditation for this scope",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PostMapping("/accreditations")
@@ -513,9 +436,7 @@ public class CommunityApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        if (!canManage(req.scopeType(), req.targetId(), auth)) {
-            throw forbidden("Not allowed to grant accreditation for this scope");
-        }
+        communityService.assertCanManageAccreditations(req.scopeType(), req.targetId(), auth, "Not allowed to grant accreditation for this scope");
         Long granterUserId = userService.getUserByUsername(auth.getName()).getId();
         CommunityAccreditation created = communityService.grantAccreditation(
                 req.userId(),
@@ -526,41 +447,6 @@ public class CommunityApiController {
                 req.note()
         );
         return toDto(created);
-    }
-
-    private boolean canManage(AccreditationScopeType scopeType,
-                              String targetId,
-                              Authentication auth) {
-        boolean isAdmin = AuthUtils.isAdmin(auth);
-
-        if (scopeType == AccreditationScopeType.GLOBAL) {
-            return isAdmin;
-        }
-
-        if (scopeType == AccreditationScopeType.SCENARIO) {
-            if (isAdmin) return true;
-            if (targetId == null || targetId.isBlank()) return false;
-            try {
-                Long scenarioId = Long.parseLong(targetId);
-                return communityService.isScenarioOwner(scenarioId, auth.getName());
-            } catch (NumberFormatException e) {
-                return false;
-            }
-        }
-
-        if (scopeType == AccreditationScopeType.LANGUAGE || scopeType == AccreditationScopeType.LANGUAGE_FAMILY) {
-            return isAdmin;
-        }
-
-        return false;
-    }
-
-    private boolean canReview(AccreditationScopeType scopeType, Long scenarioId, Authentication auth) {
-        boolean isAdmin = AuthUtils.isAdmin(auth);
-        if (scopeType == AccreditationScopeType.GLOBAL) {
-            return isAdmin;
-        }
-        return isAdmin || (scenarioId != null && communityService.isScenarioOwner(scenarioId, auth.getName()));
     }
 
     private DiscussionMessageDto toDto(DiscussionMessage message) {
@@ -610,9 +496,5 @@ public class CommunityApiController {
                 accreditation.getGrantedAt(),
                 accreditation.getNote()
         );
-    }
-
-    private ResponseStatusException forbidden(String message) {
-        return new ResponseStatusException(HttpStatus.FORBIDDEN, message);
     }
 }

@@ -15,9 +15,6 @@ public interface ThumbnailRepository extends JpaRepository<Thumbnail, Long> {
      */
     @Query(value = "SELECT id FROM thumbnail WHERE id = :id FOR UPDATE", nativeQuery = true)
     Long lockById(@Param("id") Long id);
-    List<Thumbnail> findByTitle(String title);
-
-    List<Thumbnail> getThumbnailsByScenarioId(Long scenarioId);
 
     List<Thumbnail> findByScenarioIdOrderByIdxAsc(Long scenarioId);
 

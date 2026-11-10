@@ -36,6 +36,9 @@ class ScenarioApiControllerTest {
     private ScenarioService scenarioService;
 
     @Mock
+    private org.titiplex.service.ScenarioForkService scenarioForks;
+
+    @Mock
     private UserService userService;
 
     @Mock
@@ -244,7 +247,7 @@ class ScenarioApiControllerTest {
                 "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null, false, null
         );
 
-        when(scenarioService.reviewFork(eq(30L), eq(true), eq((String) null), eq(auth))).thenReturn(approved);
+        when(scenarioForks.reviewFork(eq(30L), eq(true), eq((String) null), eq(auth))).thenReturn(approved);
         when(scenarioService.toDto(approved)).thenReturn(dto);
 
         ScenarioDto result = controller.approveFork(30L, null, auth);
@@ -272,7 +275,7 @@ class ScenarioApiControllerTest {
 
         ScenarioApiController.ReviewRequest body = new ScenarioApiController.ReviewRequest("Not accurate enough");
 
-        when(scenarioService.reviewFork(31L, false, "Not accurate enough", auth)).thenReturn(rejected);
+        when(scenarioForks.reviewFork(31L, false, "Not accurate enough", auth)).thenReturn(rejected);
         when(scenarioService.toDto(rejected)).thenReturn(dto);
 
         ScenarioDto result = controller.rejectFork(31L, body, auth);

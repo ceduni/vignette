@@ -20,30 +20,12 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
      */
     @Query(value = "SELECT id FROM scenario WHERE id = :id FOR UPDATE", nativeQuery = true)
     Long lockById(@Param("id") Long id);
-    Scenario findByTitle(String title);
 
     boolean existsByIdAndAuthorUsername(Long scenarioId, String username);
 
-    boolean existsByTitle(String title);
-
     boolean existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(String title, String authorUsername, String languageId);
 
-    List<Scenario> findAllByOrderByCreatedAtDesc();
-
-    List<Scenario> findAllByVisibilityStatusOrderByCreatedAtDesc(ScenarioVisibilityStatus visibilityStatus);
-
-    List<Scenario> findAllByAuthorUsernameOrderByCreatedAtDesc(String username);
-
     long countByVisibilityStatus(ScenarioVisibilityStatus visibilityStatus);
-
-    @Query("""
-                select s
-                from Scenario s
-                where s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
-                   or lower(s.author.username) = lower(:username)
-                order by s.createdAt desc
-    """)
-    List<Scenario> findVisibleToUsername(@Param("username") String username);
 
     @EntityGraph(attributePaths = {"tags"})
     @Query("""

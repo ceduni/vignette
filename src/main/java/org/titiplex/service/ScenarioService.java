@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.titiplex.api.dto.ScenarioDto;
 import org.titiplex.api.dto.UpdateScenarioMetadataRequest;
 import org.titiplex.api.dto.UpdateScenarioStoryboardRequest;
-import org.titiplex.persistence.model.CollaboratorRole;
 import org.titiplex.persistence.model.CollaborationStatus;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioCollaborator;
@@ -47,7 +46,7 @@ import static org.titiplex.security.AuthUtils.*;
 public class ScenarioService {
 
     public static final int DISCOVERY_SCENARIO_LIMIT = 15;
-    private static final int TITLE_MAX_LENGTH = 200;
+    static final int TITLE_MAX_LENGTH = 200;
     private static final int DESCRIPTION_MAX_LENGTH = 500;
 
     private final ScenarioRepository repo;
@@ -65,6 +64,7 @@ public class ScenarioService {
     private final ScenarioHistoryRepository historyRepo;
     private final ThumbnailService thumbnailService;
     private final FileStorageService storage;
+    private final ScenarioAccessService access;
 
     public ScenarioService(
             ScenarioRepository scenarioRepository,
@@ -81,7 +81,8 @@ public class ScenarioService {
             ScenarioInviteLinkRepository inviteLinkRepo,
             ScenarioHistoryRepository historyRepo,
             ThumbnailService thumbnailService,
-            FileStorageService storage
+            FileStorageService storage,
+            ScenarioAccessService access
     ) {
         this.repo = scenarioRepository;
         this.userService = userService;
@@ -98,10 +99,7 @@ public class ScenarioService {
         this.historyRepo = historyRepo;
         this.thumbnailService = thumbnailService;
         this.storage = storage;
-    }
-
-    public boolean existsByIdAndAuthorUsername(Long scenarioId, String username) {
-        return repo.existsByIdAndAuthorUsername(scenarioId, username);
+        this.access = access;
     }
 
     public Scenario createScenario(String title, String description, Long authorId, String languageId, List<String> tags) {
@@ -137,7 +135,7 @@ public class ScenarioService {
 
     public Scenario getVisibleScenario(Long id, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
-        assertCanViewScenario(scenario, authentication);
+        access.assertCanViewScenario(scenario, authentication);
         return scenario;
     }
 
@@ -236,7 +234,7 @@ public class ScenarioService {
 
     public Scenario publishScenario(Long id, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
-        assertCanPublishScenario(scenario, authentication);
+        access.assertCanPublishScenario(scenario, authentication);
         boolean firstPublication = scenario.getVisibilityStatus() != ScenarioVisibilityStatus.PUBLISHED;
 
         if (scenario.getReviewStatus() == ReviewStatus.PENDING) {
@@ -265,27 +263,9 @@ public class ScenarioService {
         return saved;
     }
 
-    public boolean hasEditAccess(Long scenarioId, String username) {
-        if (username == null) return false;
-        if (existsByIdAndAuthorUsername(scenarioId, username)) return true;
-        return hasEditorAccess(scenarioId, username);
-    }
-
-    /**
-     * Like {@link #hasEditAccess}, but also requires the scenario to still be a draft.
-     * Once a scenario is published, its content is frozen for everyone but admins —
-     * use this (not {@link #hasEditAccess}) to gate actual content-editing actions
-     * (metadata, storyboard, thumbnails, audio). {@link #hasEditAccess} on its own
-     * remains publish-agnostic since it also backs scenario deletion, which stays
-     * allowed for the owner after publish.
-     */
-    public boolean hasContentEditAccess(Long scenarioId, String username) {
-        return hasEditAccess(scenarioId, username);
-    }
-
     public Scenario updateStoryboard(Long id, UpdateScenarioStoryboardRequest request, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
-        assertCanEditScenario(scenario, authentication);
+        access.assertCanEditScenario(scenario, authentication);
 
         if (request.layoutMode() != null) {
             scenario.setStoryboardLayoutMode(StoryboardLayoutMode.valueOf(request.layoutMode().trim().toUpperCase()));
@@ -313,7 +293,7 @@ public class ScenarioService {
 
     public Scenario updateScenarioMetadata(Long id, UpdateScenarioMetadataRequest request, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
-        assertCanEditScenario(scenario, authentication);
+        access.assertCanEditScenario(scenario, authentication);
 
         List<String> changedFields = new ArrayList<>();
 
@@ -374,7 +354,8 @@ public class ScenarioService {
         return saved;
     }
 
-    private String validatedTitle(String title) {
+    /** Trims and checks a scenario title (also used for fork titles). */
+    static String validatedTitle(String title) {
         String normalized = title == null ? "" : title.trim();
         if (normalized.isBlank()) {
             throw new IllegalArgumentException("Title is required");
@@ -399,7 +380,7 @@ public class ScenarioService {
     @Transactional
     public void deleteScenario(Long id, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
-        assertCanDeleteScenario(scenario, authentication);
+        access.assertCanDeleteScenario(scenario, authentication);
 
         likeRepo.deleteByScenario_Id(id);
         bookmarkRepo.deleteByScenario_Id(id);
@@ -407,7 +388,7 @@ public class ScenarioService {
         inviteLinkRepo.deleteByScenarioId(id);
         historyRepo.deleteByScenarioId(id);
 
-        for (Thumbnail thumbnail : thumbnailRepo.getThumbnailsByScenarioId(id)) {
+        for (Thumbnail thumbnail : thumbnailRepo.findByScenarioIdOrderByIdxAsc(id)) {
             thumbnailService.delete(thumbnail.getId());
         }
 
@@ -421,120 +402,6 @@ public class ScenarioService {
         repo.delete(scenario);
     }
 
-    public void assertCanDeleteScenario(Scenario scenario, Authentication authentication) {
-        requireAuthenticated(authentication);
-        if (isAdmin(authentication)) {
-            return;
-        }
-
-        String username = authenticatedUsername(authentication);
-        if (username != null && existsByIdAndAuthorUsername(scenario.getId(), username)) {
-            return;
-        }
-
-        throw new AccessDeniedException("Only the scenario's author can delete it");
-    }
-
-    public void assertCanViewScenario(Scenario scenario, Authentication authentication) {
-        boolean publiclyVisible = scenario.getVisibilityStatus() == ScenarioVisibilityStatus.PUBLISHED
-                && scenario.getReviewStatus() != ReviewStatus.PENDING
-                && scenario.getReviewStatus() != ReviewStatus.REJECTED;
-
-        if (publiclyVisible) {
-            return;
-        }
-        if (isAdmin(authentication)) {
-            return;
-        }
-
-        String username = authenticatedUsername(authentication);
-        if (username != null && existsByIdAndAuthorUsername(scenario.getId(), username)) {
-            return;
-        }
-
-        if (username != null && isAcceptedCollaborator(scenario.getId(), username)) {
-            return;
-        }
-
-        // A user with a pending collaboration invitation can preview the scenario
-        // before deciding whether to accept
-        if (username != null && hasPendingInvitation(scenario.getId(), username)) {
-            return;
-        }
-
-        // Original author can view a pending/rejected fork of their own scenario
-        if (username != null && scenario.getParentScenarioId() != null) {
-            Scenario original = repo.findById(scenario.getParentScenarioId()).orElse(null);
-            if (original != null && username.equals(userService.getUserById(original.getAuthor_id()).getUsername())) {
-                return;
-            }
-        }
-
-        throw new NoSuchElementException("Scenario not found");
-    }
-
-    public void assertCanEditScenario(Scenario scenario, Authentication authentication) {
-        requireAuthenticated(authentication);
-        if (isAdmin(authentication)) {
-            return;
-        }
-
-        String username = authenticatedUsername(authentication);
-        if (username != null && existsByIdAndAuthorUsername(scenario.getId(), username)) {
-            return;
-        }
-
-        if (username != null && hasEditorAccess(scenario.getId(), username)) {
-            return;
-        }
-
-        throw new AccessDeniedException("You are not allowed to edit this scenario");
-    }
-
-    /** {@link #assertCanEditScenario(Scenario, Authentication)} from a scenario id (thumbnails, audios). */
-    public void assertCanEditScenarioById(Long scenarioId, Authentication authentication) {
-        assertCanEditScenario(getRequiredScenario(scenarioId), authentication);
-    }
-
-    public void assertCanPublishScenario(Scenario scenario, Authentication authentication) {
-        requireAuthenticated(authentication);
-        if (isAdmin(authentication)) {
-            return;
-        }
-
-        String username = authenticatedUsername(authentication);
-        if (username != null && existsByIdAndAuthorUsername(scenario.getId(), username)) {
-            return;
-        }
-
-        throw new AccessDeniedException("Seul l'auteur original peut publier ce scénario.");
-    }
-
-    private boolean isAcceptedCollaborator(Long scenarioId, String username) {
-        User user = userService.getUserByUsername(username);
-        if (user == null) return false;
-        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, user.getId())
-                .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
-                .isPresent();
-    }
-
-    private boolean hasPendingInvitation(Long scenarioId, String username) {
-        User user = userService.getUserByUsername(username);
-        if (user == null) return false;
-        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, user.getId())
-                .filter(c -> c.getStatus() == CollaborationStatus.PENDING)
-                .isPresent();
-    }
-
-    private boolean hasEditorAccess(Long scenarioId, String username) {
-        User user = userService.getUserByUsername(username);
-        if (user == null) return false;
-        return collaboratorRepo.findByScenarioIdAndUserId(scenarioId, user.getId())
-                .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED)
-                .filter(c -> c.getRole() == CollaboratorRole.OWNER || c.getRole() == CollaboratorRole.EDITOR)
-                .isPresent();
-    }
-
     public ScenarioDto toDto(Scenario s) {
         return toDto(s, null);
     }
@@ -544,7 +411,7 @@ public class ScenarioService {
         String reviewedByUsername = s.getReviewedById() != null
                 ? userService.getUserById(s.getReviewedById()).getUsername()
                 : null;
-        boolean canEdit = viewerUsername != null && hasEditAccess(s.getId(), viewerUsername);
+        boolean canEdit = viewerUsername != null && access.hasEditAccess(s.getId(), viewerUsername);
 
         return new ScenarioDto(
                 s.getId(),
@@ -639,204 +506,5 @@ public class ScenarioService {
             return DISCOVERY_SCENARIO_LIMIT;
         }
         return Math.max(1, Math.min(limit, DISCOVERY_SCENARIO_LIMIT));
-    }
-
-    public Scenario forkScenario(Long originalId, String requestedTitle, Authentication authentication) {
-        requireAuthenticated(authentication);
-
-        Scenario original = getRequiredScenario(originalId);
-
-        if (original.getVisibilityStatus() != ScenarioVisibilityStatus.PUBLISHED) {
-            throw new IllegalArgumentException("Cannot fork an unpublished scenario");
-        }
-
-        String username = authentication.getName();
-        Long userId = userService.getUserByUsername(username).getId();
-
-        String title;
-        if (requestedTitle != null && !requestedTitle.isBlank()) {
-            title = validatedTitle(requestedTitle);
-            if (repo.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(title, username, original.getLanguage_id())) {
-                throw new IllegalArgumentException("Scenario already exists for this user and language");
-            }
-        } else {
-            title = generateUniqueScenarioTitle(original.getTitle(), username, original.getLanguage_id());
-        }
-
-        Scenario fork = new Scenario();
-        fork.setTitle(title);
-        fork.setDescription(original.getDescription());
-        fork.setLocationName(original.getLocationName());
-        fork.setLatitude(original.getLatitude());
-        fork.setLongitude(original.getLongitude());
-        fork.setAuthor_id(userId);
-        fork.setLanguage_id(original.getLanguage_id());
-        fork.setCreatedAt(Instant.now());
-        fork.setAuthor(userService.getUserById(userId));
-        fork.setLanguage(original.getLanguage());
-        fork.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
-        fork.setStoryboardLayoutMode(original.getStoryboardLayoutMode());
-        fork.setStoryboardPreset(original.getStoryboardPreset());
-        fork.setStoryboardColumns(original.getStoryboardColumns());
-        fork.setParentScenarioId(original.getId());
-
-        if (!userId.equals(original.getAuthor_id())) {
-            fork.setReviewStatus(ReviewStatus.PENDING);
-        } else {
-            fork.setReviewStatus(ReviewStatus.NONE);
-        }
-
-        fork.setTags(new LinkedHashSet<>(original.getTags()));
-
-        Scenario saved;
-        try {
-            saved = repo.saveAndFlush(fork);
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            throw new IllegalArgumentException("Scenario already exists for this user and language");
-        }
-
-        // Deep copy: thumbnails + audios. Physical files are reused (content-addressed
-        // storage), only new DB rows are created pointing at the same storagePath/hash.
-        List<Thumbnail> originalThumbnails = thumbnailRepo.findByScenarioIdOrderByIdxAsc(original.getId());
-
-        for (Thumbnail ot : originalThumbnails) {
-            Thumbnail savedThumb = thumbnailRepo.save(copyThumbnail(ot, saved.getId(), userId));
-            for (Audio oa : audioRepo.findByThumbnailIdOrderByIdxAsc(ot.getId())) {
-                audioRepo.save(copyAudio(oa, saved.getId(), savedThumb.getId(), userId));
-            }
-        }
-
-        // Background audios: keep the original's selected track as the fork's selected track.
-        Long activeOriginalId = original.getActiveBackgroundAudioId();
-        for (Audio originalAudio : audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(
-                original.getId(),
-                AudioScope.BACKGROUND
-        )) {
-            Audio savedAudio = audioRepo.save(copyAudio(originalAudio, saved.getId(), null, userId));
-            if (activeOriginalId != null && activeOriginalId.equals(originalAudio.getId())) {
-                saved.setActiveBackgroundAudioId(savedAudio.getId());
-                repo.save(saved);
-            }
-        }
-
-        if (saved.getReviewStatus() == ReviewStatus.PENDING) {
-            notificationService.notifyForkReviewRequested(original.getAuthor_id(), saved, original, userId);
-        }
-
-        return saved;
-    }
-
-    @Transactional
-    public Scenario reviewFork(Long forkId, boolean approve, String comment, Authentication authentication) {
-        requireAuthenticated(authentication);
-
-        Scenario fork = getRequiredScenario(forkId);
-
-        if (fork.getReviewStatus() != ReviewStatus.PENDING) {
-            throw new IllegalStateException("Ce scénario n'est pas en attente de review.");
-        }
-        if (fork.getParentScenarioId() == null) {
-            throw new IllegalStateException("Ce scénario n'est pas un fork.");
-        }
-
-        Scenario original = getRequiredScenario(fork.getParentScenarioId());
-        String username = authentication.getName();
-        Long reviewerId = userService.getUserByUsername(username).getId();
-
-        if (!reviewerId.equals(original.getAuthor_id())) {
-            throw new AccessDeniedException("Seul l'auteur original peut approuver ou rejeter ce fork.");
-        }
-
-        fork.setReviewStatus(approve ? ReviewStatus.APPROVED : ReviewStatus.REJECTED);
-        fork.setReviewedById(reviewerId);
-        fork.setReviewedAt(Instant.now());
-        String normalizedComment = comment == null ? null : comment.trim();
-        if (normalizedComment != null && normalizedComment.length() > 255) {
-            throw new IllegalArgumentException("Review comment must be 255 characters or fewer");
-        }
-        fork.setReviewComment(normalizedComment == null || normalizedComment.isBlank() ? null : normalizedComment);
-
-        Scenario saved = repo.save(fork);
-        notificationService.notifyForkReviewed(saved.getAuthor_id(), saved, approve);
-        return saved;
-    }
-
-    /**
-     * Copies a scene image into another scenario. The physical file is shared
-     * (content-addressed storage): only a new row pointing at the same file is created.
-     */
-    private static Thumbnail copyThumbnail(Thumbnail source, Long scenarioId, Long authorId) {
-        Thumbnail copy = new Thumbnail();
-        copy.setScenarioId(scenarioId);
-        copy.setAuthorId(authorId);
-        copy.setTitle(source.getTitle());
-        copy.setIdx(source.getIdx());
-        copy.setContentType(source.getContentType());
-        copy.setStoragePath(source.getStoragePath());
-        copy.setSizeBytes(source.getSizeBytes());
-        copy.setOriginalFilename(source.getOriginalFilename());
-        copy.setImageSha256(source.getImageSha256());
-        copy.setGridColumn(source.getGridColumn());
-        copy.setGridRow(source.getGridRow());
-        copy.setGridColumnSpan(source.getGridColumnSpan());
-        copy.setGridRowSpan(source.getGridRowSpan());
-        copy.setImageWidth(source.getImageWidth());
-        copy.setImageHeight(source.getImageHeight());
-        return copy;
-    }
-
-    /**
-     * Copies an audio (scene or background) into another scenario. Every content field is
-     * copied, whatever the scope, so that scene and background audios cannot drift apart again.
-     * Only the owner/location fields change: scenario, thumbnail (null for background) and author.
-     */
-    private static Audio copyAudio(Audio source, Long scenarioId, Long thumbnailId, Long authorId) {
-        Audio copy = new Audio();
-        copy.setScenarioId(scenarioId);
-        copy.setThumbnailId(thumbnailId);
-        copy.setAuthorId(authorId);
-        copy.setScope(source.getScope());
-        copy.setLanguageId(source.getLanguageId());
-        // file
-        copy.setStoragePath(source.getStoragePath());
-        copy.setSizeBytes(source.getSizeBytes());
-        copy.setOriginalFilename(source.getOriginalFilename());
-        copy.setAudioSha256(source.getAudioSha256());
-        copy.setMime(source.getMime());
-        // metadata
-        copy.setTitle(source.getTitle());
-        copy.setIdx(source.getIdx());
-        copy.setSourceLabel(source.getSourceLabel());
-        copy.setSourceUrl(source.getSourceUrl());
-        copy.setBackgroundVolume(source.getBackgroundVolume());
-        copy.setBackgroundLoop(source.getBackgroundLoop());
-        // linguistic annotations
-        copy.setTranscription(source.getTranscription());
-        copy.setGloss(source.getGloss());
-        copy.setFreeTranslation(source.getFreeTranslation());
-        // marker on the image
-        copy.setMarkerX(source.getMarkerX());
-        copy.setMarkerY(source.getMarkerY());
-        copy.setMarkerLabel(source.getMarkerLabel());
-        return copy;
-    }
-
-    private String generateUniqueScenarioTitle(String baseTitle, String username, String languageId) {
-        String normalizedBase = baseTitle == null ? "Untitled scenario" : baseTitle.trim();
-        String candidate = copyTitle(normalizedBase, null);
-        int counter = 2;
-        while (repo.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId(candidate, username, languageId)) {
-            candidate = copyTitle(normalizedBase, counter);
-            counter++;
-        }
-        return candidate;
-    }
-
-    private String copyTitle(String baseTitle, Integer counter) {
-        String suffix = counter == null ? "" : " #" + counter;
-        String prefix = "Copy of ";
-        int available = TITLE_MAX_LENGTH - prefix.length() - suffix.length();
-        String truncatedBase = baseTitle.length() <= available ? baseTitle : baseTitle.substring(0, available).trim();
-        return prefix + truncatedBase + suffix;
     }
 }

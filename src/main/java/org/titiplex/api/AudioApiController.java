@@ -17,7 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.titiplex.api.dto.ApiError;
+import org.titiplex.api.docs.ForbiddenResponse;
+import org.titiplex.api.docs.NotFoundResponse;
 import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.api.dto.CreateAudioResponse;
 import org.titiplex.api.dto.LanguagePreviewAudioDto;
@@ -30,6 +31,7 @@ import org.titiplex.api.security.*;
 import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.service.AudioService;
 import org.titiplex.service.ScenarioHistoryService;
+import org.titiplex.service.ScenarioAccessService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
@@ -49,6 +51,7 @@ public class AudioApiController {
     private final UserService userService;
     private final ThumbnailService thumbnailService;
     private final ScenarioService scenarioService;
+    private final ScenarioAccessService scenarioAccess;
     private final ScenarioHistoryService scenarioHistoryService;
 
     public AudioApiController(
@@ -56,12 +59,14 @@ public class AudioApiController {
             UserService userService,
             ThumbnailService thumbnailService,
             ScenarioService scenarioService,
+            ScenarioAccessService scenarioAccess,
             ScenarioHistoryService scenarioHistoryService
     ) {
         this.audioService = audioService;
         this.userService = userService;
         this.thumbnailService = thumbnailService;
         this.scenarioService = scenarioService;
+        this.scenarioAccess = scenarioAccess;
         this.scenarioHistoryService = scenarioHistoryService;
     }
 
@@ -76,6 +81,7 @@ public class AudioApiController {
             description = "Returns all audio files associated with a thumbnail."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -88,11 +94,6 @@ public class AudioApiController {
                                     value = "[{\"id\": 1, \"title\": \"Audio 1\", \"idx\": 1, \"mime\": \"png\"},\n {\"id\": 2, \"title\": \"Audio 2\", \"idx\": 2, \"mime\": \"png\"}]\n"
                             )
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Thumbnail not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/thumbnails/{thumbId}/audios")
@@ -105,7 +106,7 @@ public class AudioApiController {
     ) {
         var thumbnail = thumbnailService.getThumbnailById(thumbId);
         var scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
-        scenarioService.assertCanViewScenario(scenario, auth);
+        scenarioAccess.assertCanViewScenario(scenario, auth);
         return audioService.listForThumbnail(thumbId);
     }
 
@@ -123,7 +124,7 @@ public class AudioApiController {
             Authentication auth
     ) {
         var scenario = scenarioService.getRequiredScenario(scenarioId);
-        scenarioService.assertCanViewScenario(scenario, auth);
+        scenarioAccess.assertCanViewScenario(scenario, auth);
         return audioService.listBackgroundForScenario(scenarioId);
     }
 
@@ -156,7 +157,7 @@ public class AudioApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) throws Exception {
-        scenarioService.assertCanEditScenarioById(scenarioId, auth);
+        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
         Long authorId = userService.getUserByUsername(auth.getName()).getId();
         Long id = audioService.createBackgroundAudio(scenarioId, title, sourceLabel, sourceUrl, authorId, audio);
         return new CreateAudioResponse(id);
@@ -177,7 +178,7 @@ public class AudioApiController {
             @RequestBody SelectScenarioBackgroundAudioRequest request,
             @Parameter(hidden = true) Authentication auth
     ) {
-        scenarioService.assertCanEditScenarioById(scenarioId, auth);
+        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
         audioService.selectBackgroundAudio(scenarioId, request.audioId());
     }
 
@@ -195,6 +196,7 @@ public class AudioApiController {
     )
     @org.titiplex.api.security.ApiAccess(level = org.titiplex.api.security.ApiAccessLevel.PUBLIC,
             rule = "Published media is public. Draft media requires permission to view its scenario.")
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -203,11 +205,6 @@ public class AudioApiController {
                             mediaType = "audio/*",
                             schema = @Schema(implementation = ResponseEntity.class, contains = Resource.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Audio not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/audios/{id}/content")
@@ -217,7 +214,7 @@ public class AudioApiController {
             @Parameter(hidden = true) Authentication auth
     ) {
         var scenario = scenarioService.getRequiredScenario(audioService.getScenarioIdForAudio(id));
-        scenarioService.assertCanViewScenario(scenario, auth);
+        scenarioAccess.assertCanViewScenario(scenario, auth);
         var media = audioService.loadContent(id);
 
         return ResponseEntity.ok()
@@ -234,7 +231,7 @@ public class AudioApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateAmbience(@PathVariable Long audioId, @RequestBody UpdateAmbienceRequest request,
                                @Parameter(hidden = true) Authentication auth) {
-        scenarioService.assertCanEditScenarioById(audioService.getScenarioIdForAudio(audioId), auth);
+        scenarioAccess.assertCanEditScenarioById(audioService.getScenarioIdForAudio(audioId), auth);
         audioService.updateAmbience(audioId, request.volume(), request.loop());
     }
 
@@ -244,7 +241,7 @@ public class AudioApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateGloss(@PathVariable Long audioId, @RequestBody UpdateAudioGlossRequest request,
                             @Parameter(hidden = true) Authentication auth) {
-        scenarioService.assertCanEditScenarioById(audioService.getScenarioIdForAudio(audioId), auth);
+        scenarioAccess.assertCanEditScenarioById(audioService.getScenarioIdForAudio(audioId), auth);
         audioService.updateGloss(audioId, request.transcription(), request.gloss(), request.freeTranslation());
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
         scenarioHistoryService.record(audioService.getScenarioIdForAudio(audioId), actorId,
@@ -263,7 +260,7 @@ public class AudioApiController {
             Authentication auth
     ) throws Exception {
         Long scenarioId = audioService.getScenarioIdForAudio(audioId);
-        scenarioService.assertCanEditScenarioById(scenarioId, auth);
+        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
         Long id = audioService.replaceAudio(audioId, title, audio);
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
         scenarioHistoryService.record(
@@ -349,7 +346,7 @@ public class AudioApiController {
             Authentication auth
     ) throws Exception {
 
-        scenarioService.assertCanEditScenarioById(thumbnailService.getThumbnailById(thumbId).getScenarioId(), auth);
+        scenarioAccess.assertCanEditScenarioById(thumbnailService.getThumbnailById(thumbId).getScenarioId(), auth);
         Long authorId = userService.getUserByUsername(auth.getName()).getId();
         Long id = audioService.createAudio(thumbId, title, idx, authorId, audio, markerX, markerY, markerLabel);
 
@@ -379,20 +376,12 @@ public class AudioApiController {
             resource = ProtectedResource.AUDIO,
             param = "audioId"
     )
+    @ForbiddenResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Marker updated successfully"
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Access denied",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Audio not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
 //    @ApiAccess(
@@ -419,7 +408,7 @@ public class AudioApiController {
             Authentication auth
     ) {
         Long scenarioId = audioService.getScenarioIdForAudio(audioId);
-        scenarioService.assertCanEditScenarioById(scenarioId, auth);
+        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
         audioService.updateMarker(audioId, req.markerX(), req.markerY(), req.markerLabel());
 
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
@@ -440,10 +429,10 @@ public class AudioApiController {
             resource = ProtectedResource.AUDIO,
             param = "audioId"
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Audio successfully deleted"),
-            @ApiResponse(responseCode = "404", description = "Audio not found", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden : not the owner", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @NotFoundResponse
+    @ForbiddenResponse
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Audio successfully deleted")
     })
     @ApiAccess(
             level = ApiAccessLevel.OWNER_OR_ADMIN,
@@ -460,7 +449,7 @@ public class AudioApiController {
             Authentication auth
     ) {
         Long scenarioId = audioService.getScenarioIdForAudio(audioId);
-        scenarioService.assertCanEditScenarioById(scenarioId, auth);
+        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
         audioService.deleteAudio(audioId);
 
         Long actorId = userService.getUserByUsername(auth.getName()).getId();
@@ -478,6 +467,7 @@ public class AudioApiController {
             description = "Returns all audio files associated with a language."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -490,11 +480,6 @@ public class AudioApiController {
                                     value = "[{\"id\": 1, \"title\": \"Audio 1\", \"idx\": 1, \"mime\": \"png\"},\n {\"id\": 2, \"title\": \"Audio 2\", \"idx\": 2, \"mime\": \"png\"}]\n"
                             )
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/languages/{langId}/audios")
@@ -516,6 +501,7 @@ public class AudioApiController {
                     """
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -524,11 +510,6 @@ public class AudioApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = LanguagePreviewAudioDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "No preview audio found for this language",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/languages/{langId}/preview-audio")

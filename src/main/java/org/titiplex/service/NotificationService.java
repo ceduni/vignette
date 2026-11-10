@@ -193,7 +193,7 @@ public class NotificationService {
     }
 
     /**
-     * Called by ScenarioService.forkScenario() when a fork is created by
+     * Called by ScenarioForkService.forkScenario() when a fork is created by
      * someone other than the original author. Notifies the original author
      * that a review is needed before the fork can be published.
      */
@@ -217,7 +217,7 @@ public class NotificationService {
     }
 
     /**
-     * Called by ScenarioService.reviewFork() once the original author has
+     * Called by ScenarioForkService.reviewFork() once the original author has
      * approved or rejected a fork. Notifies the forker of the outcome.
      */
     @Transactional

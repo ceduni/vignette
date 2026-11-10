@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.titiplex.api.dto.ApiError;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.NotFoundResponse;
 import org.titiplex.api.dto.CountryAtCoordinatesDto;
 import org.titiplex.api.security.PublicOperation;
 import org.titiplex.service.CountryGeoService;
@@ -35,21 +36,13 @@ public class CountryApiController {
                     """
     )
     @PublicOperation
+    @BadRequestResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Country resolved successfully",
                     content = @Content(schema = @Schema(implementation = CountryAtCoordinatesDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid coordinates",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "No country found at coordinates (e.g. ocean)",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/by-coordinates")

@@ -47,6 +47,9 @@ class ThumbnailApiControllerTest {
     private ScenarioService scenarioService;
 
     @Mock
+    private org.titiplex.service.ScenarioAccessService scenarioAccess;
+
+    @Mock
     private ScenarioHistoryService scenarioHistoryService;
 
     @InjectMocks
@@ -86,7 +89,7 @@ class ThumbnailApiControllerTest {
 
         List<ThumbnailRowDto> result = controller.list(9L, auth);
 
-        verify(scenarioService).assertCanViewScenario(scenario, auth);
+        verify(scenarioAccess).assertCanViewScenario(scenario, auth);
         assertEquals(2, result.size());
         assertEquals(1L, result.get(0).id());
         assertEquals("Scene 1", result.get(0).title());
@@ -121,7 +124,7 @@ class ThumbnailApiControllerTest {
 
         UploadResponse response = controller.upload(9L, "Intro", image, auth);
 
-        verify(scenarioService).assertCanEditScenario(scenario, auth);
+        verify(scenarioAccess).assertCanEditScenario(scenario, auth);
         assertEquals(55L, response.id());
         verify(thumbnailService).save("Intro", image, scenario, user);
     }
@@ -181,7 +184,7 @@ class ThumbnailApiControllerTest {
 
         ThumbnailRowDto result = controller.updateLayout(8L, request, auth);
 
-        verify(scenarioService).assertCanEditScenario(scenario, auth);
+        verify(scenarioAccess).assertCanEditScenario(scenario, auth);
         assertEquals(8L, result.id());
         assertEquals(2, result.gridColumn());
         assertEquals(3, result.gridRow());
@@ -213,7 +216,7 @@ class ThumbnailApiControllerTest {
 
         ThumbnailRowDto result = controller.updateTitle(8L, request, auth);
 
-        verify(scenarioService).assertCanEditScenario(scenario, auth);
+        verify(scenarioAccess).assertCanEditScenario(scenario, auth);
         verify(scenarioHistoryService).record(9L, 12L, org.titiplex.persistence.model.ScenarioHistoryAction.THUMBNAIL_UPDATED, "Renamed a thumbnail");
         assertEquals("Arrival", result.title());
     }
@@ -248,7 +251,7 @@ class ThumbnailApiControllerTest {
         existing.setScenarioId(9L);
         when(thumbnailService.getThumbnailById(8L)).thenReturn(existing);
         org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException("no"))
-                .when(scenarioService).assertCanEditScenarioById(9L, auth);
+                .when(scenarioAccess).assertCanEditScenarioById(9L, auth);
 
         org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.access.AccessDeniedException.class,
                 () -> controller.delete(8L, auth));

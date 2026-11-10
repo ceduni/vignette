@@ -14,6 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.NotFoundResponse;
+import org.titiplex.api.docs.UnauthorizedResponse;
 import org.titiplex.api.dto.*;
 import org.titiplex.api.security.PublicOperation;
 import org.titiplex.api.security.UserOperation;
@@ -53,6 +56,7 @@ public class LanguageApiController {
             description = "Returns a paginated list of languages, including their details."
     )
     @PublicOperation
+    @BadRequestResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -61,11 +65,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = Page.class, contains = LanguageRowDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid page number or size",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping
@@ -116,6 +115,7 @@ public class LanguageApiController {
             description = "Returns a language object with its details based on the provided ID."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -124,11 +124,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = LanguageDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}")
@@ -155,6 +150,7 @@ public class LanguageApiController {
                     """
     )
     @PublicOperation
+    @BadRequestResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -163,11 +159,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = Page.class, contains = LanguageOptionDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid pagination parameters",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/options")
@@ -215,16 +206,12 @@ public class LanguageApiController {
             description = "Returns whether the authenticated user can edit the specified language."
     )
     @UserOperation
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Permissions resolved successfully",
                     content = @Content(schema = @Schema(implementation = LanguagePermissionsDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}/permissions/me")
@@ -249,15 +236,11 @@ public class LanguageApiController {
                     """
     )
     @UserOperation
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "410",
                     description = "Language catalogue edits are disabled",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
                     content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
@@ -284,6 +267,7 @@ public class LanguageApiController {
             description = "Returns a list of scenarios associated with a specific language."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -292,11 +276,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}/scenarios")
@@ -311,6 +290,7 @@ public class LanguageApiController {
             summary = "List languages by family",
             description = "Returns a list of languages in a specific language family."
     )
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -319,11 +299,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = LanguageRowDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Family not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PublicOperation

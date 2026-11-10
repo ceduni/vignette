@@ -41,6 +41,9 @@ class ScenarioApiControllerWebMvcTest {
     private ScenarioService scenarioService;
 
     @MockitoBean
+    private org.titiplex.service.ScenarioForkService scenarioForks;
+
+    @MockitoBean
     private UserService userService;
 
     @MockitoBean
@@ -264,7 +267,7 @@ class ScenarioApiControllerWebMvcTest {
                 "APPROVED", "alice", Instant.parse("2026-03-25T10:00:00Z"), null, false, null
         );
 
-        when(scenarioService.reviewFork(eq(30L), eq(true), any(), any())).thenReturn(approved);
+        when(scenarioForks.reviewFork(eq(30L), eq(true), any(), any())).thenReturn(approved);
         when(scenarioService.toDto(approved)).thenReturn(dto);
 
         mvc.perform(post("/api/scenarios/30/review/approve")
@@ -292,7 +295,7 @@ class ScenarioApiControllerWebMvcTest {
                 "REJECTED", "alice", Instant.parse("2026-03-25T10:00:00Z"), "Not accurate enough", false, null
         );
 
-        when(scenarioService.reviewFork(eq(31L), eq(false), any(), any())).thenReturn(rejected);
+        when(scenarioForks.reviewFork(eq(31L), eq(false), any(), any())).thenReturn(rejected);
         when(scenarioService.toDto(rejected)).thenReturn(dto);
 
         mvc.perform(post("/api/scenarios/31/review/reject")

@@ -8,7 +8,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.web.server.ResponseStatusException;
 import org.titiplex.api.dto.CreateAccreditationRequestBody;
 import org.titiplex.api.dto.CreateDiscussionMessageRequest;
 import org.titiplex.api.dto.DiscussionMessageDto;
@@ -24,6 +23,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -199,7 +199,6 @@ class CommunityApiControllerTest {
         request.setStatus(AccreditationRequestStatus.PENDING);
         request.setCreatedAt(Instant.parse("2026-03-21T09:00:00Z"));
 
-        when(communityService.isScenarioOwner(9L, "owner")).thenReturn(true);
         when(communityService.listRequests(
                 AccreditationPermissionType.COMMUNITY_REVIEW,
                 AccreditationScopeType.SCENARIO,
@@ -222,9 +221,14 @@ class CommunityApiControllerTest {
     @Test
     void listAccreditationRequests_forbidsNonOwnerNonAdmin() {
         Authentication auth = auth("random-user", "ROLE_USER");
+        // The rule itself is tested in CommunityServiceTest; here: the controller asks it and stops.
+        org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException(
+                        "Not allowed to read these accreditation requests"))
+                .when(communityService).assertCanManageAccreditations(
+                        AccreditationScopeType.SCENARIO, "9", auth, "Not allowed to read these accreditation requests");
 
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
+        var ex = assertThrows(
+                org.springframework.security.access.AccessDeniedException.class,
                 () -> controller.listAccreditationRequests(
                         AccreditationPermissionType.COMMUNITY_REVIEW,
                         AccreditationScopeType.SCENARIO,
@@ -233,8 +237,8 @@ class CommunityApiControllerTest {
                 )
         );
 
-        assertEquals(403, ex.getStatusCode().value());
-        assertEquals("Not allowed to read these accreditation requests", ex.getReason());
+        assertEquals("Not allowed to read these accreditation requests", ex.getMessage());
+        org.mockito.Mockito.verify(communityService, org.mockito.Mockito.never()).listRequests(any(), any(), any());
     }
 
     @Test

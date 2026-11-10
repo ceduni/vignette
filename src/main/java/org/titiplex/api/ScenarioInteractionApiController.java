@@ -10,7 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.titiplex.api.dto.ApiError;
+import org.titiplex.api.docs.NotFoundResponse;
+import org.titiplex.api.docs.UnauthorizedResponse;
 import org.titiplex.api.dto.MyScenarioInteractionsDto;
 import org.titiplex.api.dto.ScenarioInteractionStatusDto;
 import org.titiplex.api.security.UserOperation;
@@ -34,14 +35,12 @@ public class ScenarioInteractionApiController {
 
     @Operation(summary = "Like a scenario", description = "Adds a like to the specified scenario for the authenticated user.")
     @UserOperation
+    @UnauthorizedResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Like added",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class))),
-            @ApiResponse(responseCode = "401", description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class)))
     })
     @PostMapping("/{id}/like")
     public ScenarioInteractionStatusDto likeScenario(
@@ -54,14 +53,12 @@ public class ScenarioInteractionApiController {
 
     @Operation(summary = "Unlike a scenario", description = "Removes the like from the specified scenario for the authenticated user.")
     @UserOperation
+    @UnauthorizedResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Like removed",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class))),
-            @ApiResponse(responseCode = "401", description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class)))
     })
     @DeleteMapping("/{id}/like")
     public ScenarioInteractionStatusDto unlikeScenario(
@@ -76,14 +73,12 @@ public class ScenarioInteractionApiController {
 
     @Operation(summary = "Bookmark a scenario", description = "Adds a bookmark to the specified scenario for the authenticated user.")
     @UserOperation
+    @UnauthorizedResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Bookmark added",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class))),
-            @ApiResponse(responseCode = "401", description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class)))
     })
     @PostMapping("/{id}/bookmark")
     public ScenarioInteractionStatusDto bookmarkScenario(
@@ -96,14 +91,12 @@ public class ScenarioInteractionApiController {
 
     @Operation(summary = "Remove bookmark", description = "Removes the bookmark from the specified scenario for the authenticated user.")
     @UserOperation
+    @UnauthorizedResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Bookmark removed",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class))),
-            @ApiResponse(responseCode = "401", description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class)))
     })
     @DeleteMapping("/{id}/bookmark")
     public ScenarioInteractionStatusDto unbookmarkScenario(
@@ -118,14 +111,12 @@ public class ScenarioInteractionApiController {
 
     @Operation(summary = "Get interaction status", description = "Returns whether the authenticated user has liked and/or bookmarked the specified scenario.")
     @UserOperation
+    @UnauthorizedResponse
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Status retrieved",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class))),
-            @ApiResponse(responseCode = "401", description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Scenario not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+                            schema = @Schema(implementation = ScenarioInteractionStatusDto.class)))
     })
     @GetMapping("/{id}/interactions")
     public ScenarioInteractionStatusDto getInteractionStatus(
@@ -143,12 +134,11 @@ public class ScenarioInteractionApiController {
                     "solely on a local cache that can drift (different browser/device, cleared storage, failed requests)."
     )
     @UserOperation
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Interactions retrieved",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MyScenarioInteractionsDto.class))),
-            @ApiResponse(responseCode = "401", description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+                            schema = @Schema(implementation = MyScenarioInteractionsDto.class)))
     })
     @GetMapping("/interactions/mine")
     public MyScenarioInteractionsDto getMyInteractions(

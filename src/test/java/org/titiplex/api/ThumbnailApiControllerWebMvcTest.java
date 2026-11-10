@@ -47,6 +47,9 @@ class ThumbnailApiControllerWebMvcTest {
     private ScenarioService scenarioService;
 
     @MockitoBean
+    private org.titiplex.service.ScenarioAccessService scenarioAccess;
+
+    @MockitoBean
     private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
 
     @MockitoBean

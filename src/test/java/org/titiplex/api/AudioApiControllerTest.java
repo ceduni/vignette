@@ -53,6 +53,9 @@ class AudioApiControllerTest {
     private ScenarioService scenarioService;
 
     @Mock
+    private org.titiplex.service.ScenarioAccessService scenarioAccess;
+
+    @Mock
     private ScenarioHistoryService scenarioHistoryService;
 
     @InjectMocks
@@ -64,8 +67,8 @@ class AudioApiControllerTest {
 
         controller.selectBackground(12L, new SelectScenarioBackgroundAudioRequest(99L), auth);
 
-        org.mockito.InOrder order = org.mockito.Mockito.inOrder(scenarioService, audioService);
-        order.verify(scenarioService).assertCanEditScenarioById(12L, auth);
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(scenarioAccess, audioService);
+        order.verify(scenarioAccess).assertCanEditScenarioById(12L, auth);
         order.verify(audioService).selectBackgroundAudio(12L, 99L);
     }
 
@@ -73,7 +76,7 @@ class AudioApiControllerTest {
 
     private void denyEditOnScenario(long scenarioId, Authentication auth) {
         org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException("no"))
-                .when(scenarioService).assertCanEditScenarioById(scenarioId, auth);
+                .when(scenarioAccess).assertCanEditScenarioById(scenarioId, auth);
     }
 
     @Test
@@ -157,7 +160,7 @@ class AudioApiControllerTest {
 
         List<AudioRowDto> result = controller.list(7L, auth);
 
-        verify(scenarioService).assertCanViewScenario(scenario, auth);
+        verify(scenarioAccess).assertCanViewScenario(scenario, auth);
         assertEquals(2, result.size());
         assertEquals(1L, result.get(0).id());
         assertEquals("Audio 1", result.get(0).title());

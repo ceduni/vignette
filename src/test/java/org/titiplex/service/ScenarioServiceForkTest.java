@@ -42,8 +42,17 @@ class ScenarioServiceForkTest {
     @Mock
     private Authentication authentication;
 
-    @InjectMocks
     private ScenarioService scenarioService;
+    private ScenarioForkService forks;
+
+    @org.junit.jupiter.api.BeforeEach
+    void wireService() {
+        ScenarioAccessService access = new ScenarioAccessService(scenarioRepository, userService, null);
+        scenarioService = new ScenarioService(
+                scenarioRepository, userService, languageService, scenarioTagService, notificationService,
+                thumbnailRepository, audioRepository, null, null, null, null, null, null, null, null, access);
+        forks = new ScenarioForkService(scenarioRepository, scenarioService, userService, notificationService, thumbnailRepository, audioRepository);
+    }
 
     private Scenario publishedScenario(long id) {
         Language language = new Language();
@@ -143,7 +152,7 @@ class ScenarioServiceForkTest {
         when(audioRepository.findByThumbnailIdOrderByIdxAsc(101L)).thenReturn(List.of(originalAudio));
         when(audioRepository.save(any(Audio.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Scenario fork = scenarioService.forkScenario(1L, null, authentication);
+        Scenario fork = forks.forkScenario(1L, null, authentication);
 
         assertEquals(99L, fork.getId());
         assertEquals(1L, fork.getParentScenarioId());
@@ -177,7 +186,7 @@ class ScenarioServiceForkTest {
         when(scenarioRepository.findByIdWithTags(2L)).thenReturn(Optional.of(draft));
 
         assertThrows(IllegalArgumentException.class,
-                () -> scenarioService.forkScenario(2L, null, authentication));
+                () -> forks.forkScenario(2L, null, authentication));
 
         verifyNoInteractions(thumbnailRepository, audioRepository);
     }
@@ -187,7 +196,7 @@ class ScenarioServiceForkTest {
         when(authentication.isAuthenticated()).thenReturn(false);
 
         assertThrows(InsufficientAuthenticationException.class,
-                () -> scenarioService.forkScenario(1L, null, authentication));
+                () -> forks.forkScenario(1L, null, authentication));
 
         verifyNoInteractions(scenarioRepository, thumbnailRepository, audioRepository);
     }
@@ -198,7 +207,7 @@ class ScenarioServiceForkTest {
         when(scenarioRepository.findByIdWithTags(999L)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class,
-                () -> scenarioService.forkScenario(999L, null, authentication));
+                () -> forks.forkScenario(999L, null, authentication));
     }
 
     @Test
@@ -216,7 +225,7 @@ class ScenarioServiceForkTest {
         mockSaveAssignsId(100L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
 
-        Scenario fork = scenarioService.forkScenario(1L, null, authentication);
+        Scenario fork = forks.forkScenario(1L, null, authentication);
 
         assertTrue(fork.getTitle().contains("#2"));
         verify(scenarioRepository, times(2))
@@ -237,7 +246,7 @@ class ScenarioServiceForkTest {
         mockSaveAssignsId(100L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
 
-        Scenario fork = scenarioService.forkScenario(1L, "  My remix  ", authentication);
+        Scenario fork = forks.forkScenario(1L, "  My remix  ", authentication);
 
         assertEquals("My remix", fork.getTitle());
     }
@@ -254,7 +263,7 @@ class ScenarioServiceForkTest {
                 .thenReturn(true);
 
         assertThrows(IllegalArgumentException.class,
-                () -> scenarioService.forkScenario(1L, "Taken title", authentication));
+                () -> forks.forkScenario(1L, "Taken title", authentication));
 
         verify(scenarioRepository, never()).save(any());
     }
@@ -277,7 +286,7 @@ class ScenarioServiceForkTest {
         mockSaveAssignsId(101L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
 
-        Scenario fork = scenarioService.forkScenario(1L, null, authentication);
+        Scenario fork = forks.forkScenario(1L, null, authentication);
 
         assertEquals("Copy of Original scenario", fork.getTitle());
     }
@@ -295,7 +304,7 @@ class ScenarioServiceForkTest {
         mockSaveAssignsId(99L);
         when(thumbnailRepository.findByScenarioIdOrderByIdxAsc(1L)).thenReturn(List.of());
 
-        Scenario fork = scenarioService.forkScenario(1L, null, authentication);
+        Scenario fork = forks.forkScenario(1L, null, authentication);
 
         assertEquals(99L, fork.getId());
         verify(thumbnailRepository, never()).save(any());
@@ -324,7 +333,7 @@ class ScenarioServiceForkTest {
         });
         when(audioRepository.findByThumbnailIdOrderByIdxAsc(101L)).thenReturn(List.of());
 
-        scenarioService.forkScenario(1L, null, authentication);
+        forks.forkScenario(1L, null, authentication);
 
         verify(audioRepository, never()).save(any());
     }
