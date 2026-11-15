@@ -1,7 +1,6 @@
 <script setup>
 import {computed, ref, watch} from "vue";
-import {updateAudioMarker, uploadThumbnailAudio} from "../api/scenarios";
-import {buildApiUrl} from "../api/rest";
+import {uploadThumbnailAudio} from "../api/scenarios";
 import {useToast} from "../composables/useToast";
 import BaseBadge from "./ui/BaseBadge.vue";
 
@@ -25,13 +24,8 @@ const audioTitle = ref("");
 const audioFile = ref(null);
 const audioErr = ref("");
 const audioSuccess = ref("");
-const markerX = ref("");
-const markerY = ref("");
-const markerLabel = ref("");
 const isRecording = ref(false);
 const focusedDiscussionAudioId = ref(null);
-const markerEditAudioId = ref(null);
-const markerEditorOpen = ref(false);
 
 const panelOpen = ref(false);
 
@@ -43,12 +37,6 @@ let mediaRecorder = null;
 let chunks = [];
 let recordedBlob = null;
 
-function clearMarker() {
-  markerX.value = "";
-  markerY.value = "";
-  markerLabel.value = "";
-}
-
 function resetFormMessages() {
   audioErr.value = "";
   audioSuccess.value = "";
@@ -56,27 +44,6 @@ function resetFormMessages() {
 
 function onFileChange(event) {
   audioFile.value = event.target.files?.[0] ?? null;
-}
-
-function thumbnailContentUrl() {
-  if (!props.selectedThumb?.id) return "";
-  return buildApiUrl(`/api/thumbnails/${props.selectedThumb.id}/content`);
-}
-
-function hasMarker(audio) {
-  return (
-      audio?.markerX !== null &&
-      audio?.markerX !== undefined &&
-      audio?.markerY !== null &&
-      audio?.markerY !== undefined &&
-      audio?.markerX !== "" &&
-      audio?.markerY !== ""
-  );
-}
-
-function formatMarker(value) {
-  const num = Number(value);
-  return Number.isFinite(num) ? num.toFixed(2) : "-";
 }
 
 function isAudioActive(audio) {
@@ -101,14 +68,6 @@ const discussionAudio = computed(() => {
   }
 
   return props.audios[0] ?? null;
-});
-
-const markerPreviewStyle = computed(() => {
-  if (markerX.value === "" || markerY.value === "") return null;
-  return {
-    left: `${markerX.value}%`,
-    top: `${markerY.value}%`,
-  };
 });
 
 async function ensureRecorder() {
@@ -155,14 +114,6 @@ function stopRecording() {
   }
 }
 
-function appendMarker(fd) {
-  if (markerX.value !== "" && markerY.value !== "") {
-    fd.append("markerX", String(Number(markerX.value)));
-    fd.append("markerY", String(Number(markerY.value)));
-    fd.append("markerLabel", markerLabel.value || "");
-  }
-}
-
 async function uploadRecording() {
   resetFormMessages();
 
@@ -173,12 +124,10 @@ async function uploadRecording() {
     const fd = new FormData();
     fd.append("title", audioTitle.value || "");
     fd.append("audio", recordedBlob, "recording.webm");
-    appendMarker(fd);
 
     await uploadThumbnailAudio(props.selectedThumb.id, fd);
 
     audioTitle.value = "";
-    clearMarker();
     recordedBlob = null;
     audioSuccess.value = "Recording uploaded successfully.";
     toast.success(audioSuccess.value);
@@ -199,13 +148,11 @@ async function uploadExistingAudio() {
     const fd = new FormData();
     fd.append("title", audioTitle.value || "");
     fd.append("audio", audioFile.value, audioFile.value.name);
-    appendMarker(fd);
 
     await uploadThumbnailAudio(props.selectedThumb.id, fd);
 
     audioTitle.value = "";
     audioFile.value = null;
-    clearMarker();
     audioSuccess.value = "Audio file uploaded successfully.";
     toast.success(audioSuccess.value);
     emit("uploaded");
@@ -213,14 +160,6 @@ async function uploadExistingAudio() {
     audioErr.value = e.message;
     toast.error(audioErr.value);
   }
-}
-
-function onImageClick(event) {
-  const rect = event.target.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width) * 100;
-  const y = ((event.clientY - rect.top) / rect.height) * 100;
-  markerX.value = Math.max(0, Math.min(100, x)).toFixed(2);
-  markerY.value = Math.max(0, Math.min(100, y)).toFixed(2);
 }
 
 function playAudio(audio) {
@@ -231,83 +170,15 @@ function openDiscussion(audio) {
   focusedDiscussionAudioId.value = audio?.id ?? null;
 }
 
-function beginMarkerEdit(audio) {
-  markerEditAudioId.value = audio.id;
-  markerX.value = audio?.markerX != null ? Number(audio.markerX).toFixed(2) : "";
-  markerY.value = audio?.markerY != null ? Number(audio.markerY).toFixed(2) : "";
-  markerLabel.value = audio?.markerLabel ?? "";
-  markerEditorOpen.value = true;
-}
-
-function cancelMarkerEdit() {
-  markerEditAudioId.value = null;
-  markerEditorOpen.value = false;
-  clearMarker();
-}
-
-async function saveMarkerEdit() {
-  resetFormMessages();
-
-  try {
-    if (!markerEditAudioId.value) {
-      throw new Error("No audio selected for marker editing.");
-    }
-
-    const payload =
-        markerX.value === "" || markerY.value === ""
-            ? {markerX: null, markerY: null, markerLabel: null}
-            : {
-              markerX: Number(markerX.value),
-              markerY: Number(markerY.value),
-              markerLabel: markerLabel.value || null,
-            };
-
-    await updateAudioMarker(markerEditAudioId.value, payload);
-
-    audioSuccess.value = "Marker updated successfully.";
-    toast.success(audioSuccess.value);
-    emit("uploaded");
-    cancelMarkerEdit();
-  } catch (e) {
-    audioErr.value = e.message || "Failed to update marker.";
-    toast.error(audioErr.value);
-  }
-}
-
-async function removeMarker(audio) {
-  resetFormMessages();
-
-  try {
-    await updateAudioMarker(audio.id, {
-      markerX: null,
-      markerY: null,
-      markerLabel: null,
-    });
-
-    audioSuccess.value = "Marker removed successfully.";
-    toast.success(audioSuccess.value);
-    emit("uploaded");
-    if (String(markerEditAudioId.value) === String(audio.id)) {
-      cancelMarkerEdit();
-    }
-  } catch (e) {
-    audioErr.value = e.message || "Failed to remove marker.";
-    toast.error(audioErr.value);
-  }
-}
-
 watch(
     () => props.selectedThumb,
     () => {
       resetFormMessages();
-      clearMarker();
       audioTitle.value = "";
       audioFile.value = null;
       recordedBlob = null;
       isRecording.value = false;
       focusedDiscussionAudioId.value = null;
-      markerEditAudioId.value = null;
-      markerEditorOpen.value = false;
     }
 );
 
@@ -404,18 +275,6 @@ watch(
                   <span v-if="audio.idx != null">
                     Order: <strong>{{ audio.idx }}</strong>
                   </span>
-
-                  <template v-if="audio.markerLabel">
-                    <span v-if="audio.idx != null"> · </span>
-                    Marker label: <strong>{{ audio.markerLabel }}</strong>
-                  </template>
-
-                  <template v-if="hasMarker(audio)">
-                    <span v-if="audio.idx != null || audio.markerLabel"> · </span>
-                    Marker:
-                    <strong>{{ formatMarker(audio.markerX) }}%</strong>,
-                    <strong>{{ formatMarker(audio.markerY) }}%</strong>
-                  </template>
                 </p>
               </div>
 
@@ -439,24 +298,6 @@ watch(
                 >
                   Play
                 </button>
-
-                <button
-                    v-if="isOwner"
-                    type="button"
-                    class="btn btn--ghost"
-                    @click="beginMarkerEdit(audio)"
-                >
-                  Edit marker
-                </button>
-
-                <button
-                    v-if="isOwner && hasMarker(audio)"
-                    type="button"
-                    class="btn btn--ghost"
-                    @click="removeMarker(audio)"
-                >
-                  Remove marker
-                </button>
               </div>
             </div>
           </article>
@@ -470,67 +311,7 @@ watch(
       <template v-if="isOwner">
         <div class="audio-panel__grid">
           <section class="audio-panel__section">
-            <h3>{{ markerEditorOpen ? "Edit marker" : "1. Marker placement" }}</h3>
-            <p class="muted">
-              Click on the image to place the audio marker.
-            </p>
-
-            <div class="marker-picker">
-              <div class="marker-image-stage">
-                <img
-                    :src="thumbnailContentUrl()"
-                    alt="Marker picker"
-                    class="marker-image"
-                    @click="onImageClick"
-                />
-
-                <div
-                    v-if="markerPreviewStyle"
-                    class="marker-dot marker-dot--draft"
-                    :style="markerPreviewStyle"
-                    title="Selected marker position"
-                ></div>
-              </div>
-            </div>
-
-            <p class="muted">
-              Marker:
-              <strong>{{ markerX || "-" }}%</strong>,
-              <strong>{{ markerY || "-" }}%</strong>
-            </p>
-
-            <label>
-              Marker label
-              <input v-model="markerLabel" placeholder="Optional marker label"/>
-            </label>
-
-            <div class="audio-panel__actions">
-              <button type="button" class="btn btn--ghost" @click="clearMarker">
-                Clear marker draft
-              </button>
-
-              <button
-                  v-if="markerEditorOpen"
-                  type="button"
-                  class="btn btn--primary"
-                  @click="saveMarkerEdit"
-              >
-                Save marker changes
-              </button>
-
-              <button
-                  v-if="markerEditorOpen"
-                  type="button"
-                  class="btn btn--ghost"
-                  @click="cancelMarkerEdit"
-              >
-                Cancel edit
-              </button>
-            </div>
-          </section>
-
-          <section class="audio-panel__section">
-            <h3>2. Audio upload</h3>
+            <h3>Audio upload</h3>
 
             <label>
               Audio title
@@ -593,7 +374,7 @@ watch(
 
       <template v-else>
         <p class="muted">
-          You can view this scenario, but only the owner can upload audio and place markers.
+          You can view this scenario, but only the owner can upload audio.
         </p>
       </template>
     </div>

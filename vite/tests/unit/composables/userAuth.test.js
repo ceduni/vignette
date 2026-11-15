@@ -1,6 +1,7 @@
 const apiLogin = vi.fn();
 const apiLogout = vi.fn();
 const apiMe = vi.fn();
+const apiRefresh = vi.fn();
 
 async function loadComposable() {
     vi.resetModules();
@@ -9,6 +10,7 @@ async function loadComposable() {
         login: apiLogin,
         logout: apiLogout,
         me: apiMe,
+        refresh: apiRefresh,
     }));
 
     return import("@/composables/useAuth");
@@ -19,6 +21,8 @@ describe("useAuth", () => {
         apiLogin.mockReset();
         apiLogout.mockReset();
         apiMe.mockReset();
+        apiRefresh.mockReset();
+        apiRefresh.mockResolvedValue({accessToken: "refreshed-token"});
     });
 
     it("loads current user successfully", async () => {

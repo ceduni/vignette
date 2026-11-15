@@ -5,20 +5,47 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.ScenarioDto;
+import org.titiplex.persistence.model.CollaborationStatus;
+import org.titiplex.persistence.model.CollaboratorRole;
+import org.titiplex.persistence.model.Audio;
+import org.titiplex.persistence.model.AudioScope;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.model.Scenario;
+import org.titiplex.persistence.model.ScenarioCollaborator;
+import org.titiplex.persistence.model.ScenarioHistoryAction;
+import org.titiplex.persistence.model.ScenarioVisibilityStatus;
+import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
+import org.titiplex.persistence.repo.AudioRepository;
+import org.titiplex.persistence.repo.ScenarioBookmarkRepository;
+import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
+import org.titiplex.persistence.repo.ScenarioHistoryRepository;
+import org.titiplex.persistence.repo.ScenarioInviteLinkRepository;
+import org.titiplex.persistence.repo.ScenarioLikeRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
+import org.titiplex.persistence.repo.ThumbnailRepository;
+import org.titiplex.service.storage.FileStorageService;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
@@ -31,9 +58,47 @@ class ScenarioServiceTest {
     private UserService userService;
     @Mock
     private LanguageService languageService;
+    @Mock
+    private ScenarioTagService scenarioTagService;
+    @Mock
+    private NotificationService notificationService;
+    @Mock
+    private ThumbnailRepository thumbnailRepo;
+    @Mock
+    private AudioRepository audioRepo;
+    @Mock
+    private ScenarioCollaboratorRepository collaboratorRepo;
+    @Mock
+    private ScenarioHistoryService scenarioHistoryService;
+    @Mock
+    private ScenarioLikeRepository likeRepo;
+    @Mock
+    private ScenarioBookmarkRepository bookmarkRepo;
+    @Mock
+    private ScenarioInviteLinkRepository inviteLinkRepo;
+    @Mock
+    private ScenarioHistoryRepository historyRepo;
+    @Mock
+    private ThumbnailService thumbnailService;
+    @Mock
+    private FileStorageService storage;
 
-    @InjectMocks
     private ScenarioService scenarioService;
+    private ScenarioForkService forks;
+    private ScenarioDeletionService deletion;
+
+    /** Real access rules on top of the mocked repositories, so service tests exercise them too. */
+    @org.junit.jupiter.api.BeforeEach
+    void wireService() {
+        ScenarioAccessService access = new ScenarioAccessService(scenarioRepository, userService, collaboratorRepo, notificationService);
+        scenarioService = new ScenarioService(
+                scenarioRepository, userService, languageService, scenarioTagService, notificationService,
+                collaboratorRepo, scenarioHistoryService, access);
+        deletion = new ScenarioDeletionService(
+                scenarioService, access, scenarioRepository, likeRepo, bookmarkRepo, collaboratorRepo,
+                inviteLinkRepo, historyRepo, thumbnailRepo, thumbnailService, audioRepo, storage);
+        forks = new ScenarioForkService(scenarioRepository, scenarioService, userService, notificationService, thumbnailRepo, audioRepo);
+    }
 
     @Test
     void createScenario_buildsScenarioWithAuthorAndLanguage() {
@@ -45,6 +110,7 @@ class ScenarioServiceTest {
 
         when(userService.getUserById(9L)).thenReturn(user);
         when(languageService.getLanguage("fra")).thenReturn(language);
+        when(scenarioTagService.resolveTags(List.of())).thenReturn(List.of());
         when(scenarioRepository.save(any(Scenario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Scenario created = scenarioService.createScenario("Titre", "Desc", 9L, "fra", List.of());
@@ -58,8 +124,194 @@ class ScenarioServiceTest {
     }
 
     @Test
+    void createScenario_rejectsDescriptionBeyondTheStoredLimit() {
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> scenarioService.createScenario("Title", "x".repeat(501), 9L, "fra", List.of())
+        );
+
+        assertEquals("Description must be 500 characters or fewer", error.getMessage());
+    }
+
+    private Scenario publishedOriginalForFork() {
+        Language language = new Language();
+        language.setId("fra");
+        Scenario original = new Scenario();
+        original.setId(3L);
+        original.setTitle("Original");
+        original.setAuthor_id(7L);
+        original.setLanguage_id("fra");
+        original.setLanguage(language);
+        original.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        original.setTags(Set.of());
+        return original;
+    }
+
+    private void stubForkSave(Scenario original) {
+        User user = author();
+        when(scenarioRepository.findByIdWithTags(3L)).thenReturn(Optional.of(original));
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+        when(userService.getUserById(7L)).thenReturn(user);
+        when(scenarioRepository.saveAndFlush(any(Scenario.class))).thenAnswer(invocation -> {
+            Scenario saved = invocation.getArgument(0);
+            saved.setId(44L);
+            return saved;
+        });
+    }
+
+    @Test
+    void forkScenario_keepsTheSelectedBackgroundAudio() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario original = publishedOriginalForFork();
+        original.setActiveBackgroundAudioId(15L);
+        Audio other = new Audio();
+        other.setId(14L);
+        other.setScope(AudioScope.BACKGROUND);
+        Audio selected = new Audio();
+        selected.setId(15L);
+        selected.setScope(AudioScope.BACKGROUND);
+        stubForkSave(original);
+        when(thumbnailRepo.findByScenarioIdOrderByIdxAsc(3L)).thenReturn(List.of());
+        when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(3L, AudioScope.BACKGROUND))
+                .thenReturn(List.of(other, selected));
+        // The copies of 14 and 15 get the new ids 114 and 115 (saved in that order)
+        java.util.concurrent.atomic.AtomicLong nextId = new java.util.concurrent.atomic.AtomicLong(114L);
+        when(audioRepo.save(any(Audio.class))).thenAnswer(invocation -> {
+            Audio copy = invocation.getArgument(0);
+            copy.setId(nextId.getAndIncrement());
+            return copy;
+        });
+
+        Scenario fork = forks.forkScenario(3L, "My copy", auth);
+
+        assertEquals(115L, fork.getActiveBackgroundAudioId());
+    }
+
+    @Test
+    void forkScenario_sceneAudioKeepsSourceLabelAndVolume() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario original = publishedOriginalForFork();
+        Thumbnail scene = new Thumbnail();
+        scene.setId(8L);
+        scene.setScenarioId(3L);
+        Audio sceneAudio = new Audio();
+        sceneAudio.setId(20L);
+        sceneAudio.setThumbnailId(8L);
+        sceneAudio.setScope(AudioScope.SCENE);
+        sceneAudio.setSourceLabel("Interview, 2024");
+        sceneAudio.setSourceUrl("https://example.test/interview");
+        sceneAudio.setBackgroundVolume(40);
+        sceneAudio.setBackgroundLoop(true);
+        sceneAudio.setGloss("gloss");
+        stubForkSave(original);
+        when(thumbnailRepo.findByScenarioIdOrderByIdxAsc(3L)).thenReturn(List.of(scene));
+        when(thumbnailRepo.save(any(Thumbnail.class))).thenAnswer(invocation -> {
+            Thumbnail copy = invocation.getArgument(0);
+            copy.setId(80L);
+            return copy;
+        });
+        when(audioRepo.findByThumbnailIdOrderByIdxAsc(8L)).thenReturn(List.of(sceneAudio));
+        when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(3L, AudioScope.BACKGROUND)).thenReturn(List.of());
+
+        forks.forkScenario(3L, "My copy", auth);
+
+        org.mockito.ArgumentCaptor<Audio> captor = org.mockito.ArgumentCaptor.forClass(Audio.class);
+        verify(audioRepo).save(captor.capture());
+        Audio copied = captor.getValue();
+        assertEquals(44L, copied.getScenarioId());
+        assertEquals(80L, copied.getThumbnailId());
+        assertEquals(AudioScope.SCENE, copied.getScope());
+        assertEquals("Interview, 2024", copied.getSourceLabel());
+        assertEquals("https://example.test/interview", copied.getSourceUrl());
+        assertEquals(40, copied.getBackgroundVolume());
+        assertEquals(true, copied.getBackgroundLoop());
+        assertEquals("gloss", copied.getGloss());
+    }
+
+    @Test
+    void forkScenario_copiesBackgroundAudioMetadata() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        User user = author();
+        Language language = new Language();
+        language.setId("fra");
+        Scenario original = new Scenario();
+        original.setId(3L);
+        original.setTitle("Original");
+        original.setAuthor_id(7L);
+        original.setLanguage_id("fra");
+        original.setLanguage(language);
+        original.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        original.setTags(Set.of());
+        Audio background = new Audio();
+        background.setId(14L);
+        background.setStoragePath("audios/scenario-3/background/forest.wav");
+        background.setSizeBytes(20L);
+        background.setOriginalFilename("forest.wav");
+        background.setAudioSha256("hash");
+        background.setTitle("Forest");
+        background.setIdx(1);
+        background.setMime("audio/wav");
+        background.setScope(AudioScope.BACKGROUND);
+        background.setLanguageId("fra");
+        background.setSourceLabel("Field recording");
+        background.setSourceUrl("https://example.test/forest");
+
+        when(scenarioRepository.findByIdWithTags(3L)).thenReturn(Optional.of(original));
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+        when(userService.getUserById(7L)).thenReturn(user);
+        when(scenarioRepository.saveAndFlush(any(Scenario.class))).thenAnswer(invocation -> {
+            Scenario saved = invocation.getArgument(0);
+            saved.setId(44L);
+            return saved;
+        });
+        when(thumbnailRepo.findByScenarioIdOrderByIdxAsc(3L)).thenReturn(List.of());
+        when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(3L, AudioScope.BACKGROUND))
+                .thenReturn(List.of(background));
+
+        forks.forkScenario(3L, "My copy", auth);
+
+        org.mockito.ArgumentCaptor<Audio> captor = org.mockito.ArgumentCaptor.forClass(Audio.class);
+        verify(audioRepo).save(captor.capture());
+        Audio copied = captor.getValue();
+        assertEquals(AudioScope.BACKGROUND, copied.getScope());
+        assertEquals(44L, copied.getScenarioId());
+        assertEquals("audios/scenario-3/background/forest.wav", copied.getStoragePath());
+        assertEquals("Field recording", copied.getSourceLabel());
+        assertEquals("https://example.test/forest", copied.getSourceUrl());
+    }
+
+    @Test
+    void updateScenarioMetadata_rejectsAnotherScenarioTitleBeforeSaving() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("Current title");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(9L);
+        User author = new User();
+        author.setUsername("alice");
+        when(userService.getUserById(9L)).thenReturn(author);
+        when(scenarioRepository.findByIdWithTags(3L)).thenReturn(Optional.of(scenario));
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+        when(scenarioRepository.existsByTitleIgnoreCaseAndAuthorUsernameAndLanguageId("Taken title", "alice", "fra"))
+                .thenReturn(true);
+
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> scenarioService.updateScenarioMetadata(
+                        3L,
+                        new org.titiplex.api.dto.UpdateScenarioMetadataRequest(" Taken title ", null, null, null),
+                        auth
+                )
+        );
+
+        assertEquals("Scenario already exists for this user and language", error.getMessage());
+        verify(scenarioRepository, never()).save(scenario);
+    }
+
+    @Test
     void getRequiredScenario_throwsWhenMissing() {
-        when(scenarioRepository.findById(11L)).thenReturn(Optional.empty());
+        when(scenarioRepository.findByIdWithTags(11L)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class, () -> scenarioService.getRequiredScenario(11L));
     }
@@ -68,7 +320,7 @@ class ScenarioServiceTest {
     void listScenarios_returnsRepositoryList() {
         Scenario scenario = new Scenario();
         scenario.setTitle("Latest");
-        when(scenarioRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(scenario));
+        when(scenarioRepository.findAllWithTagsOrderByCreatedAtDesc()).thenReturn(List.of(scenario));
 
         List<Scenario> result = scenarioService.listAllScenarios();
 
@@ -83,6 +335,7 @@ class ScenarioServiceTest {
         author.setUsername("alice");
 
         when(userService.getUserById(7L)).thenReturn(author);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
 
         Scenario scenario = new Scenario();
         scenario.setId(3L);
@@ -98,5 +351,283 @@ class ScenarioServiceTest {
         assertEquals(3L, dto.id());
         assertEquals("My scenario", dto.title());
         assertEquals("alice", dto.authorUsername());
+        assertEquals(false, dto.canEdit());
+    }
+
+    @Test
+    void toDto_withViewer_canEditTrueForAuthor() {
+        User author = author();
+        when(userService.getUserById(7L)).thenReturn(author);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("My scenario");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author);
+
+        ScenarioDto dto = scenarioService.toDto(scenario, "alice");
+
+        assertEquals(true, dto.canEdit());
+    }
+
+    @Test
+    void toDto_withViewer_canEditTrueForAcceptedEditorCollaborator() {
+        User author = author();
+        User viewer = new User();
+        viewer.setId(42L);
+        viewer.setUsername("bob");
+
+        when(userService.getUserById(7L)).thenReturn(author);
+        when(userService.getUserByUsername("bob")).thenReturn(viewer);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "bob")).thenReturn(false);
+
+        ScenarioCollaborator collab = new ScenarioCollaborator();
+        collab.setStatus(CollaborationStatus.ACCEPTED);
+        collab.setRole(CollaboratorRole.EDITOR);
+        when(collaboratorRepo.findByScenarioIdAndUserId(3L, 42L)).thenReturn(Optional.of(collab));
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("My scenario");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author);
+
+        ScenarioDto dto = scenarioService.toDto(scenario, "bob");
+
+        assertEquals(true, dto.canEdit());
+    }
+
+    @Test
+    void toDto_withViewer_canEditFalseForNonCollaborator() {
+        User author = author();
+        User viewer = new User();
+        viewer.setId(99L);
+        viewer.setUsername("stranger");
+
+        when(userService.getUserById(7L)).thenReturn(author);
+        when(userService.getUserByUsername("stranger")).thenReturn(viewer);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "stranger")).thenReturn(false);
+        when(collaboratorRepo.findByScenarioIdAndUserId(3L, 99L)).thenReturn(Optional.empty());
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("My scenario");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author);
+
+        ScenarioDto dto = scenarioService.toDto(scenario, "stranger");
+
+        assertEquals(false, dto.canEdit());
+    }
+
+    @Test
+    void toDto_withViewer_canEditTrueForAuthorOncePublished() {
+        User author = author();
+        when(userService.getUserById(7L)).thenReturn(author);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(scenarioRepository.existsByIdAndAuthorUsername(3L, "alice")).thenReturn(true);
+
+        Scenario scenario = new Scenario();
+        scenario.setId(3L);
+        scenario.setTitle("My scenario");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author);
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+
+        ScenarioDto dto = scenarioService.toDto(scenario, "alice");
+
+        assertEquals(true, dto.canEdit());
+    }
+
+    @Test
+    void listPublishedScenariosWorkedOnByUsername_throwsWhenUserNotFound() {
+        when(userService.getUserByUsername("ghost")).thenReturn(null);
+
+        assertThrows(NoSuchElementException.class,
+                () -> scenarioService.listPublishedScenariosWorkedOnByUsername("ghost"));
+    }
+
+    @Test
+    void listPublishedScenariosWorkedOnByUsername_includesAuthoredAndCollaboratedPublishedOnly() {
+        User bob = new User();
+        bob.setId(11L);
+        bob.setUsername("bob");
+        when(userService.getUserByUsername("bob")).thenReturn(bob);
+        when(scenarioTagService.toNames(anyCollection())).thenReturn(List.of());
+        when(userService.getUserById(11L)).thenReturn(bob);
+        when(userService.getUserById(7L)).thenReturn(author());
+
+        Scenario authoredPublished = new Scenario();
+        authoredPublished.setId(1L);
+        authoredPublished.setTitle("Authored + published");
+        authoredPublished.setAuthor_id(11L);
+        authoredPublished.setAuthor(bob);
+        authoredPublished.setCreatedAt(Instant.parse("2025-02-01T00:00:00Z"));
+        authoredPublished.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        authoredPublished.setTags(Set.of());
+
+        Scenario authoredDraft = new Scenario();
+        authoredDraft.setId(2L);
+        authoredDraft.setTitle("Authored draft");
+        authoredDraft.setAuthor_id(11L);
+        authoredDraft.setAuthor(bob);
+        authoredDraft.setCreatedAt(Instant.parse("2025-01-01T00:00:00Z"));
+        authoredDraft.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
+        authoredDraft.setTags(Set.of());
+
+        Scenario collaboratedPublished = new Scenario();
+        collaboratedPublished.setId(3L);
+        collaboratedPublished.setTitle("Collaborated + published");
+        collaboratedPublished.setAuthor_id(7L);
+        collaboratedPublished.setAuthor(author());
+        collaboratedPublished.setCreatedAt(Instant.parse("2025-03-01T00:00:00Z"));
+        collaboratedPublished.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        collaboratedPublished.setTags(Set.of());
+
+        when(scenarioRepository.findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc("bob"))
+                .thenReturn(List.of(authoredPublished, authoredDraft));
+
+        ScenarioCollaborator collab = new ScenarioCollaborator();
+        collab.setScenarioId(3L);
+        when(collaboratorRepo.findByUserIdAndStatus(11L, CollaborationStatus.ACCEPTED))
+                .thenReturn(List.of(collab));
+        when(scenarioRepository.findAllByIdInWithTags(List.of(3L)))
+                .thenReturn(List.of(collaboratedPublished));
+
+        List<ScenarioDto> result = scenarioService.listPublishedScenariosWorkedOnByUsername("bob");
+
+        assertEquals(2, result.size());
+        assertEquals("Collaborated + published", result.get(0).title());
+        assertEquals("Authored + published", result.get(1).title());
+    }
+
+    private Authentication authOf(String username, String... authorities) {
+        return new UsernamePasswordAuthenticationToken(
+                username,
+                "N/A",
+                java.util.Arrays.stream(authorities).map(SimpleGrantedAuthority::new).toList()
+        );
+    }
+
+    @Test
+    void listPublishedScenariosByFamilyId_usesDefaultLimit() {
+        Scenario scenario = publishedScenario(8L, "Family hit");
+        when(scenarioRepository.findPublishedByFamilyIdOrderByCreatedAtDesc(eq("indo1319"), any(Pageable.class)))
+                .thenReturn(List.of(scenario));
+        when(userService.getUserById(7L)).thenReturn(author());
+        when(scenarioTagService.toNames(any())).thenReturn(List.of());
+
+        List<ScenarioDto> result = scenarioService.listPublishedScenariosByFamilyId("indo1319", null);
+
+        assertEquals(1, result.size());
+        verify(languageService).assertFamilyExists("indo1319");
+        verify(scenarioRepository).findPublishedByFamilyIdOrderByCreatedAtDesc(eq("indo1319"), eq(Pageable.ofSize(15)));
+    }
+
+    @Test
+    void listPublishedScenariosByCountryIso_returnsEmptyWhenNoLanguages() {
+        when(languageService.findLanguageIdsByCountryIsoA3("CAN")).thenReturn(List.of());
+
+        List<ScenarioDto> result = scenarioService.listPublishedScenariosByCountryIso("CAN", 10);
+
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    void listPublishedScenariosByCountryIso_clampsLimitToFifteen() {
+        Scenario scenario = publishedScenario(2L, "Country hit");
+        when(languageService.findLanguageIdsByCountryIsoA3("FRA")).thenReturn(List.of("fra", "oci"));
+        when(scenarioRepository.findPublishedByLanguageIdInOrderByCreatedAtDesc(eq(List.of("fra", "oci")), any(Pageable.class)))
+                .thenReturn(List.of(scenario));
+        when(userService.getUserById(7L)).thenReturn(author());
+        when(scenarioTagService.toNames(any())).thenReturn(List.of());
+
+        List<ScenarioDto> result = scenarioService.listPublishedScenariosByCountryIso("FRA", 99);
+
+        assertEquals(1, result.size());
+        verify(scenarioRepository).findPublishedByLanguageIdInOrderByCreatedAtDesc(
+                eq(List.of("fra", "oci")),
+                eq(Pageable.ofSize(15))
+        );
+    }
+
+    @Test
+    void publishScenario_updatesThePublicationTimeWithoutNotifyingFollowersAgain() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario scenario = publishedScenario(42L, "Published scenario");
+        Instant previousPublication = Instant.parse("2025-01-02T00:00:00Z");
+        scenario.setPublishedAt(previousPublication);
+        User user = author();
+
+        when(scenarioRepository.findByIdWithTags(42L)).thenReturn(Optional.of(scenario));
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "alice")).thenReturn(true);
+        when(scenarioRepository.save(scenario)).thenReturn(scenario);
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
+        Scenario updated = scenarioService.publishScenario(42L, auth);
+
+        assertEquals(ScenarioVisibilityStatus.PUBLISHED, updated.getVisibilityStatus());
+        assertEquals(true, updated.getPublishedAt().isAfter(previousPublication));
+        verify(notificationService, never()).notifyNewScenarioInLanguage(any());
+        verify(scenarioHistoryService).record(
+                42L,
+                7L,
+                ScenarioHistoryAction.PUBLISHED,
+                "Updated the published scenario"
+        );
+    }
+
+    private Scenario publishedScenario(long id, String title) {
+        Scenario scenario = new Scenario();
+        scenario.setId(id);
+        scenario.setTitle(title);
+        scenario.setDescription("description");
+        scenario.setLanguage_id("fra");
+        scenario.setAuthor_id(7L);
+        scenario.setAuthor(author());
+        scenario.setCreatedAt(Instant.parse("2025-01-01T00:00:00Z"));
+        scenario.setVisibilityStatus(ScenarioVisibilityStatus.PUBLISHED);
+        scenario.setTags(Set.of());
+        return scenario;
+    }
+
+    private User author() {
+        User author = new User();
+        author.setId(7L);
+        author.setUsername("alice");
+        return author;
+    }
+
+    @Test
+    void deleteScenario_keepsSharedBackgroundAudioFile() {
+        Authentication auth = authOf("alice", "ROLE_USER");
+        Scenario scenario = new Scenario();
+        scenario.setId(42L);
+        Audio audio = new Audio();
+        audio.setId(15L);
+        audio.setScenarioId(42L);
+        audio.setScope(AudioScope.BACKGROUND);
+        audio.setStoragePath("audios/shared-background.webm");
+
+        when(scenarioRepository.findByIdWithTags(42L)).thenReturn(Optional.of(scenario));
+        when(scenarioRepository.existsByIdAndAuthorUsername(42L, "alice")).thenReturn(true);
+        when(thumbnailRepo.findByScenarioIdOrderByIdxAsc(42L)).thenReturn(List.of());
+        when(audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(42L, AudioScope.BACKGROUND))
+                .thenReturn(List.of(audio));
+        when(audioRepo.existsByStoragePathAndIdNot("audios/shared-background.webm", 15L)).thenReturn(true);
+
+        deletion.deleteScenario(42L, auth);
+
+        verify(storage, never()).deleteAfterCommit("audios/shared-background.webm");
+        verify(audioRepo).delete(audio);
+        verify(scenarioRepository).delete(scenario);
     }
 }

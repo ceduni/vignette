@@ -1,66 +1,115 @@
 package org.titiplex.service;
 
+import org.titiplex.util.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.api.dto.AudioRowDto;
+import org.titiplex.api.dto.LanguagePreviewAudioDto;
+import org.titiplex.api.dto.ScenarioBackgroundAudioDto;
 import org.titiplex.persistence.model.Audio;
+import org.titiplex.persistence.model.AudioScope;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.repo.AudioRepository;
+import org.titiplex.persistence.repo.ScenarioRepository;
 import org.titiplex.service.storage.FileStorageService;
 import org.titiplex.service.storage.MediaContent;
 import org.titiplex.service.storage.StoredFile;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @Service
 public class AudioService {
 
+    private static final Logger log = LoggerFactory.getLogger(AudioService.class);
+
     private final AudioRepository audios;
     private final ThumbnailService thumbnailService;
     private final ScenarioService scenarioService;
+    private final ScenarioRepository scenarioRepository;
     private final FileStorageService storage;
 
     public AudioService(
             AudioRepository audios,
             ThumbnailService thumbnailService,
             ScenarioService scenarioService,
+            ScenarioRepository scenarioRepository,
             FileStorageService storage
     ) {
         this.audios = audios;
         this.thumbnailService = thumbnailService;
         this.scenarioService = scenarioService;
+        this.scenarioRepository = scenarioRepository;
         this.storage = storage;
     }
 
     public List<AudioRowDto> listForThumbnail(Long thumbnailId) {
         return audios.findByThumbnailIdOrderByIdxAsc(thumbnailId).stream()
-                .map(a -> new AudioRowDto(
-                        a.getId(),
-                        a.getTitle(),
-                        a.getIdx(),
-                        a.getMime(),
-                        a.getMarkerX(),
-                        a.getMarkerY(),
-                        a.getMarkerLabel()
-                ))
+                .map(this::toAudioRowDto)
                 .toList();
     }
 
     public List<AudioRowDto> listForLanguage(String languageId) {
         return audios.findAllPublishedByLanguageId(languageId).stream()
-                .map(a -> new AudioRowDto(
-                        a.getId(),
-                        a.getTitle(),
-                        a.getIdx(),
-                        a.getMime(),
-                        a.getMarkerX(),
-                        a.getMarkerY(),
-                        a.getMarkerLabel()
-                ))
+                .map(this::toAudioRowDto)
                 .toList();
+    }
+
+    public List<ScenarioBackgroundAudioDto> listBackgroundForScenario(Long scenarioId) {
+        Long activeAudioId = scenarioService.getRequiredScenario(scenarioId).getActiveBackgroundAudioId();
+        return audios.findByScenarioIdAndScopeOrderByIdxAscIdAsc(scenarioId, AudioScope.BACKGROUND).stream()
+                .map(audio -> toBackgroundDto(audio, activeAudioId))
+                .toList();
+    }
+
+    public LanguagePreviewAudioDto getLanguagePreviewAudio(String languageId) {
+        log.info("Preview audio requested for language={}", languageId);
+
+        List<Scenario> scenarios = scenarioRepository.findPublishedByLanguageIdOrderByCreatedAtAscIdAsc(languageId);
+
+        for (Scenario scenario : scenarios) {
+            List<Thumbnail> thumbnails = thumbnailService.listByScenarioId(scenario.getId());
+
+            for (Thumbnail thumbnail : thumbnails) {
+                List<Audio> thumbnailAudios = audios.findByThumbnailIdOrderByIdxAsc(thumbnail.getId());
+                if (thumbnailAudios.isEmpty()) {
+                    continue;
+                }
+
+                Audio audio = thumbnailAudios.getFirst();
+                String contentUrl = contentUrl(audio);
+
+                log.info(
+                        "Preview audio selected language={} scenario={} thumbnail={} audio={} url={}",
+                        languageId,
+                        scenario.getId(),
+                        thumbnail.getId(),
+                        audio.getId(),
+                        contentUrl
+                );
+
+                return new LanguagePreviewAudioDto(
+                        audio.getId(),
+                        audio.getTitle(),
+                        audio.getMime(),
+                        contentUrl,
+                        scenario.getId(),
+                        scenario.getTitle(),
+                        thumbnail.getId(),
+                        audio.getLanguageId(),
+                        audio.getIdx(),
+                        null
+                );
+            }
+        }
+
+        log.info("No preview audio found for language={}", languageId);
+        throw new NoSuchElementException("No preview audio found for language " + languageId);
     }
 
     public Long getScenarioIdForAudio(Long audioId) {
@@ -81,58 +130,96 @@ public class AudioService {
                             Double markerY,
                             String markerLabel) throws Exception {
 
-        if (audioFile == null || audioFile.isEmpty()) {
-            throw new IllegalArgumentException("audio is empty");
-        }
-
-        if (markerX != null && (markerX < 0.0 || markerX > 100.0)) {
-            throw new IllegalArgumentException("markerX must be between 0 and 100");
-        }
-        if (markerY != null && (markerY < 0.0 || markerY > 100.0)) {
-            throw new IllegalArgumentException("markerY must be between 0 and 100");
-        }
-        if ((markerX == null) != (markerY == null)) {
-            throw new IllegalArgumentException("markerX and markerY must be both set or both empty");
-        }
+        requireFile(audioFile);
+        validateMarkerPosition(markerX, markerY);
+        String normalizedMarkerLabel = Text.optional(markerLabel, 120, "Marker label");
 
         Thumbnail t = thumbnailService.getThumbnailById(thumbnailId);
         Long scenarioId = t.getScenarioId();
         Scenario s = scenarioService.getRequiredScenario(scenarioId);
 
+        // Lock the thumbnail so that concurrent uploads compute max(idx) + 1 one after the other.
+        thumbnailService.lockThumbnail(thumbnailId);
         int effectiveIdx = (idx != null) ? idx : (audios.maxIdx(thumbnailId) + 1);
         if (audios.existsByThumbnailIdAndIdx(thumbnailId, effectiveIdx)) {
             throw new IllegalArgumentException("idx already used for this thumbnail");
         }
 
+        String effectiveTitle = resolveAudioTitle(title, audioFile.getOriginalFilename(), "Audio " + effectiveIdx);
         StoredFile stored = storage.storeAudio(audioFile, scenarioId, thumbnailId);
 
         Audio a = new Audio();
         a.setThumbnailId(thumbnailId);
-        a.setMime(stored.contentType());
-        a.setAudioSha256(stored.sha256());
-        a.setStoragePath(stored.relativePath());
-        a.setSizeBytes(stored.sizeBytes());
-        a.setOriginalFilename(stored.originalFilename());
-
-        String effectiveTitle;
-        if (title != null && !title.isBlank()) {
-            effectiveTitle = title.trim();
-        } else if (audioFile.getOriginalFilename() != null && !audioFile.getOriginalFilename().isBlank()) {
-            effectiveTitle = audioFile.getOriginalFilename().trim();
-        } else {
-            effectiveTitle = "Audio " + effectiveIdx;
-        }
+        a.setScope(AudioScope.SCENE);
+        applyStoredFile(a, stored);
         a.setTitle(effectiveTitle);
-
         a.setIdx(effectiveIdx);
         a.setMarkerX(markerX);
         a.setMarkerY(markerY);
-        a.setMarkerLabel((markerLabel == null || markerLabel.isBlank()) ? null : markerLabel.trim());
+        a.setMarkerLabel(normalizedMarkerLabel);
         a.setAuthorId(authorId);
         a.setScenarioId(scenarioId);
         a.setLanguageId(s.getLanguage_id());
 
         audios.save(a);
+        return a.getId();
+    }
+
+    @Transactional
+    public void selectBackgroundAudio(Long scenarioId, Long audioId) {
+        Scenario scenario = scenarioService.getRequiredScenario(scenarioId);
+        if (audioId == null) {
+            scenario.setActiveBackgroundAudioId(null);
+            scenarioRepository.save(scenario);
+            return;
+        }
+
+        Audio audio = getAudioOrThrow(audioId);
+        if (audio.getScope() != AudioScope.BACKGROUND || !scenarioId.equals(audio.getScenarioId())) {
+            throw new IllegalArgumentException("Audio does not belong to this scenario's background tracks");
+        }
+
+        scenario.setActiveBackgroundAudioId(audioId);
+        scenarioRepository.save(scenario);
+    }
+
+    @Transactional
+    public Long createBackgroundAudio(Long scenarioId,
+                                      String title,
+                                      String sourceLabel,
+                                      String sourceUrl,
+                                      Long authorId,
+                                      MultipartFile audioFile) throws Exception {
+        requireFile(audioFile);
+
+        Scenario s = scenarioService.getRequiredScenario(scenarioId);
+        // Lock the scenario so that concurrent uploads compute max(idx) + 1 one after the other.
+        scenarioRepository.lockById(scenarioId);
+        int effectiveIdx = audios.maxBackgroundIdx(scenarioId) + 1;
+        String effectiveTitle = resolveAudioTitle(
+                title,
+                audioFile.getOriginalFilename(),
+                "Background audio " + effectiveIdx
+        );
+        String normalizedSourceLabel = Text.optional(sourceLabel, 180, "Audio credit");
+        String normalizedSourceUrl = Text.optional(sourceUrl, 512, "Audio source URL");
+        StoredFile stored = storage.storeScenarioAudio(audioFile, scenarioId);
+
+        Audio a = new Audio();
+        a.setScope(AudioScope.BACKGROUND);
+        a.setThumbnailId(null);
+        applyStoredFile(a, stored);
+        a.setTitle(effectiveTitle);
+        a.setIdx(effectiveIdx);
+        a.setAuthorId(authorId);
+        a.setScenarioId(scenarioId);
+        a.setLanguageId(s.getLanguage_id());
+        a.setSourceLabel(normalizedSourceLabel);
+        a.setSourceUrl(normalizedSourceUrl);
+
+        audios.save(a);
+        s.setActiveBackgroundAudioId(a.getId());
+        scenarioRepository.save(s);
         return a.getId();
     }
 
@@ -142,7 +229,92 @@ public class AudioService {
     }
 
     @Transactional
+    public Long replaceAudio(Long audioId, String title, MultipartFile audioFile) throws Exception {
+        requireFile(audioFile);
+
+        Audio audio = getAudioOrThrow(audioId);
+        String effectiveTitle = resolveAudioTitle(title, audioFile.getOriginalFilename(), audio.getTitle());
+        String previousPath = audio.getStoragePath();
+        StoredFile stored = audio.getScope() == AudioScope.BACKGROUND
+                ? storage.storeScenarioAudio(audioFile, audio.getScenarioId())
+                : storage.storeAudio(audioFile, audio.getScenarioId(), audio.getThumbnailId());
+
+        audio.setTitle(effectiveTitle);
+        applyStoredFile(audio, stored);
+        audios.save(audio);
+
+        if (!previousPath.equals(stored.relativePath())
+                && !audios.existsByStoragePathAndIdNot(previousPath, audioId)) {
+            storage.deleteAfterCommit(previousPath);
+        }
+        return audio.getId();
+    }
+
+    @Transactional
+    public void updateAmbience(Long audioId, Integer volume, Boolean loop) {
+        if (volume == null || volume < 0 || volume > 100 || loop == null) {
+            throw new IllegalArgumentException("Volume must be between 0 and 100 and loop must be provided");
+        }
+        Audio audio = getAudioOrThrow(audioId);
+        if (audio.getScope() != AudioScope.BACKGROUND) {
+            throw new IllegalArgumentException("Audio is not a background track");
+        }
+        audio.setBackgroundVolume(volume);
+        audio.setBackgroundLoop(loop);
+        audios.save(audio);
+    }
+
+    @Transactional
+    public void updateGloss(Long audioId, String transcription, String gloss, String freeTranslation) {
+        Audio audio = getAudioOrThrow(audioId);
+        audio.setTranscription(Text.optional(transcription, 20000, "Transcription"));
+        audio.setGloss(Text.optional(gloss, 20000, "Gloss"));
+        audio.setFreeTranslation(Text.optional(freeTranslation, 20000, "Free translation"));
+        audios.save(audio);
+    }
+
+    @Transactional
     public void updateMarker(Long audioId, Double markerX, Double markerY, String markerLabel) {
+        validateMarkerPosition(markerX, markerY);
+
+        Audio a = getAudioOrThrow(audioId);
+        a.setMarkerX(markerX);
+        a.setMarkerY(markerY);
+        a.setMarkerLabel(Text.optional(markerLabel, 120, "Marker label"));
+        audios.save(a);
+    }
+
+    @Transactional
+    public void deleteAudio(Long audioId) {
+        Audio a = getAudioOrThrow(audioId);
+        if (a.getScope() == AudioScope.BACKGROUND) {
+            Scenario scenario = scenarioService.getRequiredScenario(a.getScenarioId());
+            if (audioId.equals(scenario.getActiveBackgroundAudioId())) {
+                Long replacementId = audios.findByScenarioIdAndScopeOrderByIdxAscIdAsc(a.getScenarioId(), AudioScope.BACKGROUND)
+                        .stream()
+                        .map(Audio::getId)
+                        .filter(id -> !audioId.equals(id))
+                        .findFirst()
+                        .orElse(null);
+                scenario.setActiveBackgroundAudioId(replacementId);
+                scenarioRepository.save(scenario);
+            }
+        }
+        boolean fileIsShared = audios.existsByStoragePathAndIdNot(a.getStoragePath(), audioId);
+        if (!fileIsShared) {
+            storage.deleteAfterCommit(a.getStoragePath());
+        }
+        audios.delete(a);
+    }
+
+    private static void requireFile(MultipartFile audioFile) {
+        if (audioFile == null || audioFile.isEmpty()) {
+            throw new IllegalArgumentException("audio is empty");
+        }
+    }
+
+    /** A marker sits on the scene image at a position given in percent; it is either fully set or absent. */
+    private static void validateMarkerPosition(Double markerX, Double markerY) {
         if (markerX != null && (markerX < 0.0 || markerX > 100.0)) {
             throw new IllegalArgumentException("markerX must be between 0 and 100");
         }
@@ -152,18 +324,53 @@ public class AudioService {
         if ((markerX == null) != (markerY == null)) {
             throw new IllegalArgumentException("markerX and markerY must be both set or both empty");
         }
-
-        Audio a = getAudioOrThrow(audioId);
-        a.setMarkerX(markerX);
-        a.setMarkerY(markerY);
-        a.setMarkerLabel((markerLabel == null || markerLabel.isBlank()) ? null : markerLabel.trim());
-        audios.save(a);
     }
 
-    @Transactional
-    public void deleteAudio(Long audioId) {
-        Audio a = getAudioOrThrow(audioId);
-        storage.deleteQuietly(a.getStoragePath());
-        audios.delete(a);
+    /** Points the audio at a file that was just stored. */
+    private static void applyStoredFile(Audio audio, StoredFile stored) {
+        audio.setMime(stored.contentType());
+        audio.setAudioSha256(stored.sha256());
+        audio.setStoragePath(stored.relativePath());
+        audio.setSizeBytes(stored.sizeBytes());
+        audio.setOriginalFilename(stored.originalFilename());
+    }
+
+    private String resolveAudioTitle(String title, String originalFilename, String fallback) {
+        String effectiveTitle = Text.trimOrDefault(title, Text.trimOrDefault(originalFilename, fallback));
+        return Text.requireMaxLength(effectiveTitle, 255, "Audio title");
+    }
+
+    private static String contentUrl(Audio audio) {
+        return "/api/audios/" + audio.getId() + "/content";
+    }
+
+    private AudioRowDto toAudioRowDto(Audio a) {
+        return new AudioRowDto(
+                a.getId(),
+                a.getTitle(),
+                a.getIdx(),
+                a.getMime(),
+                a.getMarkerX(),
+                a.getMarkerY(),
+                a.getMarkerLabel(),
+                a.getTranscription(),
+                a.getGloss(),
+                a.getFreeTranslation()
+        );
+    }
+
+    private ScenarioBackgroundAudioDto toBackgroundDto(Audio a, Long activeAudioId) {
+        return new ScenarioBackgroundAudioDto(
+                a.getId(),
+                a.getTitle(),
+                a.getIdx(),
+                a.getMime(),
+                contentUrl(a),
+                a.getSourceLabel(),
+                a.getSourceUrl(),
+                Objects.equals(a.getId(), activeAudioId),
+                a.getBackgroundVolume() == null ? 22 : a.getBackgroundVolume(),
+                a.getBackgroundLoop() == null ? true : a.getBackgroundLoop()
+        );
     }
 }

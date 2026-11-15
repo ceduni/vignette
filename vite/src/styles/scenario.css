@@ -7,7 +7,7 @@
 
 .scenario-card__media {
     min-height: 200px;
-    background: linear-gradient(180deg, #eef4fb 0%, #f8fbff 100%);
+    background: linear-gradient(180deg, #F5D4CE 0%, #FFF0EE 100%);
 }
 
 .scenario-card__image {
@@ -61,6 +61,12 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+.scenario-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 .scenario-card__footer {

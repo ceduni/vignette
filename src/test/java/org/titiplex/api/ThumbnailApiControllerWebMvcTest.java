@@ -3,8 +3,6 @@ package org.titiplex.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -27,12 +25,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ThumbnailApiController.class)
-@Import({SecurityConfig.class, ThumbnailApiControllerWebMvcTest.TestBeans.class})
+@Import(SecurityConfig.class)
 class ThumbnailApiControllerWebMvcTest {
 
     @Autowired
@@ -48,29 +47,14 @@ class ThumbnailApiControllerWebMvcTest {
     private ScenarioService scenarioService;
 
     @MockitoBean
+    private org.titiplex.service.ScenarioAccessService scenarioAccess;
+
+    @MockitoBean
+    private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
+
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
-    @TestConfiguration
-    static class TestBeans {
-        @Bean("scenarioSecurity")
-        ScenarioSecurityStub scenarioSecurity() {
-            return new ScenarioSecurityStub();
-        }
-    }
-
-    static class ScenarioSecurityStub {
-        public boolean isOwner(Long scenarioId, String username) {
-            return true;
-        }
-
-        public boolean isOwnerByThumbnailId(Long thumbnailId, String username) {
-            return true;
-        }
-
-        public boolean isOwnerByAudioId(Long audioId, String username, Object audioService) {
-            return true;
-        }
-    }
 
     @Test
     void list_isPublic() throws Exception {
@@ -95,17 +79,20 @@ class ThumbnailApiControllerWebMvcTest {
     }
 
     @Test
-    void content_isPublicAndReturnsHeaders() throws Exception {
+    void content_checksScenarioVisibilityAndReturnsHeaders() throws Exception {
         Resource resource = new ByteArrayResource(new byte[]{1, 2, 3, 4});
         MediaContent media = new MediaContent(resource, "image/png", 4L, "\"thumb-etag\"");
 
+        Thumbnail thumbnail = new Thumbnail();
+        thumbnail.setScenarioId(9L);
+        when(thumbnailService.getThumbnailById(8L)).thenReturn(thumbnail);
         when(thumbnailService.loadContent(8L)).thenReturn(media);
 
         mvc.perform(get("/api/thumbnails/8/content"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "image/png"))
                 .andExpect(header().string("ETag", "\"thumb-etag\""))
-                .andExpect(header().string("Cache-Control", "public, max-age=3600"))
+                .andExpect(header().string("Cache-Control", "private, no-store"))
                 .andExpect(header().longValue("Content-Length", 4L));
     }
 
@@ -173,5 +160,32 @@ class ThumbnailApiControllerWebMvcTest {
                 .andExpect(jsonPath("$.id").value(55));
 
         verify(thumbnailService).save("Intro", image, scenario, user);
+    }
+
+    @Test
+    void delete_requiresAuthentication() throws Exception {
+        mvc.perform(delete("/api/thumbnails/8").with(csrf()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void delete_allowsOwnerAndReturnsNoContent() throws Exception {
+        Thumbnail existing = new Thumbnail();
+        existing.setId(8L);
+        existing.setScenarioId(9L);
+
+        User user = new User();
+        user.setId(12L);
+        user.setUsername("alice");
+
+        when(thumbnailService.getThumbnailById(8L)).thenReturn(existing);
+        when(userService.getUserByUsername("alice")).thenReturn(user);
+
+        mvc.perform(delete("/api/thumbnails/8")
+                        .with(user("alice").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        verify(thumbnailService).delete(8L);
     }
 }

@@ -1,11 +1,16 @@
 package org.titiplex.service;
 
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.titiplex.persistence.model.*;
 import org.titiplex.persistence.repo.*;
 
 import java.time.Instant;
 import java.util.List;
+
+import static org.titiplex.security.AuthUtils.authenticatedUsername;
+import static org.titiplex.security.AuthUtils.isAdmin;
 
 @Service
 public class CommunityService {
@@ -16,6 +21,7 @@ public class CommunityService {
     private final AudioRepository audioRepository;
     private final ScenarioRepository scenarioRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public CommunityService(DiscussionMessageRepository discussionRepo,
                             AccreditationRequestRepository requestRepo,
@@ -23,7 +29,8 @@ public class CommunityService {
                             LanguageRepository languageRepository,
                             AudioRepository audioRepository,
                             ScenarioRepository scenarioRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            NotificationService notificationService) {
         this.discussionRepo = discussionRepo;
         this.requestRepo = requestRepo;
         this.accreditationRepo = accreditationRepo;
@@ -31,6 +38,7 @@ public class CommunityService {
         this.audioRepository = audioRepository;
         this.scenarioRepository = scenarioRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     public List<DiscussionMessage> listMessages(DiscussionTargetType targetType, String targetId) {
@@ -48,8 +56,9 @@ public class CommunityService {
         if (!userRepository.existsById(authorId)) throw new IllegalArgumentException("Unknown user");
         validateTarget(targetType, targetId);
 
+        DiscussionMessage parent = null;
         if (parentMessageId != null) {
-            DiscussionMessage parent = discussionRepo.findById(parentMessageId)
+            parent = discussionRepo.findById(parentMessageId)
                     .orElseThrow(() -> new IllegalArgumentException("Unknown parent message"));
 
             boolean sameTargetType = parent.getTargetType() == targetType;
@@ -68,7 +77,11 @@ public class CommunityService {
         message.setContributionType(contributionType == null ? ContributionType.GENERAL : contributionType);
         message.setContent(content.trim());
         message.setCreatedAt(Instant.now());
-        return discussionRepo.save(message);
+        DiscussionMessage saved = discussionRepo.save(message);
+
+        notificationService.notifyDiscussionMessage(saved, parent);
+
+        return saved;
     }
 
     public AccreditationRequest createRequest(Long requesterId,
@@ -196,8 +209,37 @@ public class CommunityService {
         );
     }
 
-    public boolean isScenarioOwner(Long scenarioId, String username) {
-        return scenarioRepository.existsByIdAndAuthorUsername(scenarioId, username);
+    /**
+     * Who may read and manage accreditations (requests, grants) for a scope:
+     * <ul>
+     *   <li>GLOBAL, LANGUAGE, LANGUAGE_FAMILY: admins only;</li>
+     *   <li>SCENARIO: admins, and the author of that scenario.</li>
+     * </ul>
+     */
+    public boolean canManageAccreditations(AccreditationScopeType scopeType, String targetId, Authentication auth) {
+        if (isAdmin(auth)) {
+            return scopeType != null;
+        }
+        if (scopeType != AccreditationScopeType.SCENARIO || targetId == null || targetId.isBlank()) {
+            return false;
+        }
+        String username = authenticatedUsername(auth);
+        if (username == null) {
+            return false;
+        }
+        try {
+            return scenarioRepository.existsByIdAndAuthorUsername(Long.parseLong(targetId.trim()), username);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /** Throws 403 with {@code deniedMessage} unless {@link #canManageAccreditations} allows it. */
+    public void assertCanManageAccreditations(AccreditationScopeType scopeType, String targetId,
+                                              Authentication auth, String deniedMessage) {
+        if (!canManageAccreditations(scopeType, targetId, auth)) {
+            throw new AccessDeniedException(deniedMessage);
+        }
     }
 
     private void validateTarget(DiscussionTargetType targetType, String targetId) {
@@ -214,6 +256,15 @@ public class CommunityService {
                     throw new IllegalArgumentException("Audio targetId must be numeric");
                 }
                 yield audioRepository.existsById(audioId);
+            }
+            case SCENARIO -> {       // ← ajoute ce cas
+                long scenarioId;
+                try {
+                    scenarioId = Long.parseLong(targetId);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Scenario targetId must be numeric");
+                }
+                yield scenarioRepository.existsById(scenarioId);
             }
         };
 

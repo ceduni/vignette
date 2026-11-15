@@ -144,14 +144,12 @@ class AuthApiControllerTest {
     }
 
     @Test
-    void register_trimsUsernameAndEmailAndDelegatesToService() {
+    void register_delegatesToService() {
         User created = new User();
         created.setId(99L);
         created.setUsername("alice");
 
-        when(users.existsByUsername("  alice  ")).thenReturn(false);
-        when(users.existsByEmail("  alice@example.com  ")).thenReturn(false);
-        when(users.register("alice", "alice@example.com", "password123")).thenReturn(created);
+        when(users.register("  alice  ", "  alice@example.com  ", "password123")).thenReturn(created);
 
         RegisterResponse response = controller.register(
                 new RegisterRequest("  alice  ", "  alice@example.com  ", "password123")
@@ -160,7 +158,7 @@ class AuthApiControllerTest {
         assertEquals(99L, response.id());
         assertEquals("alice", response.username());
 
-        verify(users).register("alice", "alice@example.com", "password123");
+        verify(users).register("  alice  ", "  alice@example.com  ", "password123");
     }
 
     @Test

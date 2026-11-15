@@ -10,6 +10,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -19,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.titiplex.Application;
+import org.titiplex.PostgresTestContainerConfig;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.repo.*;
 
@@ -36,16 +38,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(
         classes = Application.class,
         properties = {
-                "spring.flyway.enabled=false",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.datasource.url=jdbc:h2:mem:vignette-it;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false",
-                "spring.datasource.driverClassName=org.h2.Driver",
-                "spring.datasource.username=sa",
-                "spring.datasource.password=",
                 "app.storage.root=target/test-storage-it"
         }
 )
 @AutoConfigureMockMvc
+@Import(PostgresTestContainerConfig.class)
 class ApiFlowIntegrationTest {
 
     @Autowired
@@ -153,6 +150,30 @@ class ApiFlowIntegrationTest {
 
         long scenarioId = readId(createScenarioResult);
 
+        // Story locations must persist independently from the language reference point.
+        mvc.perform(patch("/api/scenarios/{id}/metadata", scenarioId).session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {"location":{"name":"Dakar, Senegal","latitude":14.7167,"longitude":-17.4677}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.location.name").value("Dakar, Senegal"));
+        mvc.perform(get("/api/scenarios/{id}", scenarioId).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.location.latitude").value(14.7167))
+                .andExpect(jsonPath("$.location.longitude").value(-17.4677));
+        for (String invalid : new String[]{
+                "{\"latitude\":91,\"longitude\":0}",
+                "{\"latitude\":0,\"longitude\":181}",
+                "{\"latitude\":10}"}) {
+            mvc.perform(patch("/api/scenarios/{id}/metadata", scenarioId).session(session).with(csrf())
+                            .contentType("application/json").content("{\"location\":" + invalid + "}"))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(patch("/api/scenarios/{id}/metadata", scenarioId).session(session).with(csrf())
+                        .contentType("application/json").content("{\"location\":{}}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.location").isEmpty());
+
         // 4) Upload thumbnail
         MockMultipartFile image = new MockMultipartFile(
                 "image",
@@ -195,6 +216,42 @@ class ApiFlowIntegrationTest {
 
         long audioId = readId(uploadAudioResult);
 
+        mvc.perform(patch("/api/audios/{id}/gloss", audioId)
+                        .session(session).with(csrf()).contentType("application/json")
+                        .content("""
+                                {"transcription":"Hola", "gloss":"hello", "freeTranslation":"Good morning"}
+                                """))
+                .andExpect(status().isNoContent());
+        Assertions.assertEquals("Hola", audioRepository.findById(audioId).orElseThrow().getTranscription());
+
+        long backgroundId = readId(mvc.perform(multipart("/api/scenarios/{id}/background-audios", scenarioId)
+                        .file(audio).param("title", "Forest").session(session).with(csrf()))
+                .andExpect(status().isCreated()).andReturn());
+        mvc.perform(patch("/api/audios/{id}/ambience", backgroundId)
+                        .session(session).with(csrf()).contentType("application/json")
+                        .content("{\"volume\":35,\"loop\":false}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(patch("/api/audios/{id}/ambience", backgroundId)
+                        .session(session).with(csrf()).contentType("application/json")
+                        .content("{\"volume\":101,\"loop\":true}"))
+                .andExpect(status().isBadRequest());
+
+        mvc.perform(post("/api/auth/register").with(csrf()).contentType("application/json")
+                        .content("""
+                                {"username":"outsider","email":"outsider@example.test","password":"Test-pass-42","name":"Outside","surname":"Tester"}
+                                """))
+                .andExpect(status().isCreated());
+
+        // Private metadata and media must share the same visibility boundary.
+        for (String path : new String[]{"/api/thumbnails/" + thumbnailId + "/content",
+                "/api/audios/" + audioId + "/content", "/api/audios/" + backgroundId + "/content"}) {
+            mvc.perform(get(path)).andExpect(status().isNotFound());
+            mvc.perform(get(path).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("outsider").roles("USER")))
+                    .andExpect(status().isNotFound());
+            mvc.perform(get(path).session(session)).andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "private, no-store"));
+        }
+
         // 6) Publish scenario before public readback
         mvc.perform(post("/api/scenarios/{id}/publish", scenarioId)
                         .session(session)
@@ -224,7 +281,7 @@ class ApiFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "image/png"))
                 .andExpect(header().exists("ETag"))
-                .andExpect(header().string("Cache-Control", "public, max-age=3600"))
+                .andExpect(header().string("Cache-Control", "private, no-store"))
                 .andExpect(content().bytes(new byte[]{1, 2, 3, 4, 5}));
 
         // 10) Public audio listing
@@ -238,12 +295,33 @@ class ApiFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].markerY").value(20.0))
                 .andExpect(jsonPath("$[0].markerLabel").value("speaker"));
 
+        mvc.perform(get("/api/thumbnails/{id}/audios", thumbnailId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].transcription").value("Hola"))
+                .andExpect(jsonPath("$[0].gloss").value("hello"))
+                .andExpect(jsonPath("$[0].freeTranslation").value("Good morning"));
+        mvc.perform(get("/api/scenarios/{id}/background-audios", scenarioId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(backgroundId))
+                .andExpect(jsonPath("$[0].active").value(true))
+                .andExpect(jsonPath("$[0].volume").value(35))
+                .andExpect(jsonPath("$[0].loop").value(false));
+        mvc.perform(patch("/api/audios/{id}/gloss", audioId).with(csrf())
+                        .contentType("application/json").content("{\"gloss\":\"unauthorized\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(patch("/api/audios/{id}/gloss", audioId)
+                        .session(session).with(csrf()).contentType("application/json")
+                        .content("{\"transcription\":null,\"gloss\":\"\",\"freeTranslation\":null}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/thumbnails/{id}/audios", thumbnailId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].gloss").isEmpty());
+
         // 11) Public audio content
         mvc.perform(get("/api/audios/{id}/content", audioId))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "audio/webm"))
                 .andExpect(header().exists("ETag"))
-                .andExpect(header().string("Cache-Control", "private, max-age=3600"))
+                .andExpect(header().string("Cache-Control", "private, no-store"))
                 .andExpect(content().bytes(new byte[]{9, 8, 7, 6}));
     }
 

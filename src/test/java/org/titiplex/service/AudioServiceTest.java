@@ -8,13 +8,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.api.dto.AudioRowDto;
+import org.titiplex.api.dto.LanguagePreviewAudioDto;
+import org.titiplex.api.dto.ScenarioBackgroundAudioDto;
 import org.titiplex.persistence.model.Audio;
+import org.titiplex.persistence.model.AudioScope;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.repo.AudioRepository;
+import org.titiplex.persistence.repo.ScenarioRepository;
 import org.titiplex.service.storage.FileStorageService;
 import org.titiplex.service.storage.StoredFile;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +39,9 @@ class AudioServiceTest {
 
     @Mock
     private ScenarioService scenarioService;
+
+    @Mock
+    private ScenarioRepository scenarioRepository;
 
     @Mock
     private FileStorageService storage;
@@ -125,6 +133,10 @@ class AudioServiceTest {
         Long id = audioService.createAudio(6L, "  ", 1, 4L, multipartFile, 0.0, 0.0, " ");
 
         assertEquals(88L, id);
+        // The thumbnail row is locked before the idx is checked.
+        org.mockito.InOrder order = inOrder(thumbnailService, audioRepository);
+        order.verify(thumbnailService).lockThumbnail(6L);
+        order.verify(audioRepository).existsByThumbnailIdAndIdx(6L, 1);
 
         ArgumentCaptor<Audio> captor = ArgumentCaptor.forClass(Audio.class);
         verify(audioRepository).save(captor.capture());
@@ -146,6 +158,40 @@ class AudioServiceTest {
     }
 
     @Test
+    void createBackgroundAudio_selectsTheNewTrack() throws Exception {
+        Scenario scenario = new Scenario();
+        scenario.setId(10L);
+        scenario.setLanguage_id("fra");
+        StoredFile stored = new StoredFile(
+                "audios/10/background/forest.wav",
+                "background-hash",
+                456L,
+                "audio/wav",
+                "forest.wav"
+        );
+
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(scenarioService.getRequiredScenario(10L)).thenReturn(scenario);
+        when(audioRepository.maxBackgroundIdx(10L)).thenReturn(1);
+        when(storage.storeScenarioAudio(multipartFile, 10L)).thenReturn(stored);
+        doAnswer(invocation -> {
+            Audio saved = invocation.getArgument(0);
+            saved.setId(22L);
+            return saved;
+        }).when(audioRepository).save(any(Audio.class));
+
+        Long id = audioService.createBackgroundAudio(10L, "Forest", "Field notes", "", 7L, multipartFile);
+
+        assertEquals(22L, id);
+        assertEquals(22L, scenario.getActiveBackgroundAudioId());
+        verify(scenarioRepository).save(scenario);
+        // The scenario row is locked before the next background idx is computed.
+        org.mockito.InOrder order = inOrder(scenarioRepository, audioRepository);
+        order.verify(scenarioRepository).lockById(10L);
+        order.verify(audioRepository).maxBackgroundIdx(10L);
+    }
+
+    @Test
     void getAudioOrThrow_returnsAudioWhenFound() {
         Audio audio = new Audio();
         audio.setId(19L);
@@ -154,5 +200,168 @@ class AudioServiceTest {
         Audio result = audioService.getAudioOrThrow(19L);
 
         assertEquals(19L, result.getId());
+    }
+
+    @Test
+    void replaceAudio_updatesTheExistingTakeBeforeRemovingItsOldFile() throws Exception {
+        Audio audio = new Audio();
+        audio.setId(19L);
+        audio.setScope(AudioScope.SCENE);
+        audio.setScenarioId(10L);
+        audio.setThumbnailId(6L);
+        audio.setTitle("Old take");
+        audio.setStoragePath("audios/scenario-10/thumbnail-6/old.webm");
+
+        StoredFile stored = new StoredFile(
+                "audios/scenario-10/thumbnail-6/new.webm",
+                "new-hash",
+                321L,
+                "audio/webm",
+                "new.webm"
+        );
+
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getOriginalFilename()).thenReturn("new.webm");
+        when(audioRepository.findById(19L)).thenReturn(Optional.of(audio));
+        when(storage.storeAudio(multipartFile, 10L, 6L)).thenReturn(stored);
+        when(audioRepository.existsByStoragePathAndIdNot(audio.getStoragePath(), 19L)).thenReturn(false);
+
+        Long id = audioService.replaceAudio(19L, "New take", multipartFile);
+
+        assertEquals(19L, id);
+        assertEquals("New take", audio.getTitle());
+        assertEquals("new-hash", audio.getAudioSha256());
+        assertEquals(stored.relativePath(), audio.getStoragePath());
+        verify(audioRepository).save(audio);
+        verify(storage).deleteAfterCommit("audios/scenario-10/thumbnail-6/old.webm");
+    }
+
+    @Test
+    void deleteAudio_keepsAFileReferencedByAnotherAudio() {
+        Audio audio = new Audio();
+        audio.setId(19L);
+        audio.setStoragePath("audios/shared.webm");
+        when(audioRepository.findById(19L)).thenReturn(Optional.of(audio));
+        when(audioRepository.existsByStoragePathAndIdNot("audios/shared.webm", 19L)).thenReturn(true);
+
+        audioService.deleteAudio(19L);
+
+        verify(storage, never()).deleteAfterCommit("audios/shared.webm");
+        verify(audioRepository).delete(audio);
+    }
+
+    @Test
+    void listBackgroundForScenario_marksTheSelectedAudio() {
+        Scenario scenario = new Scenario();
+        scenario.setId(10L);
+        scenario.setActiveBackgroundAudioId(22L);
+
+        Audio first = backgroundAudio(21L, 10L, 1);
+        Audio second = backgroundAudio(22L, 10L, 2);
+
+        when(scenarioService.getRequiredScenario(10L)).thenReturn(scenario);
+        when(audioRepository.findByScenarioIdAndScopeOrderByIdxAscIdAsc(10L, AudioScope.BACKGROUND))
+                .thenReturn(List.of(first, second));
+
+        List<ScenarioBackgroundAudioDto> result = audioService.listBackgroundForScenario(10L);
+
+        assertFalse(result.get(0).active());
+        assertTrue(result.get(1).active());
+    }
+
+    @Test
+    void selectBackgroundAudio_savesTheScenarioSelection() {
+        Scenario scenario = new Scenario();
+        scenario.setId(10L);
+        Audio audio = backgroundAudio(22L, 10L, 2);
+
+        when(scenarioService.getRequiredScenario(10L)).thenReturn(scenario);
+        when(audioRepository.findById(22L)).thenReturn(Optional.of(audio));
+
+        audioService.selectBackgroundAudio(10L, 22L);
+
+        assertEquals(22L, scenario.getActiveBackgroundAudioId());
+        verify(scenarioRepository).save(scenario);
+    }
+
+    @Test
+    void selectBackgroundAudio_rejectsAudioFromAnotherScenario() {
+        Scenario scenario = new Scenario();
+        scenario.setId(10L);
+        Audio audio = backgroundAudio(22L, 11L, 1);
+
+        when(scenarioService.getRequiredScenario(10L)).thenReturn(scenario);
+        when(audioRepository.findById(22L)).thenReturn(Optional.of(audio));
+
+        assertThrows(IllegalArgumentException.class, () -> audioService.selectBackgroundAudio(10L, 22L));
+        verify(scenarioRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteAudio_selectsTheNextBackgroundTrack() {
+        Scenario scenario = new Scenario();
+        scenario.setId(10L);
+        scenario.setActiveBackgroundAudioId(21L);
+        Audio selected = backgroundAudio(21L, 10L, 1);
+        Audio replacement = backgroundAudio(22L, 10L, 2);
+        selected.setStoragePath("audios/background-21.wav");
+
+        when(audioRepository.findById(21L)).thenReturn(Optional.of(selected));
+        when(scenarioService.getRequiredScenario(10L)).thenReturn(scenario);
+        when(audioRepository.findByScenarioIdAndScopeOrderByIdxAscIdAsc(10L, AudioScope.BACKGROUND))
+                .thenReturn(List.of(selected, replacement));
+
+        audioService.deleteAudio(21L);
+
+        assertEquals(22L, scenario.getActiveBackgroundAudioId());
+        verify(scenarioRepository).save(scenario);
+        verify(audioRepository).delete(selected);
+    }
+
+    @Test
+    void getLanguagePreviewAudio_selectsFirstPublishedScenarioThenFirstThumbnailThenFirstAudio() {
+        Scenario firstScenario = new Scenario();
+        firstScenario.setId(4L);
+        firstScenario.setTitle("First scenario");
+        firstScenario.setCreatedAt(Instant.parse("2025-01-01T00:00:00Z"));
+        firstScenario.setLanguage_id("bamb1269");
+
+        Thumbnail firstThumbnail = new Thumbnail();
+        firstThumbnail.setId(8L);
+        firstThumbnail.setScenarioId(4L);
+        firstThumbnail.setIdx(1);
+
+        Audio firstAudio = new Audio();
+        firstAudio.setId(15L);
+        firstAudio.setTitle("Greeting clip");
+        firstAudio.setMime("audio/webm");
+        firstAudio.setLanguageId("bamb1269");
+        firstAudio.setScenarioId(4L);
+        firstAudio.setThumbnailId(8L);
+        firstAudio.setIdx(1);
+
+        when(scenarioRepository.findPublishedByLanguageIdOrderByCreatedAtAscIdAsc("bamb1269"))
+                .thenReturn(List.of(firstScenario));
+        when(thumbnailService.listByScenarioId(4L)).thenReturn(List.of(firstThumbnail));
+        when(audioRepository.findByThumbnailIdOrderByIdxAsc(8L)).thenReturn(List.of(firstAudio));
+
+        LanguagePreviewAudioDto result = audioService.getLanguagePreviewAudio("bamb1269");
+
+        assertEquals(15L, result.id());
+        assertEquals("Greeting clip", result.title());
+        assertEquals("/api/audios/15/content", result.contentUrl());
+        assertEquals(4L, result.scenarioId());
+        assertEquals(8L, result.thumbnailId());
+    }
+
+    private Audio backgroundAudio(long id, long scenarioId, int idx) {
+        Audio audio = new Audio();
+        audio.setId(id);
+        audio.setScenarioId(scenarioId);
+        audio.setScope(AudioScope.BACKGROUND);
+        audio.setIdx(idx);
+        audio.setTitle("Ambience " + idx);
+        audio.setMime("audio/wav");
+        return audio;
     }
 }

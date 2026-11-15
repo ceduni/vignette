@@ -15,7 +15,7 @@ public class Thumbnail {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
-    @Column(name = "title", nullable = false, unique = true)
+    @Column(name = "title", nullable = false)
     private String title;
 
     @Column(name = "idx", nullable = false)
@@ -39,7 +39,7 @@ public class Thumbnail {
     @Column(name = "original_filename")
     private String originalFilename;
 
-    @Column(name = "image_sha256", nullable = false, unique = true, length = 64)
+    @Column(name = "image_sha256", nullable = false, length = 64)
     private String imageSha256;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -3,6 +3,8 @@ package org.titiplex.persistence.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -59,6 +61,12 @@ public class Language {
     @Column(name = "country_ids")
     private String countryIds;
 
+    /** True when the language was present in the latest successful Glottolog selection. */
+    @Column(name = "present_in_latest_glottolog")
+    private Boolean presentInLatestGlottolog;
+
+    @Column(name = "last_seen_in_glottolog_at")
+    private java.time.Instant lastSeenInGlottologAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
@@ -68,6 +76,7 @@ public class Language {
             updatable = false,
             foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT)
     )
+    @NotFound(action = NotFoundAction.IGNORE)
     private Language family;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -78,17 +87,18 @@ public class Language {
             updatable = false,
             foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT)
     )
+    @NotFound(action = NotFoundAction.IGNORE)
     private Language parent;
 
     /**
      * Get children of Language / Family.
      */
-    @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     private Set<Language> children = new HashSet<>();
 
-    @OneToMany(mappedBy = "language", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "language", fetch = FetchType.LAZY)
     private Set<Scenario> scenarios = new HashSet<>();
 
-    @OneToMany(mappedBy = "language", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "language", fetch = FetchType.LAZY)
     private Set<Audio> audios = new HashSet<>();
 }

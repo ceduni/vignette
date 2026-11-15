@@ -2,6 +2,7 @@ package org.titiplex.api;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -54,8 +55,8 @@ public class GlobalApiExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), req);
     }
 
-    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
-    public ResponseEntity<ApiError> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest req) {
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest req) {
         return build(HttpStatus.CONFLICT, "Database constraint violation", req);
     }
 

@@ -4,6 +4,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.config.StorageProperties;
 
@@ -19,6 +21,8 @@ import java.util.Map;
 @Service
 public class FileStorageService {
 
+    // Raster images and audio only. SVG and XML are refused on purpose: they can carry
+    // scripts, and uploads are served back as-is (stored XSS).
     private static final Map<String, String> EXTENSIONS = Map.ofEntries(
             Map.entry("image/jpeg", ".jpg"),
             Map.entry("image/png", ".png"),
@@ -26,9 +30,19 @@ public class FileStorageService {
             Map.entry("image/gif", ".gif"),
             Map.entry("audio/webm", ".webm"),
             Map.entry("audio/ogg", ".ogg"),
+            Map.entry("audio/mp4", ".mp4"),
+            Map.entry("audio/aac", ".aac"),
             Map.entry("audio/mpeg", ".mp3"),
+            Map.entry("audio/mp3", ".mp3"),
             Map.entry("audio/wav", ".wav"),
-            Map.entry("audio/x-wav", ".wav")
+            Map.entry("audio/x-wav", ".wav"),
+            Map.entry("audio/wave", ".wav"),
+            Map.entry("audio/flac", ".flac"),
+            Map.entry("audio/x-flac", ".flac"),
+            Map.entry("audio/x-m4a", ".m4a"),
+            Map.entry("audio/opus", ".opus"),
+            Map.entry("audio/aiff", ".aiff"),
+            Map.entry("audio/x-aiff", ".aiff")
     );
 
     private final StorageProperties properties;
@@ -52,6 +66,10 @@ public class FileStorageService {
         return store(file, "audios/scenario-" + scenarioId + "/thumbnail-" + thumbnailId);
     }
 
+    public StoredFile storeScenarioAudio(MultipartFile file, long scenarioId) throws Exception {
+        return store(file, "audios/scenario-" + scenarioId + "/background");
+    }
+
     private StoredFile store(MultipartFile file, String logicalDir) throws Exception {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("file is empty");
@@ -64,7 +82,6 @@ public class FileStorageService {
             throw new IllegalArgumentException("unsupported content type: " + contentType);
         }
 
-        Files.createDirectories(root);
         Path tmp = Files.createTempFile(root, "upload-", ".tmp");
 
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -102,7 +119,7 @@ public class FileStorageService {
                 sha256,
                 size,
                 contentType,
-                file.getOriginalFilename()
+                normalizedOriginalFilename(file.getOriginalFilename())
         );
     }
 
@@ -128,6 +145,19 @@ public class FileStorageService {
         }
     }
 
+    public void deleteAfterCommit(String relativePath) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteQuietly(relativePath);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteQuietly(relativePath);
+            }
+        });
+    }
+
     private Path resolve(String relativePath) {
         Path resolved = root.resolve(relativePath).normalize();
         if (!resolved.startsWith(root)) {
@@ -147,5 +177,13 @@ public class FileStorageService {
             normalized = normalized.substring(0, semicolon).trim();
         }
         return normalized;
+    }
+
+    private String normalizedOriginalFilename(String originalFilename) {
+        if (originalFilename == null) {
+            return null;
+        }
+        String normalized = originalFilename.trim();
+        return normalized.length() <= 255 ? normalized : normalized.substring(0, 255);
     }
 }

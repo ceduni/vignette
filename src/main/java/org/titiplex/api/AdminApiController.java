@@ -7,17 +7,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.ForbiddenResponse;
 import org.titiplex.api.dto.*;
 import org.titiplex.api.security.AdminOperation;
-import org.titiplex.persistence.model.Role;
+import org.titiplex.service.GlottologAdminService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -26,10 +26,16 @@ public class AdminApiController {
 
     private final UserService users;
     private final ScenarioService scenarios;
+    private final GlottologAdminService glottologAdminService;
 
-    public AdminApiController(UserService users, ScenarioService scenarios) {
+    public AdminApiController(
+            UserService users,
+            ScenarioService scenarios,
+            GlottologAdminService glottologAdminService
+    ) {
         this.users = users;
         this.scenarios = scenarios;
+        this.glottologAdminService = glottologAdminService;
     }
 
     @Operation(
@@ -37,21 +43,16 @@ public class AdminApiController {
             description = "Returns global counters for the administration dashboard."
     )
     @AdminOperation
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Overview retrieved successfully",
                     content = @Content(schema = @Schema(implementation = AdminOverviewDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/overview")
     public AdminOverviewDto overview(Authentication auth) {
-        assertAdmin(auth);
 
         long userCount = users.countUsers();
         long scenarioCount = scenarios.countAllScenarios();
@@ -71,6 +72,7 @@ public class AdminApiController {
             description = "Returns all users for administration purposes."
     )
     @AdminOperation
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -79,26 +81,13 @@ public class AdminApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = AdminUserRowDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/users")
     public List<AdminUserRowDto> listUsers(Authentication auth) {
-        assertAdmin(auth);
 
         return users.listAllUsers().stream()
-                .map(user -> new AdminUserRowDto(
-                        user.getId(),
-                        user.getUsername(),
-                        user.getEmail(),
-                        user.getDisplayName(),
-                        user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()),
-                        user.isProfilePublic()
-                ))
+                .map(AdminUserRowDto::from)
                 .toList();
     }
 
@@ -107,6 +96,7 @@ public class AdminApiController {
             description = "Returns all scenarios for administration purposes, including drafts."
     )
     @AdminOperation
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -115,16 +105,10 @@ public class AdminApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/scenarios")
     public List<ScenarioDto> listScenarios(Authentication auth) {
-        assertAdmin(auth);
 
         return scenarios.listAllScenarios().stream()
                 .map(scenarios::toDto)
@@ -136,21 +120,13 @@ public class AdminApiController {
             description = "Replaces the roles of a given user. Admin only."
     )
     @AdminOperation
+    @BadRequestResponse
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "User roles updated successfully",
                     content = @Content(schema = @Schema(implementation = AdminUserRowDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid request",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PatchMapping("/users/{id}/roles")
@@ -159,18 +135,8 @@ public class AdminApiController {
             @RequestBody UpdateUserRolesRequest req,
             Authentication auth
     ) {
-        assertAdmin(auth);
 
-        var user = users.updateRoles(id, req.roles());
-
-        return new AdminUserRowDto(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getDisplayName(),
-                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()),
-                user.isProfilePublic()
-        );
+        return AdminUserRowDto.from(users.updateRoles(id, req.roles()));
     }
 
     @Operation(
@@ -178,21 +144,13 @@ public class AdminApiController {
             description = "Updates scenario visibility for administration purposes. Admin only."
     )
     @AdminOperation
+    @BadRequestResponse
+    @ForbiddenResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Scenario visibility updated successfully",
                     content = @Content(schema = @Schema(implementation = ScenarioDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid request",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Admin privileges required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PatchMapping("/scenarios/{id}/visibility")
@@ -201,17 +159,87 @@ public class AdminApiController {
             @RequestBody UpdateScenarioVisibilityRequest req,
             Authentication auth
     ) {
-        assertAdmin(auth);
         return scenarios.toDto(scenarios.adminUpdateVisibility(id, req.visibilityStatus()));
     }
 
-    private void assertAdmin(Authentication auth) {
-        boolean isAdmin = auth != null
-                && auth.getAuthorities() != null
-                && auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+    @Operation(
+            summary = "Glottolog catalogue summary",
+            description = "Returns the number of languages currently in the database (imported by the Python worker)."
+    )
+    @AdminOperation
+    @ForbiddenResponse
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Preview generated successfully",
+                    content = @Content(schema = @Schema(implementation = GlottologImportPreviewDto.class))
+            )
+    })
+    @GetMapping("/glottolog/preview")
+    public GlottologImportPreviewDto previewGlottolog(Authentication auth) {
+        return glottologAdminService.preview();
+    }
 
-        if (!isAdmin) {
-            throw new AccessDeniedException("Admin privileges required");
-        }
+    @Operation(
+            summary = "Deposit a manual Glottolog update request",
+            description = "Creates a traceable PENDING request for the external Python worker."
+    )
+    @AdminOperation
+    @PostMapping("/glottolog/update/request")
+    public GlottologUpdateRequestDto requestGlottologUpdate(Authentication auth) {
+        return glottologAdminService.createManualUpdateRequest(auth.getName());
+    }
+
+    @Operation(
+            summary = "List recent Glottolog update requests",
+            description = "Returns the latest manual update requests and their statuses."
+    )
+    @AdminOperation
+    @GetMapping("/glottolog/update/requests")
+    public List<GlottologUpdateRequestDto> listGlottologUpdateRequests(Authentication auth) {
+        return glottologAdminService.listUpdateRequests();
+    }
+
+    @Operation(
+            summary = "Get Glottolog admin settings",
+            description = "Returns configurable Glottolog admin settings and available scheduling options."
+    )
+    @AdminOperation
+    @GetMapping("/glottolog/settings")
+    public GlottologAdminSettingsDto glottologSettings(Authentication auth) {
+        return glottologAdminService.getSettings();
+    }
+
+    @Operation(
+            summary = "Update Glottolog admin settings",
+            description = "Updates configurable Glottolog admin settings for the import workflow."
+    )
+    @AdminOperation
+    @PutMapping("/glottolog/settings")
+    public GlottologAdminSettingsDto updateGlottologSettings(
+            @RequestBody UpdateGlottologAdminSettingsRequest request,
+            Authentication auth
+    ) {
+        return glottologAdminService.updateSettings(request, auth.getName());
+    }
+
+    @Operation(
+            summary = "Get Glottolog update history",
+            description = "Returns the latest Glottolog import runs for the admin dashboard."
+    )
+    @AdminOperation
+    @GetMapping("/glottolog/history")
+    public List<GlottologUpdateHistoryRowDto> glottologHistory(Authentication auth) {
+        return glottologAdminService.listHistory();
+    }
+
+    @Operation(
+            summary = "Get Glottolog email notifications",
+            description = "Returns recent admin email notifications sent (or archived) after Glottolog updates."
+    )
+    @AdminOperation
+    @GetMapping("/glottolog/notifications")
+    public List<GlottologNotificationRowDto> glottologNotifications(Authentication auth) {
+        return glottologAdminService.listNotifications();
     }
 }

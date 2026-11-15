@@ -14,6 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.titiplex.api.docs.BadRequestResponse;
+import org.titiplex.api.docs.NotFoundResponse;
+import org.titiplex.api.docs.UnauthorizedResponse;
 import org.titiplex.api.dto.*;
 import org.titiplex.api.security.PublicOperation;
 import org.titiplex.api.security.UserOperation;
@@ -22,6 +25,7 @@ import org.titiplex.service.LanguageService;
 import org.titiplex.service.ScenarioService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/languages")
@@ -52,6 +56,7 @@ public class LanguageApiController {
             description = "Returns a paginated list of languages, including their details."
     )
     @PublicOperation
+    @BadRequestResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -60,11 +65,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = Page.class, contains = LanguageRowDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid page number or size",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping
@@ -92,13 +92,7 @@ public class LanguageApiController {
             @RequestParam(defaultValue = "50") @Min(1) int size
     ) {
         Page<Language> p = languageService.listLanguages(q, page, size);
-        return p.map(l -> new LanguageRowDto(
-                l.getId(),
-                l.getName(),
-                l.getLevel(),
-                l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
-                l.getParent() != null ? l.getParent().getName() : l.getParentId()
-        ));
+        return p.map(LanguageRowDto::from);
     }
 
     /**
@@ -112,6 +106,7 @@ public class LanguageApiController {
             description = "Returns a language object with its details based on the provided ID."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -120,11 +115,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = LanguageDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}")
@@ -151,6 +141,7 @@ public class LanguageApiController {
                     """
     )
     @PublicOperation
+    @BadRequestResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -159,11 +150,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = Page.class, contains = LanguageOptionDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid pagination parameters",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/options")
@@ -191,20 +177,32 @@ public class LanguageApiController {
     }
 
     @Operation(
+            summary = "List languages grouped by country (ISO_A3)",
+            description = "Returns a map keyed by ISO_A3 country code, each value being a list of language rows."
+    )
+    @PublicOperation
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Language map retrieved successfully"
+            )
+    })
+    @GetMapping("/by-country")
+    public Map<String, List<LanguageRowDto>> listByCountry() {
+        return languageService.listLanguagesByCountryIsoA3();
+    }
+
+    @Operation(
             summary = "Get current user language permissions",
             description = "Returns whether the authenticated user can edit the specified language."
     )
     @UserOperation
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Permissions resolved successfully",
                     content = @Content(schema = @Schema(implementation = LanguagePermissionsDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}/permissions/me")
@@ -224,36 +222,16 @@ public class LanguageApiController {
     @Operation(
             summary = "Update a language",
             description = """
-                    Updates editable language metadata.
-                    
-                    Requires either:
-                    - ROLE_ADMIN
-                    - or a LANGUAGE_EDIT accreditation matching:
-                      - GLOBAL
-                      - the specific language
-                      - or the language family of the target language
+                    Disabled in Glottolog V1: catalogue fields on language are owned by the external Python pipeline.
+                    Manual edits would be overwritten on the next successful import.
                     """
     )
     @UserOperation
+    @UnauthorizedResponse
     @ApiResponses({
             @ApiResponse(
-                    responseCode = "200",
-                    description = "Language updated successfully",
-                    content = @Content(schema = @Schema(implementation = LanguageDto.class))
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "User is not allowed to edit this language",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language not found",
+                    responseCode = "410",
+                    description = "Language catalogue edits are disabled",
                     content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
@@ -263,10 +241,10 @@ public class LanguageApiController {
             @RequestBody UpdateLanguageRequest request,
             Authentication auth
     ) {
-        if (!languageService.canEditLanguage(auth.getName(), id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to edit this language");
-        }
-        return languageService.updateLanguage(id, request);
+        throw new ResponseStatusException(
+                HttpStatus.GONE,
+                "Language catalogue fields are managed by the Glottolog Python pipeline and cannot be edited via the API."
+        );
     }
 
     /**
@@ -280,6 +258,7 @@ public class LanguageApiController {
             description = "Returns a list of scenarios associated with a specific language."
     )
     @PublicOperation
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -288,26 +267,21 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             array = @ArraySchema(schema = @Schema(implementation = ScenarioDto.class))
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Language not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @GetMapping("/{id}/scenarios")
     public List<ScenarioDto> getOneScenarios(
-            @Parameter(description = "ID of the language to retrieve scenarios for", required = true)
-            @PathVariable String id
+        @Parameter(description = "ID of the language to retrieve scenarios for", required = true)
+        @PathVariable String id
     ) {
-        return languageService.getLanguage(id).getScenarios()
-                .stream().map(scenarioService::toDto).toList();
-    }
+        return scenarioService.listScenariosByLanguageId(id);
+     }
 
     @Operation(
             summary = "List languages by family",
             description = "Returns a list of languages in a specific language family."
     )
+    @NotFoundResponse
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -316,11 +290,6 @@ public class LanguageApiController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = LanguageRowDto.class)
                     )
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Family not found with the specified ID",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
             )
     })
     @PublicOperation
@@ -330,12 +299,7 @@ public class LanguageApiController {
             @PathVariable String id
     ) {
         return languageService.getLanguagesByFamily(id).stream()
-                .map(l -> new LanguageRowDto(
-                        l.getId(),
-                        l.getName(),
-                        l.getLevel(),
-                        l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
-                        l.getParent() != null ? l.getParent().getName() : l.getParentId()
-                )).toList();
+                .map(LanguageRowDto::from)
+                .toList();
     }
 }

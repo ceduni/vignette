@@ -36,3 +36,27 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Local runtime / workspace ###
+data/
+.tools/
+/fond*.avif
+/.vite/
+
+### Secrets / local env ###
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+### Local tooling ###
+backups/
+
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+
+### Accidental macOS / iCloud duplicates ###
+* 2.*
+*.icloud

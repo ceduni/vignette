@@ -4,7 +4,6 @@ import {
     buildStoryboardItems,
     clamp,
     defaultTileLayout,
-    normalizeMarkers,
     nullableInt,
     safeNumber,
     sortByIdxThenId,
@@ -30,21 +29,6 @@ describe("scenarioStoryboard utils", () => {
         expect(nullableInt(undefined)).toBeNull();
         expect(nullableInt("4.9")).toBe(4);
         expect(nullableInt("abc")).toBeNull();
-    });
-
-    it("normalizeMarkers filters invalid markers and clamps valid ones", () => {
-        const result = normalizeMarkers([
-            {id: 1, markerX: 25, markerY: 40},
-            {id: 2, markerX: 150, markerY: -10},
-            {id: 3, markerX: null, markerY: 50},
-            {id: 4, markerX: "", markerY: ""},
-        ]);
-
-        expect(result).toHaveLength(2);
-        expect(result[0]._x).toBe(25);
-        expect(result[0]._y).toBe(40);
-        expect(result[1]._x).toBe(100);
-        expect(result[1]._y).toBe(0);
     });
 
     it("sortByIdxThenId sorts by idx then id", () => {
@@ -104,6 +88,8 @@ describe("scenarioStoryboard utils", () => {
             columnSpan: 2,
             rowStart: null,
             rowSpan: 2,
+            aspectRatio: "16 / 9",
+            shape: "feature",
         });
 
         expect(defaultTileLayout({imageWidth: 800, imageHeight: 1400}, 1, 3)).toEqual({
@@ -111,6 +97,8 @@ describe("scenarioStoryboard utils", () => {
             columnSpan: 1,
             rowStart: null,
             rowSpan: 2,
+            aspectRatio: "3 / 4",
+            shape: "portrait",
         });
 
         expect(defaultTileLayout({imageWidth: 1600, imageHeight: 800}, 1, 3)).toEqual({
@@ -118,6 +106,8 @@ describe("scenarioStoryboard utils", () => {
             columnSpan: 2,
             rowStart: null,
             rowSpan: 1,
+            aspectRatio: "16 / 9",
+            shape: "wide",
         });
     });
 
@@ -142,6 +132,7 @@ describe("scenarioStoryboard utils", () => {
             columnSpan: 2,
             rowStart: 2,
             rowSpan: 4,
+            shape: "custom",
         });
     });
 
@@ -156,6 +147,8 @@ describe("scenarioStoryboard utils", () => {
         })).toEqual({
             gridColumn: "2 / span 3",
             gridRow: "4 / span 2",
+            "--storyboard-tile-cols": 3,
+            "--storyboard-tile-rows": 2,
         });
 
         expect(storyboardItemStyle({
@@ -167,6 +160,8 @@ describe("scenarioStoryboard utils", () => {
             },
         })).toEqual({
             gridColumn: "span 2",
+            "--storyboard-tile-cols": 2,
+            "--storyboard-tile-rows": 1,
         });
     });
 });

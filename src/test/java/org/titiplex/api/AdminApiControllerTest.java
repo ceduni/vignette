@@ -5,14 +5,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.titiplex.api.dto.AdminOverviewDto;
 import org.titiplex.api.dto.AdminUserRowDto;
+import org.titiplex.api.dto.GlottologImportPreviewDto;
 import org.titiplex.api.dto.ScenarioDto;
 import org.titiplex.persistence.model.Role;
 import org.titiplex.persistence.model.User;
+import org.titiplex.service.GlottologAdminService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
 
@@ -33,6 +34,9 @@ class AdminApiControllerTest {
     @Mock
     private ScenarioService scenarioService;
 
+    @Mock
+    private GlottologAdminService glottologAdminService;
+
     @InjectMocks
     private AdminApiController controller;
 
@@ -41,14 +45,6 @@ class AdminApiControllerTest {
                 "admin",
                 "password",
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
-    }
-
-    private UsernamePasswordAuthenticationToken userAuth() {
-        return new UsernamePasswordAuthenticationToken(
-                "user",
-                "password",
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
     }
 
@@ -65,11 +61,6 @@ class AdminApiControllerTest {
         assertEquals(7L, dto.scenarioCount());
         assertEquals(4L, dto.publishedScenarioCount());
         assertEquals(3L, dto.draftScenarioCount());
-    }
-
-    @Test
-    void overview_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.overview(userAuth()));
     }
 
     @Test
@@ -97,11 +88,6 @@ class AdminApiControllerTest {
     }
 
     @Test
-    void listUsers_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.listUsers(userAuth()));
-    }
-
-    @Test
     void listScenarios_returnsDtos_forAdmin() {
         ScenarioDto dto = new ScenarioDto(
                 12L,
@@ -115,7 +101,12 @@ class AdminApiControllerTest {
                 "PRESET",
                 "GRID_3",
                 3,
-                List.of()
+                List.of(),
+                null,
+                "NONE",
+                null,
+                null,
+                null, false, null
         );
 
         when(scenarioService.listAllScenarios()).thenReturn(List.of());
@@ -133,7 +124,24 @@ class AdminApiControllerTest {
     }
 
     @Test
-    void listScenarios_rejectsNonAdmin() {
-        assertThrows(AccessDeniedException.class, () -> controller.listScenarios(userAuth()));
+    void previewGlottolog_returnsDatabaseCount_forAdmin() {
+        when(glottologAdminService.preview()).thenReturn(new GlottologImportPreviewDto(9000L));
+
+        GlottologImportPreviewDto preview = controller.previewGlottolog(adminAuth());
+
+        assertEquals(9000L, preview.databaseCount());
+    }
+
+    @Test
+    void requestGlottologUpdate_depositsManualRequestForPythonWorker() {
+        when(glottologAdminService.createManualUpdateRequest("admin"))
+                .thenReturn(new org.titiplex.api.dto.GlottologUpdateRequestDto(
+                        7L, "admin", Instant.now(), "PENDING",
+                        null, null, null, null, null, null, null
+                ));
+
+        var result = controller.requestGlottologUpdate(adminAuth());
+
+        assertEquals(7L, result.id());
     }
 }

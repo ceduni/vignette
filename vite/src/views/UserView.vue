@@ -1,11 +1,9 @@
 <script setup>
 import {computed, onMounted, ref} from "vue";
-import {RouterLink} from "vue-router";
 import {fetchMyProfile, updateMyProfile} from "../api/users";
-import {fetchMyScenarios, fetchScenarios} from "../api/scenarios";
 import {useAuth} from "../composables/useAuth";
 
-const {currentUser, loadMe} = useAuth();
+const {currentUser} = useAuth();
 
 const profile = ref({
   displayName: "",
@@ -17,17 +15,17 @@ const profile = ref({
 });
 
 const roles = ref([]);
-const affiliations = ref([]);
-const myScenarios = ref([]);
 const error = ref("");
 const success = ref("");
 const loading = ref(false);
-const loadingWorks = ref(false);
-computed(() => myScenarios.value.length);
+
+const initials = computed(() => {
+  const name = profile.value.displayName || currentUser.value?.username || "";
+  return name.split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+});
 
 async function loadProfile() {
   const data = await fetchMyProfile();
-
   profile.value = {
     displayName: data.displayName ?? "",
     institution: data.institution ?? "",
@@ -36,31 +34,13 @@ async function loadProfile() {
     academyAffiliations: (data.academyAffiliations ?? []).join("\n"),
     profilePublic: !!data.profilePublic,
   };
-
   roles.value = data.roles ?? [];
-  affiliations.value = data.academyAffiliations ?? [];
-}
-
-async function loadMyWorks() {
-  loadingWorks.value = true;
-  try {
-    await loadMe();
-    const allScenarios = await fetchScenarios();
-    const username = currentUser.value?.username ?? null;
-
-    myScenarios.value = username
-        ? allScenarios.filter((scenario) => scenario.authorUsername === username)
-        : [];
-  } finally {
-    loadingWorks.value = false;
-  }
 }
 
 async function save() {
   loading.value = true;
   error.value = "";
   success.value = "";
-
   try {
     await updateMyProfile({
       displayName: profile.value.displayName,
@@ -68,13 +48,10 @@ async function save() {
       researchInterests: profile.value.researchInterests,
       bio: profile.value.bio,
       academyAffiliations: profile.value.academyAffiliations
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean),
+          .split("\n").map(s => s.trim()).filter(Boolean),
       profilePublic: profile.value.profilePublic,
     });
-
-    success.value = "Profile saved.";
+    success.value = "Saved.";
     await loadProfile();
   } catch (e) {
     error.value = e.message;
@@ -83,196 +60,182 @@ async function save() {
   }
 }
 
-const privateCount = computed(() =>
-    myScenarios.value.filter((s) => s.visibilityStatus !== "PUBLISHED").length
-);
-
-const publishedCount = computed(() =>
-    myScenarios.value.filter((s) => s.visibilityStatus === "PUBLISHED").length
-);
-
-async function loadWorkspace() {
-  loading.value = true;
-  error.value = "";
-
-  try {
-    await loadMe();
-    myScenarios.value = await fetchMyScenarios();
-  } catch (e) {
-    error.value = e.message || "Failed to load workspace.";
-  } finally {
-    loading.value = false;
-  }
-}
-
-onMounted(async () => {
-  try {
-    await Promise.all([
-      loadProfile(),
-      loadMyWorks(),
-      loadWorkspace(),
-    ]);
-  } catch (e) {
-    error.value = e.message;
-  }
-});
+onMounted(loadProfile);
 </script>
 
 <template>
-  <main class="page">
-    <section class="section">
-      <div class="section-heading">
-        <div>
-          <h1>User profile</h1>
-          <p class="muted">Manage your public presence, affiliations and personal work.</p>
+  <main class="page up-page">
+
+    <div class="up-identity">
+      <div class="up-avatar">{{ initials }}</div>
+      <div class="up-identity__text">
+        <h1 class="up-name">{{ profile.displayName || currentUser?.username || "My profile" }}</h1>
+        <div class="up-meta">
+          <span class="up-username">@{{ currentUser?.username }}</span>
+          <template v-if="profile.institution">
+            <span class="up-sep">·</span>
+            <span>{{ profile.institution }}</span>
+          </template>
+        </div>
+        <div v-if="roles.length" class="up-roles">
+          <span v-for="r in roles" :key="r" class="up-role">{{ r }}</span>
         </div>
       </div>
+    </div>
 
-      <section class="form-card">
-        <h2>Profile information</h2>
+    <section class="card up-form">
+      <h2 class="up-form__title">Edit profile</h2>
 
-        <label>
-          Display name
-          <input v-model="profile.displayName"/>
-        </label>
-
-        <label>
-          Institution
-          <input v-model="profile.institution"/>
-        </label>
+      <div class="form-stack">
+        <div class="form-grid">
+          <label>
+            Display name
+            <input v-model="profile.displayName" placeholder="Your full name"/>
+          </label>
+          <label>
+            Institution
+            <input v-model="profile.institution" placeholder="University or organisation"/>
+          </label>
+        </div>
 
         <label>
           Research interests
-          <input v-model="profile.researchInterests"/>
+          <input v-model="profile.researchInterests" placeholder="e.g. phonology, field methods, lexicography"/>
         </label>
 
         <label>
-          Biography
-          <textarea v-model="profile.bio" rows="5"/>
+          Bio
+          <textarea v-model="profile.bio" rows="4" placeholder="A short description of your work and background"/>
         </label>
 
         <label>
-          Academic affiliations (one per line)
-          <textarea v-model="profile.academyAffiliations" rows="5"/>
+          Academic affiliations
+          <textarea v-model="profile.academyAffiliations" rows="3" placeholder="One affiliation per line"/>
         </label>
 
-        <label class="checkbox-row">
-          <input v-model="profile.profilePublic" type="checkbox"/>
-          <span>Make my profile public</span>
-        </label>
+        <div class="up-form__bottom">
+          <label class="checkbox-row">
+            <input v-model="profile.profilePublic" type="checkbox"/>
+            <span>Make my profile visible to other users</span>
+          </label>
 
-        <button class="btn btn--primary" @click="save" :disabled="loading">
-          {{ loading ? "Saving..." : "Save profile" }}
-        </button>
-
-        <p v-if="success" class="success">{{ success }}</p>
-        <p v-if="error" class="error">{{ error }}</p>
-      </section>
-
-      <div class="card-grid">
-        <section class="card">
-          <h3>Roles</h3>
-          <ul v-if="roles.length" class="plain-list">
-            <li v-for="r in roles" :key="r">{{ r }}</li>
-          </ul>
-          <p v-else class="muted">No roles available.</p>
-        </section>
-
-        <section class="card">
-          <h3>Affiliations</h3>
-          <ul v-if="affiliations.length" class="plain-list">
-            <li v-for="a in affiliations" :key="a">{{ a }}</li>
-          </ul>
-          <p v-else class="muted">No affiliations listed.</p>
-        </section>
-      </div>
-    </section>
-
-    <div>
-      <hr class="hline">
-    </div>
-
-    <section class="card section">
-      <div class="section-heading">
-        <div>
-          <h2>Workspace</h2>
-          <p class="muted">
-            Private overview for your scenarios, publication state and management shortcuts.
-          </p>
+          <div class="up-form__actions">
+            <button class="btn btn--primary" @click="save" :disabled="loading">
+              {{ loading ? "Saving…" : "Save changes" }}
+            </button>
+            <Transition name="fade">
+              <span v-if="success" class="success">{{ success }}</span>
+            </Transition>
+            <span v-if="error" class="error">{{ error }}</span>
+          </div>
         </div>
       </div>
-
-      <div class="card-grid">
-        <section class="card">
-          <h3>My scenarios</h3>
-          <p class="text">{{ myScenarios.length }}</p>
-        </section>
-
-        <section class="card">
-          <h3>Published</h3>
-          <p class="text">{{ publishedCount }}</p>
-        </section>
-
-        <section class="card">
-          <h3>Private / draft</h3>
-          <p class="text">{{ privateCount }}</p>
-        </section>
-      </div>
-
-      <div v-if="loadingWorks" class="loader-block">
-        <span class="loader-spinner"></span>
-        <span class="muted">Loading workspace...</span>
-      </div>
-
-      <div v-else-if="myScenarios.length" class="card-grid">
-        <article v-for="scenario in myScenarios" :key="scenario.id" class="card">
-          <div class="toolbar toolbar--spread">
-            <h3>{{ scenario.title || "Untitled scenario" }}</h3>
-            <span class="badge">{{ scenario.visibilityStatus || "UNKNOWN" }}</span>
-          </div>
-
-          <p class="text">
-            {{ scenario.description || "No description provided." }}
-          </p>
-
-          <p class="muted">
-            Language: {{ scenario.languageId || "-" }}
-          </p>
-
-          <div class="toolbar">
-            <RouterLink :to="`/scenarios/${scenario.id}`" class="btn btn--ghost">
-              Open
-            </RouterLink>
-            <RouterLink :to="`/scenarios/${scenario.id}/manage`" class="btn btn--primary">
-              Manage
-            </RouterLink>
-          </div>
-        </article>
-      </div>
-
-      <div v-else class="empty-state">
-        <h3>No scenario available</h3>
-        <p class="muted">
-          You do not have any scenario yet.
-        </p>
-      </div>
     </section>
+
   </main>
 </template>
 
 <style scoped>
-.badge {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.82rem;
-  background: var(--surface-alt);
+.up-page {
+  max-width: 720px;
 }
 
-.toolbar--spread {
-  justify-content: space-between;
+.up-identity {
+  display: flex;
   align-items: center;
+  gap: 20px;
+  padding: 28px 0 24px;
+}
+
+.up-avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 999px;
+  background: #F5D4CE;
+  color: #5B1928;
+  font-size: 1.4rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+
+.up-identity__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.up-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.up-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--text-soft);
+  flex-wrap: wrap;
+}
+
+.up-username { font-weight: 600; }
+
+.up-sep { opacity: 0.4; }
+
+.up-roles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.up-role {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-cool);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.up-form__title {
+  margin: 0 0 18px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.up-form__bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.up-form__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.fade-enter-active { transition: opacity 300ms ease; }
+.fade-leave-active { transition: opacity 500ms ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+@media (max-width: 600px) {
+  .up-identity { flex-direction: column; align-items: flex-start; }
+  .up-avatar { width: 56px; height: 56px; font-size: 1.1rem; }
+  .up-name { font-size: 1.2rem; }
 }
 </style>

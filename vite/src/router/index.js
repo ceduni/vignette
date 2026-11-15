@@ -3,6 +3,7 @@ import {createRouter, createWebHistory} from "vue-router";
 import HomeView from "../views/HomeView.vue";
 import LanguagesView from "../views/LanguagesView.vue";
 import LanguageDetailView from "../views/LanguageDetailView.vue";
+import LanguageWorldMapView from "../views/languages/LanguageWorldMapView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import ScenariosView from "../views/ScenariosView.vue";
@@ -14,6 +15,8 @@ import ScenarioManageView from "../views/ScenarioManageView.vue";
 import AdminDashboardView from "../views/AdminDashboardView.vue";
 import AdminCommunityView from "../views/AdminCommunityView.vue";
 import AdminLanguagesView from "../views/AdminLanguagesView.vue";
+import InviteJoinView from "../views/InviteJoinView.vue";
+import InvitationsView from "../views/InvitationsView.vue";
 
 import {useAuth} from "../composables/useAuth";
 import AboutProjectView from "../views/AboutProjectView.vue";
@@ -25,163 +28,138 @@ const routes = [
         path: "/",
         name: "home",
         component: HomeView,
-        meta: {
-            title: "Home",
-            description: "Landing page for the Vignette project and platform overview.",
-        },
+        meta: { title: "Home", description: "Landing page for the Vignette project and platform overview." },
     },
     {
         path: "/about",
         name: "about",
         component: AboutProjectView,
-        meta: {
-            title: "About the project",
-            description: "Origins, goals and design rationale of the Vignette project.",
-        },
+        meta: { title: "About the project", description: "Origins, goals and design rationale of the Vignette project." },
     },
     {
         path: "/languages",
         name: "languages",
         component: LanguagesView,
-        meta: {
-            title: "Languages",
-            description: "Browse and search language entries.",
-        },
+        meta: { title: "Languages", description: "Browse and search language entries." },
+    },
+    {
+        path: "/languages/map",
+        name: "languages-map",
+        component: LanguageWorldMapView,
+        meta: { title: "Language map", description: "Interactive world map with per-country language data." },
     },
     {
         path: "/languages/:id",
         name: "language-detail",
         component: LanguageDetailView,
         props: true,
-        meta: {
-            title: "Language details",
-            description: "Detailed language entry with metadata, scenarios and discussion.",
-        },
+        meta: { title: "Language details", description: "Detailed language entry with metadata, scenarios and discussion." },
     },
     {
         path: "/login",
         name: "login",
         component: LoginView,
-        meta: {
-            guestOnly: true,
-            title: "Login",
-            description: "Authenticate to access protected features.",
-        },
+        meta: { guestOnly: true, title: "Login", description: "Authenticate to access protected features." },
     },
     {
         path: "/register",
         name: "register",
         component: RegisterView,
-        meta: {
-            guestOnly: true,
-            title: "Register",
-            description: "Create a new Vignette user account.",
-        },
+        meta: { guestOnly: true, title: "Register", description: "Create a new Vignette user account." },
     },
     {
         path: "/scenarios",
         name: "scenarios",
         component: ScenariosView,
-        meta: {
-            title: "Scenarios",
-            description: "Browse available scenarios and storyboard resources.",
-        },
+        meta: { title: "Scenarios", description: "Browse all published scenarios from the community." },
     },
     {
         path: "/scenarios/:id",
         name: "scenario-detail",
         component: ScenarioDetailView,
         props: true,
-        meta: {
-            title: "Scenario workspace",
-            description: "Detailed scenario page with storyboard, playback and media panels.",
-        },
+        meta: { title: "Scenario workspace", description: "Detailed scenario page with storyboard, playback and media panels." },
+    },
+    {
+        path: "/users/:username/scenarios",
+        name: "user-scenarios",
+        component: () => import("../views/UserScenariosView.vue"),
+        props: true,
+        meta: { title: "Scenarios", description: "Published scenarios a user has authored or collaborated on." },
     },
     {
         path: "/create-scenario",
         name: "create-scenario",
         component: CreateScenarioView,
-        meta: {
-            requiresAuth: true,
-            title: "Create scenario",
-            description: "Create a new scenario and initialize its metadata.",
-        },
+        meta: { requiresAuth: true, title: "Create scenario", description: "Create a new scenario and initialize its metadata." },
     },
     {
         path: "/user",
         name: "user",
         component: UserView,
-        meta: {
-            requiresAuth: true,
-            title: "My profile",
-            description: "Manage your user profile, affiliations and personal work.",
-        },
+        meta: { requiresAuth: true, title: "My profile", description: "Manage your user profile, affiliations and personal work." },
+    },
+    {
+        path: "/workspace",
+        name: "workspace",
+        component: WorkspaceHomeView,
+        meta: { requiresAuth: true, title: "My scenarios", description: "Manage your personal scenarios, drafts and publications." },
+    },
+    {
+        path: "/bookmarked-scenarios",
+        name: "bookmarked-scenarios",
+        component: () => import("../views/BookmarkedScenariosView.vue"),
+        meta: { requiresAuth: true, title: "Bookmarked scenarios", description: "Scenarios you have bookmarked." },
     },
     {
         path: "/scenarios/:id/manage",
         name: "scenario-manage",
         component: ScenarioManageView,
         props: true,
-        meta: {
-            requiresAuth: true,
-            title: "Manage scenario",
-            description: "Private management interface for scenario settings and community governance.",
-        },
+        meta: { requiresAuth: true, title: "Manage scenario", description: "Private management interface for scenario settings and community governance." },
     },
     {
         path: "/admin",
         name: "admin",
         component: AdminDashboardView,
-        meta: {
-            requiresAuth: true,
-            requiresAdmin: true,
-            title: "Admin dashboard",
-            description: "Global administration and moderation workspace.",
-        },
+        meta: { requiresAuth: true, requiresAdmin: true, title: "Admin dashboard", description: "Global administration and moderation workspace." },
     },
     {
         path: "/admin/community",
         name: "admin-community",
         component: AdminCommunityView,
-        meta: {
-            requiresAuth: true,
-            requiresAdmin: true,
-            title: "Community administration",
-            description: "Global accreditation moderation and grants.",
-        },
+        meta: { requiresAuth: true, requiresAdmin: true, title: "Community administration", description: "Global accreditation moderation and grants." },
     },
     {
         path: "/admin/languages",
         name: "admin-languages",
         component: AdminLanguagesView,
-        meta: {
-            requiresAuth: true,
-            requiresAdmin: true,
-            title: "Language administration",
-            description: "Language-level editing and moderation tools.",
-        },
+        meta: { requiresAuth: true, requiresAdmin: true, title: "Language administration", description: "Language-level editing and moderation tools." },
     },
     {
         path: "/admin/users",
         name: "admin-users",
         component: AdminUsersView,
-        meta: {
-            requiresAuth: true,
-            requiresAdmin: true,
-            title: "User administration",
-            description: "Manage users and roles.",
-        },
+        meta: { requiresAuth: true, requiresAdmin: true, title: "User administration", description: "Manage users and roles." },
     },
     {
         path: "/admin/scenarios",
         name: "admin-scenarios",
         component: AdminScenariosView,
-        meta: {
-            requiresAuth: true,
-            requiresAdmin: true,
-            title: "Scenario administration",
-            description: "Manage scenario visibility and moderation.",
-        },
+        meta: { requiresAuth: true, requiresAdmin: true, title: "Scenario administration", description: "Manage scenario visibility and moderation." },
+    },
+    {
+        path: "/scenarios/join/:token",
+        name: "scenario-invite-join",
+        component: InviteJoinView,
+        props: true,
+        meta: { requiresAuth: true, title: "Join scenario", description: "Accept an invitation to collaborate on a scenario." },
+    },
+    {
+        path: "/invitations",
+        name: "invitations",
+        component: InvitationsView,
+        meta: { requiresAuth: true, title: "Invitations", description: "Pending collaboration invitations." },
     },
 ];
 

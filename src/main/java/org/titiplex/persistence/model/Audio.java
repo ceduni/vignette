@@ -24,7 +24,7 @@ public class Audio {
     @Column(name = "original_filename")
     private String originalFilename;
 
-    @Column(name = "audio_sha256", nullable = false, unique = true, length = 64)
+    @Column(name = "audio_sha256", nullable = false, length = 64)
     private String audioSha256;
 
     @Column(name = "title", nullable = false)
@@ -36,6 +36,10 @@ public class Audio {
     @Column(name = "mime", nullable = false, length = 64)
     private String mime; //audio/webm
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scope", nullable = false, length = 32, columnDefinition = "varchar(32) default 'SCENE'")
+    private AudioScope scope = AudioScope.SCENE;
+
     @Column(name = "author_id", nullable = false)
     private Long authorId;
 
@@ -45,8 +49,29 @@ public class Audio {
     @Column(name = "language_id", nullable = false)
     private String languageId;
 
-    @Column(name = "thumbnail_id", nullable = false)
+    @Column(name = "thumbnail_id")
     private Long thumbnailId;
+
+    @Column(name = "source_label", length = 180)
+    private String sourceLabel;
+
+    @Column(name = "source_url", length = 512)
+    private String sourceUrl;
+
+    @Column(name = "background_volume")
+    private Integer backgroundVolume;
+
+    @Column(name = "background_loop")
+    private Boolean backgroundLoop;
+
+    @Column(columnDefinition = "text")
+    private String transcription;
+
+    @Column(columnDefinition = "text")
+    private String gloss;
+
+    @Column(name = "free_translation", columnDefinition = "text")
+    private String freeTranslation;
 
     @Column(name = "marker_x")
     private Double markerX;
@@ -77,7 +102,7 @@ public class Audio {
     )
     private Scenario scenario;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "thumbnail_id",
             referencedColumnName = "id",

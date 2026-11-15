@@ -20,6 +20,24 @@ jobs:
     env:
       SPRING_PROFILES_ACTIVE: dev
       APP_JWT_SECRET: docs-only-secret
+      # The dev profile connects to PostgreSQL on localhost (service below).
+      DB_PASSWORD: vignette
+      APP_GLOTTOLOG_BOOTSTRAP_IMPORT: "false"
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vignette
+          POSTGRES_PASSWORD: vignette
+          POSTGRES_DB: vignette
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vignette -d vignette"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout

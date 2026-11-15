@@ -1,0 +1,214 @@
+.admin-page,
+.admin-workspace,
+.admin-shell-page {
+    --vignette-bg: #F8F2EC;
+    --vignette-surface: #FFFDFB;
+    --vignette-surface-soft: #F4E7E4;
+    --vignette-primary: #6D1F34;
+    --vignette-primary-dark: #4A1022;
+    --vignette-primary-soft: rgba(109, 31, 52, 0.10);
+    --vignette-border: rgba(109, 31, 52, 0.14);
+    --vignette-text: #2F1722;
+    --vignette-muted: rgba(47, 23, 34, 0.65);
+    --vignette-success-bg: #DCE8CF;
+    --vignette-success-text: #405C32;
+    --vignette-danger-bg: #F8D7DA;
+    --vignette-danger-text: #8A1F2D;
+
+    --bg: var(--vignette-bg);
+    --surface: var(--vignette-surface);
+    --surface-alt: var(--vignette-surface-soft);
+    --accent-warm: var(--vignette-surface-soft);
+    --accent-cool: var(--vignette-surface-soft);
+    --accent-green: var(--vignette-success-bg);
+    --primary: var(--vignette-primary);
+    --primary-strong: var(--vignette-primary-dark);
+    --text: var(--vignette-text);
+    --text-soft: var(--vignette-muted);
+    --border: var(--vignette-border);
+    --danger: var(--vignette-danger-text);
+    --success: var(--vignette-success-text);
+    --shadow: 0 12px 28px rgba(109, 31, 52, 0.08);
+
+    color: var(--text);
+}
+
+.admin-page,
+.admin-shell-page {
+    min-height: 100vh;
+    background: var(--bg);
+}
+
+/* Masquer le footer global sur tout l'espace admin */
+body:has(.admin-shell-page) .app-footer,
+body:has(.admin-page) .app-footer {
+    display: none !important;
+}
+
+.admin-workspace .card,
+.admin-page .card,
+.admin-shell-page .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+}
+
+.admin-workspace .btn--primary,
+.admin-page .btn--primary,
+.admin-shell-page .btn--primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.admin-workspace .btn--primary:hover,
+.admin-page .btn--primary:hover,
+.admin-shell-page .btn--primary:hover {
+    background: var(--primary-strong);
+    border-color: var(--primary-strong);
+    color: #fff;
+}
+
+.admin-workspace .btn--ghost,
+.admin-workspace .btn--secondary,
+.admin-page .btn--ghost,
+.admin-page .btn--secondary,
+.admin-shell-page .btn--ghost,
+.admin-shell-page .btn--secondary {
+    background: var(--surface-alt);
+    color: var(--primary);
+    border-color: var(--border);
+}
+
+.admin-workspace .btn--ghost:hover,
+.admin-workspace .btn--secondary:hover,
+.admin-page .btn--ghost:hover,
+.admin-page .btn--secondary:hover,
+.admin-shell-page .btn--ghost:hover,
+.admin-shell-page .btn--secondary:hover {
+    background: var(--vignette-surface-soft);
+    color: var(--primary-strong);
+}
+
+.admin-workspace input,
+.admin-workspace select,
+.admin-workspace textarea,
+.admin-page input,
+.admin-page select,
+.admin-page textarea,
+.admin-shell-page input,
+.admin-shell-page select,
+.admin-shell-page textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 0.75rem 0.85rem;
+}
+
+.admin-workspace input::placeholder,
+.admin-page input::placeholder,
+.admin-shell-page input::placeholder,
+.admin-workspace textarea::placeholder,
+.admin-page textarea::placeholder,
+.admin-shell-page textarea::placeholder {
+    color: var(--text-soft);
+}
+
+.admin-workspace .badge,
+.admin-page .badge,
+.admin-shell-page .badge {
+    background: var(--surface-alt);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.admin-workspace .badge--success,
+.admin-page .badge--success,
+.admin-shell-page .badge--success {
+    background: var(--vignette-success-bg);
+    color: var(--vignette-success-text);
+    border-color: rgba(64, 92, 50, 0.20);
+}
+
+.admin-workspace .badge--danger,
+.admin-page .badge--danger,
+.admin-shell-page .badge--danger {
+    background: var(--vignette-danger-bg);
+    color: var(--vignette-danger-text);
+    border-color: rgba(138, 31, 45, 0.18);
+}
+
+.admin-workspace .badge--info,
+.admin-page .badge--info,
+.admin-shell-page .badge--info,
+.admin-workspace .badge--accent,
+.admin-page .badge--accent,
+.admin-shell-page .badge--accent,
+.admin-workspace .badge--muted,
+.admin-page .badge--muted,
+.admin-shell-page .badge--muted {
+    background: var(--vignette-primary-soft);
+    color: var(--primary);
+    border-color: var(--border);
+}
+
+.admin-workspace .error,
+.admin-page .error,
+.admin-shell-page .error {
+    background: var(--vignette-danger-bg);
+    color: var(--vignette-danger-text);
+    border: 1px solid rgba(138, 31, 45, 0.16);
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+}
+
+.admin-workspace .success,
+.admin-page .success,
+.admin-shell-page .success {
+    background: var(--vignette-success-bg);
+    color: var(--vignette-success-text);
+    border: 1px solid rgba(64, 92, 50, 0.16);
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+}
+
+.admin-workspace .loader-spinner,
+.admin-page .loader-spinner,
+.admin-shell-page .loader-spinner {
+    border-color: rgba(109, 31, 52, 0.18);
+    border-top-color: var(--primary);
+}
+
+.admin-workspace .empty-state,
+.admin-page .empty-state,
+.admin-shell-page .empty-state {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 18px;
+    padding: 1.1rem 1.2rem;
+}
+
+.admin-workspace .muted,
+.admin-page .muted,
+.admin-shell-page .muted,
+.admin-workspace small,
+.admin-page small,
+.admin-shell-page small {
+    color: var(--text-soft);
+}
+
+.admin-workspace pre,
+.admin-page pre,
+.admin-shell-page pre {
+    background: var(--vignette-surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.admin-workspace hr,
+.admin-page hr,
+.admin-shell-page hr {
+    border-color: var(--border);
+}

@@ -32,13 +32,13 @@ Object.defineProperty(window, "scrollTo", {
     value: vi.fn(),
 });
 
-if (!globalThis.URL.createObjectURL) {
-    globalThis.URL.createObjectURL = vi.fn(() => "blob:mock-url");
-}
+const createObjectURL = vi.fn(() => "blob:mock-url");
+const revokeObjectURL = vi.fn();
 
-if (!globalThis.URL.revokeObjectURL) {
-    globalThis.URL.revokeObjectURL = vi.fn();
-}
+globalThis.URL.createObjectURL = globalThis.URL.createObjectURL || createObjectURL;
+globalThis.URL.revokeObjectURL = globalThis.URL.revokeObjectURL || revokeObjectURL;
+window.URL.createObjectURL = window.URL.createObjectURL || createObjectURL;
+window.URL.revokeObjectURL = window.URL.revokeObjectURL || revokeObjectURL;
 
 beforeEach(() => {
     sessionStorage.clear();

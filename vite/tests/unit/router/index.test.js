@@ -24,6 +24,7 @@ async function loadRouterWithAuthState(
 
     vi.doMock("@/views/HomeView.vue", () => ({default: simpleComponentStub("HomeView")}));
     vi.doMock("@/views/LanguagesView.vue", () => ({default: simpleComponentStub("LanguagesView")}));
+    vi.doMock("@/views/languages/LanguageWorldMapView.vue", () => ({default: simpleComponentStub("LanguageWorldMapView")}));
     vi.doMock("@/views/LanguageDetailView.vue", () => ({default: simpleComponentStub("LanguageDetailView")}));
     vi.doMock("@/views/LoginView.vue", () => ({default: simpleComponentStub("LoginView")}));
     vi.doMock("@/views/RegisterView.vue", () => ({default: simpleComponentStub("RegisterView")}));

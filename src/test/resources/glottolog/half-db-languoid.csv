@@ -1,0 +1,6 @@
+id,name,bookkeeping,level,family_id,country_ids,child_family_count,child_language_count,child_dialect_count
+fra,French,false,language,indo1319,FRA,0,0,0
+spa,Spanish,false,language,indo1319,ESP,0,0,0
+cat,Catalan,false,language,indo1319,ESP,0,0,0
+indo1319,Indo-European,false,family,,,0,0,0
+bookkeeping-only,Bookkeeping Ghost,false,language,,,0,0,0

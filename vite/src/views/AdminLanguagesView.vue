@@ -1,5 +1,6 @@
 <script setup>
 import {onMounted, ref} from "vue";
+import AdminWorkspaceShell from "../components/admin/AdminWorkspaceShell.vue";
 import {fetchLanguage, fetchLanguages, updateLanguage} from "../api/languages";
 
 const loading = ref(false);
@@ -90,11 +91,13 @@ onMounted(searchLanguages);
 </script>
 
 <template>
-  <main class="page">
-    <section class="section">
+  <AdminWorkspaceShell
+      title="Languages"
+      subtitle="Search and edit language entries."
+  >
       <div class="section-heading">
         <div>
-          <h1>Admin languages</h1>
+          <h2>Languages</h2>
           <p class="muted">
             Search and inspect language entries, with a lightweight admin edit interface.
           </p>
@@ -183,8 +186,7 @@ onMounted(searchLanguages);
           </p>
         </section>
       </div>
-    </section>
-  </main>
+  </AdminWorkspaceShell>
 </template>
 
 <style scoped>
