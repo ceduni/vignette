@@ -351,7 +351,7 @@ centaines de lignes).
 
 ## 6. Pour se lancer
 
-1. Lire le [README](../README.md) et lancer le projet en profil `pgdev`.
+1. Lire le [README](../README.md) et lancer le projet en profil `dev`.
 2. Se connecter avec `admin` / `admin12345` pour voir `/admin/community`.
 3. Ouvrir une page langue (`/languages/:id`) — c'est le meilleur endroit
    pour voir converger follow, likes, bookmarks et discussion en situation

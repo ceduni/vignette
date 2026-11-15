@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     with db.connect(settings) as conn:
         admin = db.fetch_admin_settings(conn)
         if admin is None:
-            print("No glottolog_admin_settings row — start Java/pgdev once first.", file=sys.stderr)
+            print("No glottolog_admin_settings row — start Java (profile dev) once first.", file=sys.stderr)
             return 1
 
         must_touch_settings = (not admin.auto_update_enabled) or (

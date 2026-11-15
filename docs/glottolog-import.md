@@ -90,7 +90,7 @@ GlottologUpdateService
       ▼
 LanguageImportService  ── lit le CSV, filtre, normalise, écrit inserts/updates/suppressions
       ▼
-Base de données (H2 en dev, PostgreSQL en prod)
+Base de données (PostgreSQL)
 ```
 
 ---

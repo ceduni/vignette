@@ -59,7 +59,7 @@ public class GlottologPythonBootstrapService {
         if (datasourceUrl == null || !datasourceUrl.startsWith("jdbc:postgresql:")) {
             System.out.println(
                     "Startup Python bootstrap: skipped (not PostgreSQL). "
-                            + "Use profile pgdev + Postgres, or run: "
+                            + "Use a PostgreSQL datasource (profile dev), or run: "
                             + "python3 -m glottolog_worker --bootstrap"
             );
             return languageService.count() > 0;

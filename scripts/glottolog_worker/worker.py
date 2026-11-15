@@ -583,7 +583,7 @@ def main(argv: list[str] | None = None) -> int:
                 admin = sync_admin_config(conn, settings)
                 if admin is None:
                     print(
-                        "No admin settings row — start Java (pgdev) once so "
+                        "No admin settings row — start Java (profile dev) once so "
                         "glottolog_admin_settings is created, then retry.",
                         flush=True,
                     )

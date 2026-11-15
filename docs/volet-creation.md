@@ -40,7 +40,7 @@ Il est possible de travailler sur une petite partie sans maîtriser tout le proj
 
 ### 1.1 Prérequis
 
-Le projet utilise Java 21 ou une version plus récente, Maven, Node.js, npm et un navigateur moderne. PostgreSQL est nécessaire pour l’environnement complet. Le profil `dev` permet de travailler rapidement avec une base H2 locale.
+Le projet utilise Java 21 ou une version plus récente, Maven, Node.js, npm et un navigateur moderne. PostgreSQL est nécessaire : c’est la seule base de données du projet, en local (profil `dev`), dans les tests et en production (Supabase). Docker est requis pour lancer les tests du backend.
 
 ### 1.2 Lancer le backend léger
 
@@ -200,16 +200,15 @@ Le modèle JPA représente une table.
 
 Le DTO représente la forme envoyée au frontend.
 
-### 2.7 JPA, H2, PostgreSQL et Flyway
+### 2.7 JPA, PostgreSQL et Flyway
 
-JPA relie les modèles Java aux tables. Le profil `dev` utilise H2 avec `ddl-auto=update`. Le profil `pgdev` utilise PostgreSQL avec la mise à jour du schéma par Hibernate. Le profil de production utilise Flyway et demande à Hibernate de valider le schéma.
+JPA relie les modèles Java aux tables. Tous les profils utilisent PostgreSQL. Le schéma est géré uniquement par les migrations Flyway de `src/main/resources/db/migration` ; Hibernate se contente de le valider (`ddl-auto=validate`) et ne crée ni ne modifie aucune table.
 
-Les migrations du volet création sont notamment :
+Les anciennes migrations `V1` à `V16`, dont celles du volet création, sont regroupées dans la base de départ :
 
 ```text
-V12__scenario_background_audio.sql
-V13__vignette_maker_scenes.sql
-V14__active_scenario_background_audio.sql
+V1__baseline.sql
+V2__indexes_and_glottolog_wake_trigger.sql
 ```
 
 ### 2.8 Vitest et Playwright
@@ -2035,11 +2034,11 @@ Vérifier si le Studio était en mode temporaire. Les identifiants `emergency-` 
 
 Vérifier aussi si une Object URL a été sauvegardée à la place du vrai fichier.
 
-### 22.13 La base fonctionne en dev mais pas en production
+### 22.13 L’application refuse de démarrer après un changement de modèle
 
-Le profil dev permet à Hibernate de mettre le schéma à jour. La production utilise `ddl-auto=validate` et Flyway.
+Tous les profils utilisent Flyway et `ddl-auto=validate`. Hibernate ne met plus le schéma à jour, même en dev.
 
-Toute nouvelle colonne nécessaire en production doit donc avoir une migration.
+Toute nouvelle colonne doit donc avoir une migration `V<n>__description.sql`, sinon l’application s’arrête au démarrage avec une erreur de validation du schéma.
 
 ### 22.14 Une glose disparaît après le rechargement
 

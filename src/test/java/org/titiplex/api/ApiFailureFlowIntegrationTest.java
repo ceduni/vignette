@@ -7,6 +7,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -16,6 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.titiplex.Application;
+import org.titiplex.PostgresTestContainerConfig;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.repo.*;
 
@@ -34,16 +36,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(
         classes = Application.class,
         properties = {
-                "spring.flyway.enabled=false",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.datasource.url=jdbc:h2:mem:vignette-it-fail;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false",
-                "spring.datasource.driverClassName=org.h2.Driver",
-                "spring.datasource.username=sa",
-                "spring.datasource.password=",
                 "app.storage.root=target/test-storage-it-fail"
         }
 )
 @AutoConfigureMockMvc
+@Import(PostgresTestContainerConfig.class)
 class ApiFailureFlowIntegrationTest {
 
     @Autowired

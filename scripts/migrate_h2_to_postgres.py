@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Migrate users/scenarios from local H2 (./data/bootapp) into PostgreSQL.
 
+One-off tool for data left in the former H2 dev database. The application itself
+no longer uses H2, so the H2 jar is not a project dependency any more.
+
   python3 scripts/migrate_h2_to_postgres.py
   python3 scripts/migrate_h2_to_postgres.py --dry-run
 """
@@ -93,7 +96,7 @@ def find_h2_jar(explicit: str | None) -> Path:
     if not jars:
         raise SystemExit(
             "No H2 jar under ~/.m2/repository/com/h2database/h2 — "
-            "run `mvn dependency:resolve` or pass --h2-jar"
+            "run `mvn dependency:get -Dartifact=com.h2database:h2:2.3.232` or pass --h2-jar"
         )
     return jars[-1]
 
