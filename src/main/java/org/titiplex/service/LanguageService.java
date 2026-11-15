@@ -1,5 +1,6 @@
 package org.titiplex.service;
 
+import org.titiplex.util.Text;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,7 +28,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -200,22 +200,16 @@ public class LanguageService {
         if (req.name() != null) language.setName(req.name().trim());
         if (req.level() != null) language.setLevel(req.level().trim());
         if (req.bookkeeping() != null) language.setBookkeeping(req.bookkeeping());
-        if (req.iso639P3code() != null) language.setIso639P3code(blankToNull(req.iso639P3code()));
+        if (req.iso639P3code() != null) language.setIso639P3code(Text.blankToNull(req.iso639P3code()));
         if (req.latitude() != null) language.setLatitude(req.latitude());
         if (req.longitude() != null) language.setLongitude(req.longitude());
-        if (req.countryIds() != null) language.setCountryIds(blankToNull(req.countryIds()));
-        if (req.familyId() != null) language.setFamilyId(blankToNull(req.familyId()));
-        if (req.parentId() != null) language.setParentId(blankToNull(req.parentId()));
-        if (req.description() != null) language.setDescription(blankToNull(req.description()));
-        if (req.markupDescription() != null) language.setMarkupDescription(blankToNull(req.markupDescription()));
+        if (req.countryIds() != null) language.setCountryIds(Text.blankToNull(req.countryIds()));
+        if (req.familyId() != null) language.setFamilyId(Text.blankToNull(req.familyId()));
+        if (req.parentId() != null) language.setParentId(Text.blankToNull(req.parentId()));
+        if (req.description() != null) language.setDescription(Text.blankToNull(req.description()));
+        if (req.markupDescription() != null) language.setMarkupDescription(Text.blankToNull(req.markupDescription()));
 
         return toDto(repo.save(language));
-    }
-
-    private String blankToNull(String value) {
-        if (value == null) return null;
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 
     public Page<LanguageOptionDto> searchOptions(String q, int page, int size) {
@@ -296,16 +290,7 @@ public class LanguageService {
                 continue;
             }
 
-            LanguageRowDto row = new LanguageRowDto(
-                    language.getId(),
-                    language.getName(),
-                    language.getLevel(),
-                    language.getCountryIds(),
-                    language.getFamily() != null ? language.getFamily().getName() : language.getFamilyId(),
-                    language.getParent() != null ? language.getParent().getName() : language.getParentId(),
-                    language.getLatitude(),
-                    language.getLongitude()
-            );
+            LanguageRowDto row = LanguageRowDto.from(language);
 
             for (String token : Arrays.stream(countryIds.split("[\\s,;]+"))
                     .map(String::trim)

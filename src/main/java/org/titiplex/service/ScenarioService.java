@@ -1,35 +1,24 @@
 package org.titiplex.service;
 
 import org.springframework.data.domain.PageRequest;
-import org.titiplex.api.dto.ScenarioLocationDto;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.titiplex.api.dto.ScenarioDto;
+import org.titiplex.api.dto.ScenarioLocationDto;
 import org.titiplex.api.dto.UpdateScenarioMetadataRequest;
 import org.titiplex.api.dto.UpdateScenarioStoryboardRequest;
 import org.titiplex.persistence.model.CollaborationStatus;
+import org.titiplex.persistence.model.ReviewStatus;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.ScenarioCollaborator;
 import org.titiplex.persistence.model.ScenarioHistoryAction;
 import org.titiplex.persistence.model.ScenarioVisibilityStatus;
 import org.titiplex.persistence.model.StoryboardLayoutMode;
+import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
-import org.springframework.transaction.annotation.Transactional;
-import org.titiplex.persistence.model.Audio;
-import org.titiplex.persistence.model.AudioScope;
-import org.titiplex.persistence.model.ReviewStatus;
-import org.titiplex.persistence.model.Thumbnail;
-import org.titiplex.persistence.model.User;
-import org.titiplex.persistence.repo.AudioRepository;
-import org.titiplex.persistence.repo.ScenarioBookmarkRepository;
-import org.titiplex.persistence.repo.ScenarioHistoryRepository;
-import org.titiplex.persistence.repo.ScenarioInviteLinkRepository;
-import org.titiplex.persistence.repo.ScenarioLikeRepository;
-import org.titiplex.persistence.repo.ThumbnailRepository;
-import org.titiplex.service.storage.FileStorageService;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -40,30 +29,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import static org.titiplex.security.AuthUtils.*;
+import static org.titiplex.security.AuthUtils.authenticatedUsername;
+import static org.titiplex.security.AuthUtils.isAdmin;
+import static org.titiplex.security.AuthUtils.requireAuthenticated;
 
+/**
+ * Scenarios themselves: creating them, finding and listing them, editing their description
+ * and storyboard settings, and publishing them.
+ * <p>
+ * Related concerns live in their own services: permissions ({@link ScenarioAccessService}),
+ * copies and their review ({@link ScenarioForkService}), deletion
+ * ({@link ScenarioDeletionService}) and collaborators ({@link ScenarioCollaborationService}).
+ */
 @Service
 public class ScenarioService {
 
     public static final int DISCOVERY_SCENARIO_LIMIT = 15;
     static final int TITLE_MAX_LENGTH = 200;
     private static final int DESCRIPTION_MAX_LENGTH = 500;
+    private static final int LOCATION_NAME_MAX_LENGTH = 200;
 
     private final ScenarioRepository repo;
     private final UserService userService;
     private final LanguageService languageService;
     private final ScenarioTagService scenarioTagService;
     private final NotificationService notificationService;
-    private final ThumbnailRepository thumbnailRepo;
-    private final AudioRepository audioRepo;
     private final ScenarioCollaboratorRepository collaboratorRepo;
     private final ScenarioHistoryService scenarioHistoryService;
-    private final ScenarioLikeRepository likeRepo;
-    private final ScenarioBookmarkRepository bookmarkRepo;
-    private final ScenarioInviteLinkRepository inviteLinkRepo;
-    private final ScenarioHistoryRepository historyRepo;
-    private final ThumbnailService thumbnailService;
-    private final FileStorageService storage;
     private final ScenarioAccessService access;
 
     public ScenarioService(
@@ -72,16 +64,8 @@ public class ScenarioService {
             LanguageService languageService,
             ScenarioTagService scenarioTagService,
             NotificationService notificationService,
-            ThumbnailRepository thumbnailRepo,
-            AudioRepository audioRepo,
             ScenarioCollaboratorRepository collaboratorRepo,
             ScenarioHistoryService scenarioHistoryService,
-            ScenarioLikeRepository likeRepo,
-            ScenarioBookmarkRepository bookmarkRepo,
-            ScenarioInviteLinkRepository inviteLinkRepo,
-            ScenarioHistoryRepository historyRepo,
-            ThumbnailService thumbnailService,
-            FileStorageService storage,
             ScenarioAccessService access
     ) {
         this.repo = scenarioRepository;
@@ -89,18 +73,12 @@ public class ScenarioService {
         this.languageService = languageService;
         this.scenarioTagService = scenarioTagService;
         this.notificationService = notificationService;
-        this.thumbnailRepo = thumbnailRepo;
-        this.audioRepo = audioRepo;
         this.collaboratorRepo = collaboratorRepo;
         this.scenarioHistoryService = scenarioHistoryService;
-        this.likeRepo = likeRepo;
-        this.bookmarkRepo = bookmarkRepo;
-        this.inviteLinkRepo = inviteLinkRepo;
-        this.historyRepo = historyRepo;
-        this.thumbnailService = thumbnailService;
-        this.storage = storage;
         this.access = access;
     }
+
+    // ── Creating ───────────────────────────────────────────────────────
 
     public Scenario createScenario(String title, String description, Long authorId, String languageId, List<String> tags) {
         String normalizedTitle = validatedTitle(title);
@@ -128,6 +106,8 @@ public class ScenarioService {
         return saved;
     }
 
+    // ── Finding one scenario ───────────────────────────────────────────
+
     public Scenario getRequiredScenario(Long id) {
         return repo.findByIdWithTags(id)
                 .orElseThrow(() -> new NoSuchElementException("Scenario not found"));
@@ -139,6 +119,9 @@ public class ScenarioService {
         return scenario;
     }
 
+    // ── Listing, for the current user ──────────────────────────────────
+
+    /** Everything for admins; published scenarios for visitors; published plus their own for users. */
     public List<Scenario> listVisibleScenarios(Authentication authentication) {
         if (isAdmin(authentication)) {
             return repo.findAllWithTagsOrderByCreatedAtDesc();
@@ -152,21 +135,26 @@ public class ScenarioService {
         return repo.findVisibleToUsernameWithTags(username);
     }
 
+    public List<ScenarioDto> listVisibleScenarioDtos(Authentication authentication) {
+        return toDtos(listVisibleScenarios(authentication), authenticatedUsername(authentication));
+    }
+
     public List<Scenario> listMyScenarios(Authentication authentication) {
         requireAuthenticated(authentication);
 
         return repo.findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc(authentication.getName());
     }
 
+    public List<ScenarioDto> listMyScenarioDtos(Authentication authentication) {
+        return toDtos(listMyScenarios(authentication), authenticatedUsername(authentication));
+    }
+
+    /** Scenarios of other authors on which the user is an accepted collaborator. */
     public List<Scenario> listSharedWithMeScenarios(Authentication authentication) {
         requireAuthenticated(authentication);
 
         Long userId = userService.getUserByUsername(authentication.getName()).getId();
-        List<Long> scenarioIds = collaboratorRepo.findByUserIdAndStatus(userId, CollaborationStatus.ACCEPTED)
-                .stream()
-                .map(org.titiplex.persistence.model.ScenarioCollaborator::getScenarioId)
-                .toList();
-
+        List<Long> scenarioIds = acceptedCollaborationScenarioIds(userId);
         if (scenarioIds.isEmpty()) {
             return List.of();
         }
@@ -175,11 +163,10 @@ public class ScenarioService {
     }
 
     public List<ScenarioDto> listSharedWithMeScenarioDtos(Authentication authentication) {
-        String username = authenticatedUsername(authentication);
-        return listSharedWithMeScenarios(authentication).stream()
-                .map(s -> toDto(s, username))
-                .toList();
+        return toDtos(listSharedWithMeScenarios(authentication), authenticatedUsername(authentication));
     }
+
+    // ── Listing, public discovery ──────────────────────────────────────
 
     /**
      * Published scenarios a user has worked on — either as author or as an accepted
@@ -191,10 +178,7 @@ public class ScenarioService {
             throw new NoSuchElementException("User not found");
         }
 
-        List<Long> collaboratedIds = collaboratorRepo.findByUserIdAndStatus(user.getId(), CollaborationStatus.ACCEPTED)
-                .stream()
-                .map(ScenarioCollaborator::getScenarioId)
-                .toList();
+        List<Long> collaboratedIds = acceptedCollaborationScenarioIds(user.getId());
 
         Map<Long, Scenario> published = new LinkedHashMap<>();
         for (Scenario s : repo.findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc(username)) {
@@ -212,9 +196,38 @@ public class ScenarioService {
 
         return published.values().stream()
                 .sorted(Comparator.comparing(Scenario::getCreatedAt).reversed())
-                .map(s -> toDto(s, null))
+                .map(this::toDto)
                 .toList();
     }
+
+    public List<ScenarioDto> listScenariosByLanguageId(String languageId) {
+        return toDtos(repo.findAllByLanguageIdWithTagsOrderByCreatedAtDesc(languageId), null);
+    }
+
+    public List<ScenarioDto> listPublishedScenariosByFamilyId(String familyId, Integer limit) {
+        languageService.assertFamilyExists(familyId);
+        Pageable pageable = PageRequest.of(0, clampDiscoveryLimit(limit));
+        return toDtos(repo.findPublishedByFamilyIdOrderByCreatedAtDesc(familyId, pageable), null);
+    }
+
+    public List<ScenarioDto> listPublishedScenariosByCountryIso(String isoA3, Integer limit) {
+        List<String> languageIds = languageService.findLanguageIdsByCountryIsoA3(isoA3);
+        if (languageIds.isEmpty()) {
+            return List.of();
+        }
+
+        Pageable pageable = PageRequest.of(0, clampDiscoveryLimit(limit));
+        return toDtos(repo.findPublishedByLanguageIdInOrderByCreatedAtDesc(languageIds, pageable), null);
+    }
+
+    int clampDiscoveryLimit(Integer limit) {
+        if (limit == null) {
+            return DISCOVERY_SCENARIO_LIMIT;
+        }
+        return Math.max(1, Math.min(limit, DISCOVERY_SCENARIO_LIMIT));
+    }
+
+    // ── Administration ─────────────────────────────────────────────────
 
     public List<Scenario> listAllScenarios() {
         return repo.findAllWithTagsOrderByCreatedAtDesc();
@@ -231,6 +244,30 @@ public class ScenarioService {
     public long countDraftScenarios() {
         return repo.countByVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
     }
+
+    /** Lets an admin publish or unpublish any scenario, bypassing the author and the fork review. */
+    public Scenario adminUpdateVisibility(Long id, String visibilityStatus) {
+        Scenario scenario = getRequiredScenario(id);
+
+        if (visibilityStatus == null || visibilityStatus.isBlank()) {
+            throw new IllegalArgumentException("Visibility status is required");
+        }
+
+        ScenarioVisibilityStatus next = ScenarioVisibilityStatus.valueOf(visibilityStatus.trim().toUpperCase());
+        scenario.setVisibilityStatus(next);
+
+        if (next == ScenarioVisibilityStatus.PUBLISHED && scenario.getPublishedAt() == null) {
+            scenario.setPublishedAt(Instant.now());
+        }
+
+        if (next != ScenarioVisibilityStatus.PUBLISHED) {
+            scenario.setPublishedAt(null);
+        }
+
+        return repo.save(scenario);
+    }
+
+    // ── Publishing ─────────────────────────────────────────────────────
 
     public Scenario publishScenario(Long id, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
@@ -249,19 +286,16 @@ public class ScenarioService {
 
         Scenario saved = repo.save(scenario);
 
-        Long actorId = userService.getUserByUsername(authentication.getName()).getId();
-        scenarioHistoryService.record(
-                saved.getId(),
-                actorId,
-                ScenarioHistoryAction.PUBLISHED,
-                firstPublication ? "Published the scenario" : "Updated the published scenario"
-        );
+        recordHistory(saved, authentication, ScenarioHistoryAction.PUBLISHED,
+                firstPublication ? "Published the scenario" : "Updated the published scenario");
 
         if (firstPublication) {
             notificationService.notifyNewScenarioInLanguage(saved);
         }
         return saved;
     }
+
+    // ── Editing ────────────────────────────────────────────────────────
 
     public Scenario updateStoryboard(Long id, UpdateScenarioStoryboardRequest request, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
@@ -284,13 +318,11 @@ public class ScenarioService {
         }
 
         Scenario saved = repo.save(scenario);
-
-        Long actorId = userService.getUserByUsername(authentication.getName()).getId();
-        scenarioHistoryService.record(saved.getId(), actorId, ScenarioHistoryAction.STORYBOARD_UPDATED, "Updated the storyboard settings");
-
+        recordHistory(saved, authentication, ScenarioHistoryAction.STORYBOARD_UPDATED, "Updated the storyboard settings");
         return saved;
     }
 
+    /** Updates the fields present in the request (title, description, tags, location); absent ones are left as they are. */
     public Scenario updateScenarioMetadata(Long id, UpdateScenarioMetadataRequest request, Authentication authentication) {
         Scenario scenario = getRequiredScenario(id);
         access.assertCanEditScenario(scenario, authentication);
@@ -322,37 +354,44 @@ public class ScenarioService {
         }
 
         if (request.location() != null) {
-            ScenarioLocationDto location = request.location();
-            Double latitude = location.latitude();
-            Double longitude = location.longitude();
-            String name = location.name() == null ? "" : location.name().trim();
-            if (latitude == null && longitude == null && name.isEmpty()) {
-                scenario.setLocationName(null);
-                scenario.setLatitude(null);
-                scenario.setLongitude(null);
-            } else {
-                if (name.length() > 200 || latitude == null || longitude == null
-                        || !Double.isFinite(latitude) || !Double.isFinite(longitude)
-                        || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-                    throw new IllegalArgumentException("A location requires valid latitude (-90 to 90) and longitude (-180 to 180), and a name of at most 200 characters");
-                }
-                scenario.setLocationName(name.isEmpty() ? null : name);
-                scenario.setLatitude(latitude);
-                scenario.setLongitude(longitude);
-            }
+            applyLocation(scenario, request.location());
             changedFields.add("location");
         }
 
         Scenario saved = repo.save(scenario);
 
         if (!changedFields.isEmpty()) {
-            Long actorId = userService.getUserByUsername(authentication.getName()).getId();
-            scenarioHistoryService.record(saved.getId(), actorId, ScenarioHistoryAction.METADATA_UPDATED,
+            recordHistory(saved, authentication, ScenarioHistoryAction.METADATA_UPDATED,
                     "Updated " + String.join(", ", changedFields));
         }
 
         return saved;
     }
+
+    /** A location with no coordinates and no name clears the scenario's location. */
+    private static void applyLocation(Scenario scenario, ScenarioLocationDto location) {
+        Double latitude = location.latitude();
+        Double longitude = location.longitude();
+        String name = location.name() == null ? "" : location.name().trim();
+
+        if (latitude == null && longitude == null && name.isEmpty()) {
+            scenario.setLocationName(null);
+            scenario.setLatitude(null);
+            scenario.setLongitude(null);
+            return;
+        }
+
+        if (name.length() > LOCATION_NAME_MAX_LENGTH || latitude == null || longitude == null
+                || !Double.isFinite(latitude) || !Double.isFinite(longitude)
+                || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new IllegalArgumentException("A location requires valid latitude (-90 to 90) and longitude (-180 to 180), and a name of at most 200 characters");
+        }
+        scenario.setLocationName(name.isEmpty() ? null : name);
+        scenario.setLatitude(latitude);
+        scenario.setLongitude(longitude);
+    }
+
+    // ── Validation ─────────────────────────────────────────────────────
 
     /** Trims and checks a scenario title (also used for fork titles). */
     static String validatedTitle(String title) {
@@ -377,35 +416,13 @@ public class ScenarioService {
         return normalized;
     }
 
-    @Transactional
-    public void deleteScenario(Long id, Authentication authentication) {
-        Scenario scenario = getRequiredScenario(id);
-        access.assertCanDeleteScenario(scenario, authentication);
-
-        likeRepo.deleteByScenario_Id(id);
-        bookmarkRepo.deleteByScenario_Id(id);
-        collaboratorRepo.deleteByScenarioId(id);
-        inviteLinkRepo.deleteByScenarioId(id);
-        historyRepo.deleteByScenarioId(id);
-
-        for (Thumbnail thumbnail : thumbnailRepo.findByScenarioIdOrderByIdxAsc(id)) {
-            thumbnailService.delete(thumbnail.getId());
-        }
-
-        for (Audio audio : audioRepo.findByScenarioIdAndScopeOrderByIdxAscIdAsc(id, AudioScope.BACKGROUND)) {
-            if (!audioRepo.existsByStoragePathAndIdNot(audio.getStoragePath(), audio.getId())) {
-                storage.deleteAfterCommit(audio.getStoragePath());
-            }
-            audioRepo.delete(audio);
-        }
-
-        repo.delete(scenario);
-    }
+    // ── DTO ────────────────────────────────────────────────────────────
 
     public ScenarioDto toDto(Scenario s) {
         return toDto(s, null);
     }
 
+    /** @param viewerUsername the user the DTO is built for, to tell whether they may edit; null for an anonymous view */
     public ScenarioDto toDto(Scenario s, String viewerUsername) {
         String authorUsername = userService.getUserById(s.getAuthor_id()).getUsername();
         String reviewedByUsername = s.getReviewedById() != null
@@ -437,74 +454,23 @@ public class ScenarioService {
         );
     }
 
-    public Scenario adminUpdateVisibility(Long id, String visibilityStatus) {
-        Scenario scenario = getRequiredScenario(id);
-
-        if (visibilityStatus == null || visibilityStatus.isBlank()) {
-            throw new IllegalArgumentException("Visibility status is required");
-        }
-
-        ScenarioVisibilityStatus next = ScenarioVisibilityStatus.valueOf(visibilityStatus.trim().toUpperCase());
-        scenario.setVisibilityStatus(next);
-
-        if (next == ScenarioVisibilityStatus.PUBLISHED && scenario.getPublishedAt() == null) {
-            scenario.setPublishedAt(Instant.now());
-        }
-
-        if (next != ScenarioVisibilityStatus.PUBLISHED) {
-            scenario.setPublishedAt(null);
-        }
-
-        return repo.save(scenario);
-    }
-
-    public List<ScenarioDto> listVisibleScenarioDtos(Authentication authentication) {
-        String username = authenticatedUsername(authentication);
-        return listVisibleScenarios(authentication).stream()
-                .map(s -> toDto(s, username))
+    private List<ScenarioDto> toDtos(List<Scenario> scenarios, String viewerUsername) {
+        return scenarios.stream()
+                .map(s -> toDto(s, viewerUsername))
                 .toList();
     }
 
-    public List<ScenarioDto> listMyScenarioDtos(Authentication authentication) {
-        String username = authenticatedUsername(authentication);
-        return listMyScenarios(authentication).stream()
-                .map(s -> toDto(s, username))
-                .toList();
-    }
+    // ── Helpers ────────────────────────────────────────────────────────
 
-    public List<ScenarioDto> listScenariosByLanguageId(String languageId) {
-        return repo.findAllByLanguageIdWithTagsOrderByCreatedAtDesc(languageId)
+    private List<Long> acceptedCollaborationScenarioIds(Long userId) {
+        return collaboratorRepo.findByUserIdAndStatus(userId, CollaborationStatus.ACCEPTED)
                 .stream()
-                .map(this::toDto)
+                .map(ScenarioCollaborator::getScenarioId)
                 .toList();
     }
 
-    public List<ScenarioDto> listPublishedScenariosByFamilyId(String familyId, Integer limit) {
-        languageService.assertFamilyExists(familyId);
-        Pageable pageable = PageRequest.of(0, clampDiscoveryLimit(limit));
-        return repo.findPublishedByFamilyIdOrderByCreatedAtDesc(familyId, pageable)
-                .stream()
-                .map(this::toDto)
-                .toList();
-    }
-
-    public List<ScenarioDto> listPublishedScenariosByCountryIso(String isoA3, Integer limit) {
-        List<String> languageIds = languageService.findLanguageIdsByCountryIsoA3(isoA3);
-        if (languageIds.isEmpty()) {
-            return List.of();
-        }
-
-        Pageable pageable = PageRequest.of(0, clampDiscoveryLimit(limit));
-        return repo.findPublishedByLanguageIdInOrderByCreatedAtDesc(languageIds, pageable)
-                .stream()
-                .map(this::toDto)
-                .toList();
-    }
-
-    int clampDiscoveryLimit(Integer limit) {
-        if (limit == null) {
-            return DISCOVERY_SCENARIO_LIMIT;
-        }
-        return Math.max(1, Math.min(limit, DISCOVERY_SCENARIO_LIMIT));
+    private void recordHistory(Scenario scenario, Authentication authentication, ScenarioHistoryAction action, String summary) {
+        Long actorId = userService.getUserByUsername(authentication.getName()).getId();
+        scenarioHistoryService.record(scenario.getId(), actorId, action, summary);
     }
 }

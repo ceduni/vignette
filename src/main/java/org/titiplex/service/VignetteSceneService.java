@@ -1,5 +1,6 @@
 package org.titiplex.service;
 
+import org.titiplex.util.Text;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.titiplex.api.dto.VignetteSceneDto;
@@ -62,11 +63,7 @@ public class VignetteSceneService {
     }
 
     private String normalizedName(String name) {
-        String normalized = name == null || name.isBlank() ? "Untitled Scene" : name.trim();
-        if (normalized.length() > 200) {
-            throw new IllegalArgumentException("Scene name must be 200 characters or fewer");
-        }
-        return normalized;
+        return Text.requireMaxLength(Text.trimOrDefault(name, "Untitled Scene"), 200, "Scene name");
     }
 
     private VignetteSceneDto toDto(VignetteScene s) {

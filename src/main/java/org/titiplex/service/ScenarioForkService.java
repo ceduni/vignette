@@ -1,5 +1,6 @@
 package org.titiplex.service;
 
+import org.titiplex.util.Text;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -160,11 +161,7 @@ public class ScenarioForkService {
         fork.setReviewStatus(approve ? ReviewStatus.APPROVED : ReviewStatus.REJECTED);
         fork.setReviewedById(reviewerId);
         fork.setReviewedAt(Instant.now());
-        String normalizedComment = comment == null ? null : comment.trim();
-        if (normalizedComment != null && normalizedComment.length() > 255) {
-            throw new IllegalArgumentException("Review comment must be 255 characters or fewer");
-        }
-        fork.setReviewComment(normalizedComment == null || normalizedComment.isBlank() ? null : normalizedComment);
+        fork.setReviewComment(Text.optional(comment, 255, "Review comment"));
 
         Scenario saved = repo.save(fork);
         notificationService.notifyForkReviewed(saved.getAuthor_id(), saved, approve);

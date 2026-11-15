@@ -40,6 +40,8 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository repo;
     @Mock
+    private NotificationStream stream;
+    @Mock
     private UserService userService;
     @Mock
     private LanguageFollowService languageFollowService;

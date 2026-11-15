@@ -47,10 +47,10 @@ class ScenarioServiceForkTest {
 
     @org.junit.jupiter.api.BeforeEach
     void wireService() {
-        ScenarioAccessService access = new ScenarioAccessService(scenarioRepository, userService, null);
+        ScenarioAccessService access = new ScenarioAccessService(scenarioRepository, userService, null, notificationService);
         scenarioService = new ScenarioService(
                 scenarioRepository, userService, languageService, scenarioTagService, notificationService,
-                thumbnailRepository, audioRepository, null, null, null, null, null, null, null, null, access);
+                null, null, access);
         forks = new ScenarioForkService(scenarioRepository, scenarioService, userService, notificationService, thumbnailRepository, audioRepository);
     }
 

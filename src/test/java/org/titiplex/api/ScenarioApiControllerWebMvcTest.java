@@ -44,6 +44,9 @@ class ScenarioApiControllerWebMvcTest {
     private org.titiplex.service.ScenarioForkService scenarioForks;
 
     @MockitoBean
+    private org.titiplex.service.ScenarioDeletionService scenarioDeletion;
+
+    @MockitoBean
     private UserService userService;
 
     @MockitoBean
@@ -232,7 +235,7 @@ class ScenarioApiControllerWebMvcTest {
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(scenarioService).deleteScenario(eq(77L), any(Authentication.class));
+        verify(scenarioDeletion).deleteScenario(eq(77L), any(Authentication.class));
     }
 
     @Test

@@ -21,14 +21,13 @@ import java.util.Map;
 @Service
 public class FileStorageService {
 
+    // Raster images and audio only. SVG and XML are refused on purpose: they can carry
+    // scripts, and uploads are served back as-is (stored XSS).
     private static final Map<String, String> EXTENSIONS = Map.ofEntries(
             Map.entry("image/jpeg", ".jpg"),
             Map.entry("image/png", ".png"),
             Map.entry("image/webp", ".webp"),
             Map.entry("image/gif", ".gif"),
-            Map.entry("image/svg+xml", ".svg"),
-            Map.entry("text/xml", ".xml"),
-            Map.entry("application/xml", ".xml"),
             Map.entry("audio/webm", ".webm"),
             Map.entry("audio/ogg", ".ogg"),
             Map.entry("audio/mp4", ".mp4"),
@@ -83,7 +82,6 @@ public class FileStorageService {
             throw new IllegalArgumentException("unsupported content type: " + contentType);
         }
 
-        Files.createDirectories(root);
         Path tmp = Files.createTempFile(root, "upload-", ".tmp");
 
         MessageDigest digest = MessageDigest.getInstance("SHA-256");

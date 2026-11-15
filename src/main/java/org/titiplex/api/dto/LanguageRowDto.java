@@ -1,6 +1,7 @@
 package org.titiplex.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.titiplex.persistence.model.Language;
 
 @Schema(name = "LanguageRowDto", description = "DTO for a single language row or description.")
 public record LanguageRowDto(
@@ -20,4 +21,18 @@ public record LanguageRowDto(
         Float latitude,
         @Schema(description = "Longitude")
         Float longitude) {
+
+    /** Family and parent are shown by name when they are known languages, by raw id otherwise. */
+    public static LanguageRowDto from(Language l) {
+        return new LanguageRowDto(
+                l.getId(),
+                l.getName(),
+                l.getLevel(),
+                l.getCountryIds(),
+                l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
+                l.getParent() != null ? l.getParent().getName() : l.getParentId(),
+                l.getLatitude(),
+                l.getLongitude()
+        );
+    }
 }

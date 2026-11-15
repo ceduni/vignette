@@ -13,14 +13,11 @@ import org.titiplex.api.docs.BadRequestResponse;
 import org.titiplex.api.docs.ForbiddenResponse;
 import org.titiplex.api.dto.*;
 import org.titiplex.api.security.AdminOperation;
-import org.titiplex.persistence.model.Role;
 import org.titiplex.service.GlottologAdminService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
 
-import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -90,14 +87,7 @@ public class AdminApiController {
     public List<AdminUserRowDto> listUsers(Authentication auth) {
 
         return users.listAllUsers().stream()
-                .map(user -> new AdminUserRowDto(
-                        user.getId(),
-                        user.getUsername(),
-                        user.getEmail(),
-                        user.getDisplayName(),
-                        user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()),
-                        user.isProfilePublic()
-                ))
+                .map(AdminUserRowDto::from)
                 .toList();
     }
 
@@ -146,16 +136,7 @@ public class AdminApiController {
             Authentication auth
     ) {
 
-        var user = users.updateRoles(id, req.roles());
-
-        return new AdminUserRowDto(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getDisplayName(),
-                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()),
-                user.isProfilePublic()
-        );
+        return AdminUserRowDto.from(users.updateRoles(id, req.roles()));
     }
 
     @Operation(

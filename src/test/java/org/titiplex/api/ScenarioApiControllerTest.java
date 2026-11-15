@@ -39,6 +39,9 @@ class ScenarioApiControllerTest {
     private org.titiplex.service.ScenarioForkService scenarioForks;
 
     @Mock
+    private org.titiplex.service.ScenarioDeletionService scenarioDeletion;
+
+    @Mock
     private UserService userService;
 
     @Mock
@@ -291,7 +294,7 @@ class ScenarioApiControllerTest {
 
         controller.delete(77L, auth);
 
-        verify(scenarioService).deleteScenario(77L, auth);
+        verify(scenarioDeletion).deleteScenario(77L, auth);
     }
 
     private Authentication auth(String username, String... authorities) {

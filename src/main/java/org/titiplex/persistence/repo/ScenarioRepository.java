@@ -50,7 +50,7 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
     @Query("""
                 select s
                 from Scenario s
-                where lower(s.author.username) = lower(:username)
+                where s.author.username = :username
                 order by s.createdAt desc
     """)
     List<Scenario> findAllByAuthorUsernameWithTagsOrderByCreatedAtDesc(@Param("username") String username);
@@ -60,7 +60,7 @@ public interface ScenarioRepository extends JpaRepository<Scenario, Long> {
                 select s
                 from Scenario s
                 where s.visibilityStatus = org.titiplex.persistence.model.ScenarioVisibilityStatus.PUBLISHED
-                   or lower(s.author.username) = lower(:username)
+                   or s.author.username = :username
                 order by s.createdAt desc
     """)
     List<Scenario> findVisibleToUsernameWithTags(@Param("username") String username);

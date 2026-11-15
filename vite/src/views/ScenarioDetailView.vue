@@ -1506,7 +1506,7 @@ onBeforeUnmount(() => {
               <p class="si-desc__text">
                 <template v-if="isForkPending">This fork is awaiting review from the original author before it can be published.</template>
                 <template v-else-if="isForkRejected">This fork was rejected{{ scenario.reviewComment ? ": " + scenario.reviewComment : "." }}</template>
-                <template v-else-if="reviewStatus === 'APPROVED'">This fork was approved{{ scenario.reviewedByUsername ? " by " + scenario.reviewedByUsername : "" }} and can be published.</template>
+                <template v-else-if="reviewStatus === 'APPROVED'">This fork was approved{{ scenario.reviewedByUsername ? " by " + scenario.reviewedByUsername : "" }} and can be published. Any further change sends it back for review.</template>
               </p>
             </div>
 
@@ -1588,8 +1588,8 @@ onBeforeUnmount(() => {
                         </svg>
                       </div>
                       <p class="ud-dropzone__label">{{ pendingRouteDraft ? 'Choose a scene image' : 'Drop images here' }}</p>
-                      <p class="ud-dropzone__sub">Drop here or click to browse · PNG, JPG, WebP, SVG</p>
-                      <input type="file" accept="image/*,.svg,.xml,text/xml,application/xml" multiple class="ud-file-input" @change="onImageChange"/>
+                      <p class="ud-dropzone__sub">Drop here or click to browse · PNG, JPG, WebP, GIF</p>
+                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple class="ud-file-input" @change="onImageChange"/>
                     </label>
 
                     <button
@@ -1641,7 +1641,7 @@ onBeforeUnmount(() => {
                           <path d="M12 5v14M5 12h14"/>
                         </svg>
                         Add more images
-                        <input type="file" accept="image/*,.svg,.xml,text/xml,application/xml" multiple class="ud-file-input" @change="onImageChange"/>
+                        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple class="ud-file-input" @change="onImageChange"/>
                       </label>
 
                       <button

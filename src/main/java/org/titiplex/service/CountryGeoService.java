@@ -6,17 +6,25 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.titiplex.api.dto.CountryAtCoordinatesDto;
+import org.titiplex.service.geo.CountryShape;
+import org.titiplex.service.geo.TopoJsonDecoder;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+/**
+ * Finds which country a point of the globe is in.
+ * <p>
+ * Country outlines come from a bundled world map (TopoJSON, identified by ISO numeric
+ * codes), matched with a second file that gives the ISO alpha-3 code of each numeric code.
+ * Both are loaded once at startup.
+ */
 @Service
 public class CountryGeoService {
 
@@ -34,42 +42,27 @@ public class CountryGeoService {
     void loadCountryShapes() throws IOException {
         Map<String, CountryMeta> metaByNumericCode = loadCountryMeta();
 
-        try (InputStream topologyStream = new ClassPathResource(TOPOLOGY_RESOURCE).getInputStream()) {
-            JsonNode topology = objectMapper.readTree(topologyStream);
-            JsonNode arcs = topology.get("arcs");
-            JsonNode transform = topology.get("transform");
-            double[] scale = readScale(transform);
-            double[] translate = readTranslate(transform);
+        JsonNode topology = readResource(TOPOLOGY_RESOURCE);
+        JsonNode geometries = topology.path("objects").path("countries").path("geometries");
+        if (!geometries.isArray()) {
+            throw new IllegalStateException("Invalid topology: missing country geometries");
+        }
 
-            JsonNode geometries = topology.path("objects").path("countries").path("geometries");
-            if (!geometries.isArray()) {
-                throw new IllegalStateException("Invalid topology: missing country geometries");
+        TopoJsonDecoder decoder = new TopoJsonDecoder(topology);
+        for (JsonNode geometry : geometries) {
+            // Countries without a known ISO alpha-3 code are left out
+            CountryMeta meta = metaByNumericCode.get(geometry.path("id").asText("").trim());
+            if (meta == null) {
+                continue;
             }
 
-            for (JsonNode geometry : geometries) {
-                String numericCode = String.valueOf(geometry.path("id").asText("")).trim();
-                if (numericCode.isBlank()) {
-                    continue;
-                }
-
-                CountryMeta meta = metaByNumericCode.get(numericCode);
-                String isoA3 = meta != null ? meta.isoA3() : null;
-                if (isoA3 == null || isoA3.isBlank()) {
-                    continue;
-                }
-
-                String name = firstNonBlank(
-                        geometry.path("properties").path("name").asText(null),
-                        meta.name()
-                );
-
-                List<List<List<double[]>>> polygons = decodeGeometry(geometry, arcs, scale, translate);
-                if (polygons.isEmpty()) {
-                    continue;
-                }
-
-                countryShapes.add(new CountryShape(isoA3, name, polygons));
+            List<List<List<double[]>>> polygons = decoder.decodePolygons(geometry);
+            if (polygons.isEmpty()) {
+                continue;
             }
+
+            String name = firstNonBlank(geometry.path("properties").path("name").asText(null), meta.name());
+            countryShapes.add(new CountryShape(meta.isoA3(), name, polygons));
         }
 
         if (countryShapes.isEmpty()) {
@@ -77,6 +70,7 @@ public class CountryGeoService {
         }
     }
 
+    /** When several shapes contain the point, the smallest one wins (an enclave over its surrounding country). */
     public CountryAtCoordinatesDto findCountryByCoordinates(double latitude, double longitude) {
         validateCoordinates(latitude, longitude);
 
@@ -95,12 +89,7 @@ public class CountryGeoService {
             throw new NoSuchElementException("No country found at coordinates");
         }
 
-        return new CountryAtCoordinatesDto(
-                bestMatch.isoA3(),
-                bestMatch.name(),
-                latitude,
-                longitude
-        );
+        return new CountryAtCoordinatesDto(bestMatch.isoA3(), bestMatch.name(), latitude, longitude);
     }
 
     private void validateCoordinates(double latitude, double longitude) {
@@ -112,182 +101,26 @@ public class CountryGeoService {
         }
     }
 
+    /** ISO numeric code → alpha-3 code and name; entries without an alpha-3 code are skipped. */
     private Map<String, CountryMeta> loadCountryMeta() throws IOException {
-        try (InputStream mappingStream = new ClassPathResource(ISO_MAPPING_RESOURCE).getInputStream()) {
-            JsonNode mapping = objectMapper.readTree(mappingStream);
-            Map<String, CountryMeta> result = new HashMap<>();
-
-            Iterator<Map.Entry<String, JsonNode>> fields = mapping.fields();
-            while (fields.hasNext()) {
-                Map.Entry<String, JsonNode> entry = fields.next();
-                String numericCode = entry.getKey();
-                JsonNode value = entry.getValue();
-                String isoA3 = value.path("isoA3").asText(null);
-                if (isoA3 == null || isoA3.isBlank()) {
-                    continue;
-                }
-                result.put(numericCode, new CountryMeta(
-                        isoA3.toUpperCase(Locale.ROOT),
-                        value.path("name").asText(null)
-                ));
-            }
-
-            return result;
-        }
-    }
-
-    private static double[] readScale(JsonNode transform) {
-        JsonNode scaleNode = transform != null ? transform.get("scale") : null;
-        if (scaleNode == null || !scaleNode.isArray() || scaleNode.size() < 2) {
-            return new double[]{1.0, 1.0};
-        }
-        return new double[]{scaleNode.get(0).asDouble(1.0), scaleNode.get(1).asDouble(1.0)};
-    }
-
-    private static double[] readTranslate(JsonNode transform) {
-        JsonNode translateNode = transform != null ? transform.get("translate") : null;
-        if (translateNode == null || !translateNode.isArray() || translateNode.size() < 2) {
-            return new double[]{0.0, 0.0};
-        }
-        return new double[]{translateNode.get(0).asDouble(0.0), translateNode.get(1).asDouble(0.0)};
-    }
-
-    private static List<List<List<double[]>>> decodeGeometry(
-            JsonNode geometry,
-            JsonNode arcs,
-            double[] scale,
-            double[] translate
-    ) {
-        String type = geometry.path("type").asText("");
-        JsonNode arcGroups = geometry.get("arcs");
-        if (arcGroups == null) {
-            return List.of();
-        }
-
-        return switch (type) {
-            case "Polygon" -> List.of(decodePolygonRings(arcGroups, arcs, scale, translate));
-            case "MultiPolygon" -> decodeMultiPolygon(arcGroups, arcs, scale, translate);
-            default -> List.of();
-        };
-    }
-
-    private static List<List<List<double[]>>> decodeMultiPolygon(
-            JsonNode multiPolygonArcs,
-            JsonNode arcs,
-            double[] scale,
-            double[] translate
-    ) {
-        if (!multiPolygonArcs.isArray()) {
-            return List.of();
-        }
-
-        List<List<List<double[]>>> polygons = new ArrayList<>();
-        for (JsonNode polygonArcs : multiPolygonArcs) {
-            polygons.add(decodePolygonRings(polygonArcs, arcs, scale, translate));
-        }
-        return polygons;
-    }
-
-    private static List<List<double[]>> decodePolygonRings(
-            JsonNode polygonArcs,
-            JsonNode arcs,
-            double[] scale,
-            double[] translate
-    ) {
-        if (!polygonArcs.isArray()) {
-            return List.of();
-        }
-
-        List<List<double[]>> rings = new ArrayList<>();
-        for (JsonNode ringArcs : polygonArcs) {
-            List<double[]> ring = decodeRing(ringArcs, arcs, scale, translate);
-            if (ring.size() >= 3) {
-                rings.add(ring);
-            }
-        }
-        return rings;
-    }
-
-    private static List<double[]> decodeRing(
-            JsonNode ringArcs,
-            JsonNode arcs,
-            double[] scale,
-            double[] translate
-    ) {
-        if (!ringArcs.isArray()) {
-            return List.of();
-        }
-
-        List<double[]> points = new ArrayList<>();
-        for (JsonNode arcIndexNode : ringArcs) {
-            int arcIndex = arcIndexNode.asInt();
-            List<double[]> arcPoints = decodeArc(arcIndex, arcs, scale, translate);
-            appendArc(points, arcPoints);
-        }
-        return points;
-    }
-
-    private static List<double[]> decodeArc(
-            int arcIndex,
-            JsonNode arcs,
-            double[] scale,
-            double[] translate
-    ) {
-        boolean reversed = arcIndex < 0;
-        int resolvedIndex = reversed ? ~arcIndex : arcIndex;
-        JsonNode arc = arcs.get(resolvedIndex);
-        if (arc == null || !arc.isArray()) {
-            return List.of();
-        }
-
-        double x = 0;
-        double y = 0;
-        List<double[]> points = new ArrayList<>();
-
-        for (JsonNode delta : arc) {
-            if (!delta.isArray() || delta.size() < 2) {
+        Map<String, CountryMeta> result = new HashMap<>();
+        for (Map.Entry<String, JsonNode> entry : readResource(ISO_MAPPING_RESOURCE).properties()) {
+            String isoA3 = entry.getValue().path("isoA3").asText(null);
+            if (isoA3 == null || isoA3.isBlank()) {
                 continue;
             }
-            x += delta.get(0).asDouble();
-            y += delta.get(1).asDouble();
-            points.add(new double[]{
-                    x * scale[0] + translate[0],
-                    y * scale[1] + translate[1]
-            });
+            result.put(entry.getKey(), new CountryMeta(
+                    isoA3.toUpperCase(Locale.ROOT),
+                    entry.getValue().path("name").asText(null)
+            ));
         }
-
-        if (reversed) {
-            List<double[]> reversedPoints = new ArrayList<>(points.size());
-            for (int i = points.size() - 1; i >= 0; i--) {
-                reversedPoints.add(points.get(i));
-            }
-            return reversedPoints;
-        }
-
-        return points;
+        return result;
     }
 
-    private static void appendArc(List<double[]> target, List<double[]> arcPoints) {
-        if (arcPoints.isEmpty()) {
-            return;
+    private JsonNode readResource(String path) throws IOException {
+        try (InputStream stream = new ClassPathResource(path).getInputStream()) {
+            return objectMapper.readTree(stream);
         }
-
-        int startIndex = 0;
-        if (!target.isEmpty()) {
-            double[] last = target.get(target.size() - 1);
-            double[] first = arcPoints.get(0);
-            if (almostEqual(last[0], first[0]) && almostEqual(last[1], first[1])) {
-                startIndex = 1;
-            }
-        }
-
-        for (int i = startIndex; i < arcPoints.size(); i++) {
-            target.add(arcPoints.get(i));
-        }
-    }
-
-    private static boolean almostEqual(double a, double b) {
-        return Math.abs(a - b) < 1e-9;
     }
 
     private static String firstNonBlank(String... values) {
@@ -300,96 +133,5 @@ public class CountryGeoService {
     }
 
     private record CountryMeta(String isoA3, String name) {
-    }
-
-    private static final class CountryShape {
-        private final String isoA3;
-        private final String name;
-        private final List<List<List<double[]>>> polygons;
-
-        private CountryShape(String isoA3, String name, List<List<List<double[]>>> polygons) {
-            this.isoA3 = isoA3;
-            this.name = name;
-            this.polygons = polygons;
-        }
-
-        private String isoA3() {
-            return isoA3;
-        }
-
-        private String name() {
-            return name;
-        }
-
-        private double containingPolygonArea(double longitude, double latitude) {
-            double smallestArea = Double.MAX_VALUE;
-            boolean found = false;
-
-            for (List<List<double[]>> polygon : polygons) {
-                if (polygon.isEmpty()) {
-                    continue;
-                }
-
-                List<double[]> exterior = polygon.get(0);
-                if (!pointInRing(longitude, latitude, exterior)) {
-                    continue;
-                }
-
-                boolean inHole = false;
-                for (int i = 1; i < polygon.size(); i++) {
-                    if (pointInRing(longitude, latitude, polygon.get(i))) {
-                        inHole = true;
-                        break;
-                    }
-                }
-                if (inHole) {
-                    continue;
-                }
-
-                double area = Math.abs(ringArea(exterior));
-                if (area < smallestArea) {
-                    smallestArea = area;
-                    found = true;
-                }
-            }
-
-            return found ? smallestArea : -1;
-        }
-
-        private static boolean pointInRing(double x, double y, List<double[]> ring) {
-            boolean inside = false;
-            int size = ring.size();
-            if (size < 3) {
-                return false;
-            }
-
-            for (int i = 0, j = size - 1; i < size; j = i++) {
-                double xi = ring.get(i)[0];
-                double yi = ring.get(i)[1];
-                double xj = ring.get(j)[0];
-                double yj = ring.get(j)[1];
-
-                boolean intersects = ((yi > y) != (yj > y))
-                        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersects) {
-                    inside = !inside;
-                }
-            }
-
-            return inside;
-        }
-
-        private static double ringArea(List<double[]> ring) {
-            double area = 0;
-            int size = ring.size();
-            for (int i = 0, j = size - 1; i < size; j = i++) {
-                double xi = ring.get(i)[0];
-                double yi = ring.get(i)[1];
-                double xj = ring.get(j)[0];
-                double yj = ring.get(j)[1];
-                area += (xj + xi) * (yj - yi);
-            }
-            return area / 2.0;
-        }
     }
 }

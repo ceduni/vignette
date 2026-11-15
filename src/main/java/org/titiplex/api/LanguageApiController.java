@@ -92,16 +92,7 @@ public class LanguageApiController {
             @RequestParam(defaultValue = "50") @Min(1) int size
     ) {
         Page<Language> p = languageService.listLanguages(q, page, size);
-        return p.map(l -> new LanguageRowDto(
-                l.getId(),
-                l.getName(),
-                l.getLevel(),
-                l.getCountryIds(),
-                l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
-                l.getParent() != null ? l.getParent().getName() : l.getParentId(),
-                l.getLatitude(),
-                l.getLongitude()
-        ));
+        return p.map(LanguageRowDto::from);
     }
 
     /**
@@ -308,15 +299,7 @@ public class LanguageApiController {
             @PathVariable String id
     ) {
         return languageService.getLanguagesByFamily(id).stream()
-                .map(l -> new LanguageRowDto(
-                        l.getId(),
-                        l.getName(),
-                        l.getLevel(),
-                        l.getCountryIds(),
-                        l.getFamily() != null ? l.getFamily().getName() : l.getFamilyId(),
-                        l.getParent() != null ? l.getParent().getName() : l.getParentId(),
-                        l.getLatitude(),
-                        l.getLongitude()
-                )).toList();
+                .map(LanguageRowDto::from)
+                .toList();
     }
 }

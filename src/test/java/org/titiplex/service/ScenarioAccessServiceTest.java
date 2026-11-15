@@ -13,10 +13,16 @@ import org.titiplex.persistence.model.*;
 import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,6 +34,8 @@ class ScenarioAccessServiceTest {
     private UserService userService;
     @Mock
     private ScenarioCollaboratorRepository collaboratorRepository;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private ScenarioAccessService access;
@@ -45,7 +53,7 @@ class ScenarioAccessServiceTest {
         return scenario;
     }
 
-    private void collaborator(long scenarioId, String username, long userId, CollaboratorRole role, CollaborationStatus status) {
+    private ScenarioCollaborator collaborator(long scenarioId, String username, long userId, CollaboratorRole role, CollaborationStatus status) {
         User user = new User();
         user.setId(userId);
         user.setUsername(username);
@@ -56,6 +64,29 @@ class ScenarioAccessServiceTest {
         c.setRole(role);
         c.setStatus(status);
         when(collaboratorRepository.findByScenarioIdAndUserId(scenarioId, userId)).thenReturn(Optional.of(c));
+        return c;
+    }
+
+    /** Fork 7 of scenario 6 (written by user 1, "alice"), made by user 2 ("bob") and approved by alice. */
+    private Scenario approvedFork(ScenarioVisibilityStatus visibility) {
+        Scenario original = scenario(6L, ScenarioVisibilityStatus.PUBLISHED);
+        when(scenarioRepository.findById(6L)).thenReturn(Optional.of(original));
+
+        Scenario fork = scenario(7L, visibility);
+        fork.setAuthor_id(2L);
+        fork.setParentScenarioId(6L);
+        fork.setReviewStatus(ReviewStatus.APPROVED);
+        fork.setReviewedById(1L);
+        fork.setReviewedAt(Instant.now());
+        fork.setPublishedAt(visibility == ScenarioVisibilityStatus.PUBLISHED ? Instant.now() : null);
+        return fork;
+    }
+
+    private void user(String username, long id) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        when(userService.getUserByUsername(username)).thenReturn(user);
     }
 
     // ── edit ───────────────────────────────────────────────────────────
@@ -95,6 +126,57 @@ class ScenarioAccessServiceTest {
     void assertCanEditScenario_deniesStranger() {
         assertThrows(AccessDeniedException.class,
                 () -> access.assertCanEditScenario(scenario(3L, ScenarioVisibilityStatus.DRAFT), authOf("stranger", "ROLE_USER")));
+    }
+
+    @Test
+    void assertCanEditScenario_sendsApprovedForkBackToReview() {
+        Scenario fork = approvedFork(ScenarioVisibilityStatus.DRAFT);
+        when(scenarioRepository.existsByIdAndAuthorUsername(7L, "bob")).thenReturn(true);
+        user("bob", 2L);
+
+        access.assertCanEditScenario(fork, authOf("bob", "ROLE_USER"));
+
+        assertEquals(ReviewStatus.PENDING, fork.getReviewStatus());
+        assertNull(fork.getReviewedById());
+        assertNull(fork.getReviewedAt());
+        verify(scenarioRepository).save(fork);
+        verify(notificationService).notifyForkChangedAfterApproval(eq(1L), eq(fork), any(), eq(2L));
+    }
+
+    @Test
+    void assertCanEditScenario_unpublishesAnApprovedForkEditedAfterPublication() {
+        Scenario fork = approvedFork(ScenarioVisibilityStatus.PUBLISHED);
+        when(scenarioRepository.existsByIdAndAuthorUsername(7L, "bob")).thenReturn(true);
+        user("bob", 2L);
+
+        access.assertCanEditScenario(fork, authOf("bob", "ROLE_USER"));
+
+        assertEquals(ReviewStatus.PENDING, fork.getReviewStatus());
+        assertEquals(ScenarioVisibilityStatus.DRAFT, fork.getVisibilityStatus());
+        assertNull(fork.getPublishedAt());
+    }
+
+    @Test
+    void assertCanEditScenario_keepsApprovalWhenTheReviewerEditsTheFork() {
+        Scenario fork = approvedFork(ScenarioVisibilityStatus.DRAFT);
+        collaborator(7L, "alice", 1L, CollaboratorRole.EDITOR, CollaborationStatus.ACCEPTED);
+
+        access.assertCanEditScenario(fork, authOf("alice", "ROLE_USER"));
+
+        assertEquals(ReviewStatus.APPROVED, fork.getReviewStatus());
+        verify(scenarioRepository, never()).save(any());
+        verify(notificationService, never()).notifyForkChangedAfterApproval(any(), any(), any(), any());
+    }
+
+    @Test
+    void assertCanEditScenario_deniedEditLeavesApprovalUntouched() {
+        Scenario fork = scenario(7L, ScenarioVisibilityStatus.DRAFT);
+        fork.setParentScenarioId(6L);
+        fork.setReviewStatus(ReviewStatus.APPROVED);
+
+        assertThrows(AccessDeniedException.class,
+                () -> access.assertCanEditScenario(fork, authOf("stranger", "ROLE_USER")));
+        assertEquals(ReviewStatus.APPROVED, fork.getReviewStatus());
     }
 
     @Test
@@ -143,5 +225,20 @@ class ScenarioAccessServiceTest {
     void assertCanViewScenario_invitedUserCanPreviewDraft() {
         collaborator(5L, "bob", 2L, CollaboratorRole.EDITOR, CollaborationStatus.PENDING);
         assertDoesNotThrow(() -> access.assertCanViewScenario(scenario(5L, ScenarioVisibilityStatus.DRAFT), authOf("bob", "ROLE_USER")));
+    }
+
+    @Test
+    void assertCanViewScenario_invitedUserCanPreviewDraftUntilTheInvitationExpires() {
+        collaborator(5L, "bob", 2L, CollaboratorRole.EDITOR, CollaborationStatus.PENDING)
+                .setExpiresAt(Instant.now().plus(1, ChronoUnit.DAYS));
+        assertDoesNotThrow(() -> access.assertCanViewScenario(scenario(5L, ScenarioVisibilityStatus.DRAFT), authOf("bob", "ROLE_USER")));
+    }
+
+    @Test
+    void assertCanViewScenario_expiredInvitationNoLongerGivesAccess() {
+        collaborator(5L, "bob", 2L, CollaboratorRole.EDITOR, CollaborationStatus.PENDING)
+                .setExpiresAt(Instant.now().minus(1, ChronoUnit.DAYS));
+        assertThrows(NoSuchElementException.class,
+                () -> access.assertCanViewScenario(scenario(5L, ScenarioVisibilityStatus.DRAFT), authOf("bob", "ROLE_USER")));
     }
 }

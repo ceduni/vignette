@@ -13,6 +13,7 @@ import org.titiplex.persistence.model.User;
 import org.titiplex.persistence.repo.ScenarioCollaboratorRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
 
+import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -25,8 +26,10 @@ import static org.titiplex.security.AuthUtils.*;
  * Rules:
  * <ul>
  *   <li><b>view</b>: published scenarios for everyone; otherwise admin, author, accepted
- *       collaborators, invited users, and the original author of a fork;</li>
- *   <li><b>edit</b>: admin, author, accepted OWNER/EDITOR collaborators;</li>
+ *       collaborators, users with an invitation that has not expired, and the original
+ *       author of a fork;</li>
+ *   <li><b>edit</b>: admin, author, accepted OWNER/EDITOR collaborators. Editing an approved
+ *       fork sends it back to review;</li>
  *   <li><b>publish / delete</b>: admin and author only.</li>
  * </ul>
  * A scenario the user may not view is reported as "not found" so its existence is not revealed.
@@ -37,15 +40,18 @@ public class ScenarioAccessService {
     private final ScenarioRepository scenarioRepository;
     private final UserService userService;
     private final ScenarioCollaboratorRepository collaboratorRepository;
+    private final NotificationService notificationService;
 
     public ScenarioAccessService(
             ScenarioRepository scenarioRepository,
             UserService userService,
-            ScenarioCollaboratorRepository collaboratorRepository
+            ScenarioCollaboratorRepository collaboratorRepository,
+            NotificationService notificationService
     ) {
         this.scenarioRepository = scenarioRepository;
         this.userService = userService;
         this.collaboratorRepository = collaboratorRepository;
+        this.notificationService = notificationService;
     }
 
     // ── Questions (true / false) ───────────────────────────────────────
@@ -78,8 +84,9 @@ public class ScenarioAccessService {
         if (username != null) {
             if (isAuthor(scenario.getId(), username)) return;
             // Accepted collaborators, and invited users previewing before they answer
-            if (hasCollaborationStatus(scenario.getId(), username, CollaborationStatus.ACCEPTED)) return;
-            if (hasCollaborationStatus(scenario.getId(), username, CollaborationStatus.PENDING)) return;
+            if (collaboration(scenario.getId(), username)
+                    .filter(c -> c.getStatus() == CollaborationStatus.ACCEPTED || isOpenInvitation(c))
+                    .isPresent()) return;
             // The original author can view a pending/rejected fork of their own scenario
             if (isAuthorOfForkedOriginal(scenario, username)) return;
         }
@@ -87,12 +94,20 @@ public class ScenarioAccessService {
         throw new NoSuchElementException("Scenario not found");
     }
 
+    /**
+     * Call right before changing a scenario or its media. Besides checking the permission,
+     * this sends an approved fork back to review: see {@link #sendApprovedForkBackToReview}.
+     */
     public void assertCanEditScenario(Scenario scenario, Authentication authentication) {
         requireAuthenticated(authentication);
-        if (isAdmin(authentication) || hasEditAccess(scenario.getId(), authenticatedUsername(authentication))) {
+        if (isAdmin(authentication)) {
             return;
         }
-        throw new AccessDeniedException("You are not allowed to edit this scenario");
+        String username = authenticatedUsername(authentication);
+        if (!hasEditAccess(scenario.getId(), username)) {
+            throw new AccessDeniedException("You are not allowed to edit this scenario");
+        }
+        sendApprovedForkBackToReview(scenario, username);
     }
 
     /** {@link #assertCanEditScenario(Scenario, Authentication)} from a scenario id (thumbnails, audios). */
@@ -126,8 +141,39 @@ public class ScenarioAccessService {
         return collaboratorRepository.findByScenarioIdAndUserId(scenarioId, user.getId());
     }
 
-    private boolean hasCollaborationStatus(Long scenarioId, String username, CollaborationStatus status) {
-        return collaboration(scenarioId, username).filter(c -> c.getStatus() == status).isPresent();
+    /** A pending invitation that has not expired yet (no expiry date means it never expires). */
+    private static boolean isOpenInvitation(ScenarioCollaborator c) {
+        return c.getStatus() == CollaborationStatus.PENDING
+                && (c.getExpiresAt() == null || c.getExpiresAt().isAfter(Instant.now()));
+    }
+
+    /**
+     * The original author approved the fork as it was at review time. Any later edit voids
+     * that approval: the fork goes back to PENDING (and to DRAFT if it was already published)
+     * and the original author is asked to review it again. Otherwise the forker could get an
+     * untouched copy approved, then change everything and publish it.
+     */
+    private void sendApprovedForkBackToReview(Scenario fork, String editorUsername) {
+        if (fork.getReviewStatus() != ReviewStatus.APPROVED || fork.getParentScenarioId() == null) {
+            return;
+        }
+        Scenario original = scenarioRepository.findById(fork.getParentScenarioId()).orElse(null);
+        User editor = userService.getUserByUsername(editorUsername);
+        // No one left to review it again, or the reviewer is the one editing.
+        if (original == null || editor == null || editor.getId().equals(original.getAuthor_id())) {
+            return;
+        }
+
+        fork.setReviewStatus(ReviewStatus.PENDING);
+        fork.setReviewedById(null);
+        fork.setReviewedAt(null);
+        fork.setReviewComment(null);
+        if (fork.getVisibilityStatus() == ScenarioVisibilityStatus.PUBLISHED) {
+            fork.setVisibilityStatus(ScenarioVisibilityStatus.DRAFT);
+            fork.setPublishedAt(null);
+        }
+        scenarioRepository.save(fork);
+        notificationService.notifyForkChangedAfterApproval(original.getAuthor_id(), fork, original, editor.getId());
     }
 
     private boolean isAuthorOfForkedOriginal(Scenario scenario, String username) {

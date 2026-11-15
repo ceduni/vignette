@@ -85,15 +85,18 @@ class ScenarioServiceTest {
 
     private ScenarioService scenarioService;
     private ScenarioForkService forks;
+    private ScenarioDeletionService deletion;
 
     /** Real access rules on top of the mocked repositories, so service tests exercise them too. */
     @org.junit.jupiter.api.BeforeEach
     void wireService() {
-        ScenarioAccessService access = new ScenarioAccessService(scenarioRepository, userService, collaboratorRepo);
+        ScenarioAccessService access = new ScenarioAccessService(scenarioRepository, userService, collaboratorRepo, notificationService);
         scenarioService = new ScenarioService(
                 scenarioRepository, userService, languageService, scenarioTagService, notificationService,
-                thumbnailRepo, audioRepo, collaboratorRepo, scenarioHistoryService, likeRepo, bookmarkRepo,
-                inviteLinkRepo, historyRepo, thumbnailService, storage, access);
+                collaboratorRepo, scenarioHistoryService, access);
+        deletion = new ScenarioDeletionService(
+                scenarioService, access, scenarioRepository, likeRepo, bookmarkRepo, collaboratorRepo,
+                inviteLinkRepo, historyRepo, thumbnailRepo, thumbnailService, audioRepo, storage);
         forks = new ScenarioForkService(scenarioRepository, scenarioService, userService, notificationService, thumbnailRepo, audioRepo);
     }
 
@@ -621,7 +624,7 @@ class ScenarioServiceTest {
                 .thenReturn(List.of(audio));
         when(audioRepo.existsByStoragePathAndIdNot("audios/shared-background.webm", 15L)).thenReturn(true);
 
-        scenarioService.deleteScenario(42L, auth);
+        deletion.deleteScenario(42L, auth);
 
         verify(storage, never()).deleteAfterCommit("audios/shared-background.webm");
         verify(audioRepo).delete(audio);

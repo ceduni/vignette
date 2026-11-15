@@ -28,13 +28,8 @@ import org.titiplex.api.dto.UpdateMarkerRequest;
 import org.titiplex.api.dto.UpdateAudioGlossRequest;
 import org.titiplex.api.dto.UpdateAmbienceRequest;
 import org.titiplex.api.security.*;
-import org.titiplex.persistence.model.ScenarioHistoryAction;
+import org.titiplex.service.AudioManagementService;
 import org.titiplex.service.AudioService;
-import org.titiplex.service.ScenarioHistoryService;
-import org.titiplex.service.ScenarioAccessService;
-import org.titiplex.service.ScenarioService;
-import org.titiplex.service.ThumbnailService;
-import org.titiplex.service.UserService;
 
 import java.util.List;
 
@@ -47,27 +42,12 @@ import java.util.List;
 public class AudioApiController {
 
 
+    private final AudioManagementService audioManagement;
     private final AudioService audioService;
-    private final UserService userService;
-    private final ThumbnailService thumbnailService;
-    private final ScenarioService scenarioService;
-    private final ScenarioAccessService scenarioAccess;
-    private final ScenarioHistoryService scenarioHistoryService;
 
-    public AudioApiController(
-            AudioService audioService,
-            UserService userService,
-            ThumbnailService thumbnailService,
-            ScenarioService scenarioService,
-            ScenarioAccessService scenarioAccess,
-            ScenarioHistoryService scenarioHistoryService
-    ) {
+    public AudioApiController(AudioManagementService audioManagement, AudioService audioService) {
+        this.audioManagement = audioManagement;
         this.audioService = audioService;
-        this.userService = userService;
-        this.thumbnailService = thumbnailService;
-        this.scenarioService = scenarioService;
-        this.scenarioAccess = scenarioAccess;
-        this.scenarioHistoryService = scenarioHistoryService;
     }
 
     /**
@@ -104,10 +84,7 @@ public class AudioApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        var thumbnail = thumbnailService.getThumbnailById(thumbId);
-        var scenario = scenarioService.getRequiredScenario(thumbnail.getScenarioId());
-        scenarioAccess.assertCanViewScenario(scenario, auth);
-        return audioService.listForThumbnail(thumbId);
+        return audioManagement.listForThumbnail(thumbId, auth);
     }
 
     @Operation(
@@ -123,9 +100,7 @@ public class AudioApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        var scenario = scenarioService.getRequiredScenario(scenarioId);
-        scenarioAccess.assertCanViewScenario(scenario, auth);
-        return audioService.listBackgroundForScenario(scenarioId);
+        return audioManagement.listBackground(scenarioId, auth);
     }
 
     @Operation(
@@ -157,10 +132,8 @@ public class AudioApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) throws Exception {
-        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
-        Long authorId = userService.getUserByUsername(auth.getName()).getId();
-        Long id = audioService.createBackgroundAudio(scenarioId, title, sourceLabel, sourceUrl, authorId, audio);
-        return new CreateAudioResponse(id);
+        return new CreateAudioResponse(
+                audioManagement.uploadBackground(scenarioId, title, sourceLabel, sourceUrl, audio, auth));
     }
 
     @Operation(
@@ -178,8 +151,7 @@ public class AudioApiController {
             @RequestBody SelectScenarioBackgroundAudioRequest request,
             @Parameter(hidden = true) Authentication auth
     ) {
-        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
-        audioService.selectBackgroundAudio(scenarioId, request.audioId());
+        audioManagement.selectBackground(scenarioId, request.audioId(), auth);
     }
 
     /**
@@ -194,7 +166,7 @@ public class AudioApiController {
             summary = "Retrieves the content of an audio file.",
             description = "Returns the audio file content, with appropriate MIME type and caching headers."
     )
-    @org.titiplex.api.security.ApiAccess(level = org.titiplex.api.security.ApiAccessLevel.PUBLIC,
+    @ApiAccess(level = ApiAccessLevel.PUBLIC,
             rule = "Published media is public. Draft media requires permission to view its scenario.")
     @NotFoundResponse
     @ApiResponses({
@@ -213,9 +185,7 @@ public class AudioApiController {
             @PathVariable Long id,
             @Parameter(hidden = true) Authentication auth
     ) {
-        var scenario = scenarioService.getRequiredScenario(audioService.getScenarioIdForAudio(id));
-        scenarioAccess.assertCanViewScenario(scenario, auth);
-        var media = audioService.loadContent(id);
+        var media = audioManagement.loadContent(id, auth);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(media.contentType()))
@@ -231,8 +201,7 @@ public class AudioApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateAmbience(@PathVariable Long audioId, @RequestBody UpdateAmbienceRequest request,
                                @Parameter(hidden = true) Authentication auth) {
-        scenarioAccess.assertCanEditScenarioById(audioService.getScenarioIdForAudio(audioId), auth);
-        audioService.updateAmbience(audioId, request.volume(), request.loop());
+        audioManagement.updateAmbience(audioId, request.volume(), request.loop(), auth);
     }
 
     @Operation(summary = "Save transcription, linguistic gloss and free translation")
@@ -241,11 +210,7 @@ public class AudioApiController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateGloss(@PathVariable Long audioId, @RequestBody UpdateAudioGlossRequest request,
                             @Parameter(hidden = true) Authentication auth) {
-        scenarioAccess.assertCanEditScenarioById(audioService.getScenarioIdForAudio(audioId), auth);
-        audioService.updateGloss(audioId, request.transcription(), request.gloss(), request.freeTranslation());
-        Long actorId = userService.getUserByUsername(auth.getName()).getId();
-        scenarioHistoryService.record(audioService.getScenarioIdForAudio(audioId), actorId,
-                ScenarioHistoryAction.AUDIO_UPDATED, "Updated an audio gloss");
+        audioManagement.updateGloss(audioId, request.transcription(), request.gloss(), request.freeTranslation(), auth);
     }
 
     @OwnerOrAdminOperation(
@@ -259,17 +224,7 @@ public class AudioApiController {
             @RequestPart("audio") MultipartFile audio,
             Authentication auth
     ) throws Exception {
-        Long scenarioId = audioService.getScenarioIdForAudio(audioId);
-        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
-        Long id = audioService.replaceAudio(audioId, title, audio);
-        Long actorId = userService.getUserByUsername(auth.getName()).getId();
-        scenarioHistoryService.record(
-                scenarioId,
-                actorId,
-                ScenarioHistoryAction.AUDIO_UPDATED,
-                "Replaced an audio clip"
-        );
-        return new CreateAudioResponse(id);
+        return new CreateAudioResponse(audioManagement.replace(audioId, title, audio, auth));
     }
 
     /**
@@ -312,12 +267,6 @@ public class AudioApiController {
             @ApiResponse(responseCode = "400", description = "Invalid input"),
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
-//    @ApiAccess(
-//            level = ApiAccessLevel.OWNER_OR_ADMIN,
-//            rule = "Requires authentication. Authorization: related resource owner or ADMIN only.",
-//            ownerResource = "thumbnail"
-//    )
-//    @SecurityRequirement(name = "bearerAuth")
     @PostMapping(value = "/thumbnails/{thumbId}/audios", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public CreateAudioResponse upload(
@@ -346,15 +295,8 @@ public class AudioApiController {
             Authentication auth
     ) throws Exception {
 
-        scenarioAccess.assertCanEditScenarioById(thumbnailService.getThumbnailById(thumbId).getScenarioId(), auth);
-        Long authorId = userService.getUserByUsername(auth.getName()).getId();
-        Long id = audioService.createAudio(thumbId, title, idx, authorId, audio, markerX, markerY, markerLabel);
-
-        Long scenarioId = audioService.getScenarioIdForAudio(id);
-        String historySummary = (title != null && !title.isBlank()) ? "Added audio \"" + title.trim() + "\"" : "Added an audio clip";
-        scenarioHistoryService.record(scenarioId, authorId, ScenarioHistoryAction.AUDIO_ADDED, historySummary);
-
-        return new CreateAudioResponse(id);
+        return new CreateAudioResponse(
+                audioManagement.upload(thumbId, title, idx, audio, markerX, markerY, markerLabel, auth));
     }
 
     /**
@@ -384,12 +326,6 @@ public class AudioApiController {
                     description = "Marker updated successfully"
             )
     })
-//    @ApiAccess(
-//            level = ApiAccessLevel.OWNER_OR_ADMIN,
-//            rule = "Requires authentication. Authorization: related resource owner or ADMIN only.",
-//            ownerResource = "audio"
-//    )
-//    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/audios/{audioId}/marker")
     public void updateMarker(
             @Parameter(description = "ID of the audio file whose marker is to be updated", required = true)
@@ -407,12 +343,7 @@ public class AudioApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        Long scenarioId = audioService.getScenarioIdForAudio(audioId);
-        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
-        audioService.updateMarker(audioId, req.markerX(), req.markerY(), req.markerLabel());
-
-        Long actorId = userService.getUserByUsername(auth.getName()).getId();
-        scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.AUDIO_UPDATED, "Updated an audio marker");
+        audioManagement.updateMarker(audioId, req.markerX(), req.markerY(), req.markerLabel(), auth);
     }
 
     /**
@@ -439,7 +370,6 @@ public class AudioApiController {
             rule = "Requires authentication. Authorization: related resource owner or ADMIN only.",
             ownerResource = "audio"
     )
-//    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/audios/{audioId}")
     public void delete(
             @Parameter(description = "ID of the audio file to delete", required = true)
@@ -448,12 +378,7 @@ public class AudioApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        Long scenarioId = audioService.getScenarioIdForAudio(audioId);
-        scenarioAccess.assertCanEditScenarioById(scenarioId, auth);
-        audioService.deleteAudio(audioId);
-
-        Long actorId = userService.getUserByUsername(auth.getName()).getId();
-        scenarioHistoryService.record(scenarioId, actorId, ScenarioHistoryAction.AUDIO_DELETED, "Deleted an audio clip");
+        audioManagement.delete(audioId, auth);
     }
 
     /**

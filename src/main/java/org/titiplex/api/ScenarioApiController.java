@@ -27,8 +27,9 @@ import org.titiplex.api.security.PublicOperation;
 import org.titiplex.api.security.UserOperation;
 import org.titiplex.persistence.model.Scenario;
 import org.titiplex.service.LanguageService;
-import org.titiplex.service.ScenarioHistoryService;
+import org.titiplex.service.ScenarioDeletionService;
 import org.titiplex.service.ScenarioForkService;
+import org.titiplex.service.ScenarioHistoryService;
 import org.titiplex.service.ScenarioService;
 import org.titiplex.service.UserService;
 
@@ -47,19 +48,22 @@ public class ScenarioApiController {
     private final LanguageService languageService;
     private final ScenarioHistoryService scenarioHistoryService;
     private final ScenarioForkService scenarioForks;
+    private final ScenarioDeletionService scenarioDeletion;
 
     public ScenarioApiController(
             ScenarioService scenarioService,
             UserService userService,
             LanguageService languageService,
             ScenarioHistoryService scenarioHistoryService,
-            ScenarioForkService scenarioForks
+            ScenarioForkService scenarioForks,
+            ScenarioDeletionService scenarioDeletion
     ) {
         this.scenarioService = scenarioService;
         this.userService = userService;
         this.languageService = languageService;
         this.scenarioHistoryService = scenarioHistoryService;
         this.scenarioForks = scenarioForks;
+        this.scenarioDeletion = scenarioDeletion;
     }
 
     /**
@@ -379,6 +383,7 @@ public class ScenarioApiController {
                     
                     If the scenario was never published before, the publication timestamp is set.
                     A fork pending or rejected review cannot be published.
+                    Editing an approved fork sends it back to review (and unpublishes it).
                     Only the original author of the scenario can publish it (not editor collaborators).
                     """
     )
@@ -641,7 +646,7 @@ public class ScenarioApiController {
             @Parameter(hidden = true)
             Authentication auth
     ) {
-        scenarioService.deleteScenario(id, auth);
+        scenarioDeletion.deleteScenario(id, auth);
     }
 
     @Operation(

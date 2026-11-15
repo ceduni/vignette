@@ -1,16 +1,13 @@
 import {ref} from "vue";
 
-const IMAGE_IMPORT_FORMATS_LABEL = "PNG, JPG, WebP, SVG, or XML";
+const IMAGE_IMPORT_FORMATS_LABEL = "PNG, JPG, WebP, or GIF";
 
 function isSceneImageFile(file) {
     const type = String(file?.type || "").toLowerCase();
     const name = String(file?.name || "").toLowerCase();
-    return (
-        type.startsWith("image/") ||
-        type === "text/xml" ||
-        type === "application/xml" ||
-        /\.(png|jpe?g|webp|gif|svg|xml)$/i.test(name)
-    );
+    // SVG and XML are refused by the server (they can carry scripts).
+    if (type === "image/svg+xml" || /\.(svg|xml)$/i.test(name)) return false;
+    return type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(name);
 }
 
 function userErrorMessage(error) {
@@ -25,7 +22,7 @@ function imageUploadErrorMessage(error) {
     if (/415|unsupported media|content type/i.test(message)) {
         return `This image type is not supported. Try ${IMAGE_IMPORT_FORMATS_LABEL}.`;
     }
-    return message || "Could not add this scene image. Try PNG, JPG, WebP, or SVG.";
+    return message || `Could not add this scene image. Try ${IMAGE_IMPORT_FORMATS_LABEL}.`;
 }
 
 export function useSceneImageUpload(options = {}) {

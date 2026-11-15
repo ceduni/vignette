@@ -1,6 +1,7 @@
 package org.titiplex.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.titiplex.persistence.model.Thumbnail;
 
 @Schema(description = "Thumbnail row information with storyboard metadata")
 public record ThumbnailRowDto(
@@ -23,4 +24,17 @@ public record ThumbnailRowDto(
         @Schema(description = "Stored image height")
         Integer imageHeight
 ) {
+    public static ThumbnailRowDto from(Thumbnail t) {
+        return new ThumbnailRowDto(
+                t.getId(),
+                t.getTitle(),
+                t.getIdx(),
+                t.getGridColumn(),
+                t.getGridRow(),
+                t.getGridColumnSpan(),
+                t.getGridRowSpan(),
+                t.getImageWidth(),
+                t.getImageHeight()
+        );
+    }
 }

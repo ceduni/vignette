@@ -1,5 +1,6 @@
 package org.titiplex.service;
 
+import org.titiplex.util.Text;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,11 +16,16 @@ import org.titiplex.service.storage.FileStorageService;
 import org.titiplex.service.storage.MediaContent;
 import org.titiplex.service.storage.StoredFile;
 
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
 public class ThumbnailService {
@@ -44,10 +50,8 @@ public class ThumbnailService {
         // Lock the scenario so that concurrent uploads compute max(idx) + 1 one after the other.
         scenarioRepo.lockById(scenario.getId());
         int nextIdx = repo.maxIdx(scenario.getId()) + 1;
-        String effectiveTitle = (title == null || title.isBlank()) ? "Image " + nextIdx : title.trim();
-        if (effectiveTitle.length() > 255) {
-            throw new IllegalArgumentException("Scene title must be 255 characters or fewer");
-        }
+        String effectiveTitle = Text.requireMaxLength(
+                Text.trimOrDefault(title, "Image " + nextIdx), 255, "Scene title");
         StoredFile stored = storage.storeThumbnail(image, scenario.getId());
         // Storage is content-addressed (path derived from the SHA-256), so a duplicate upload
         // lands on the file the existing scene already uses: nothing to clean up on refusal.
@@ -94,13 +98,15 @@ public class ThumbnailService {
     @Transactional
     public List<Thumbnail> reorder(Long scenarioId, List<Long> ids) {
         List<Thumbnail> rows = listByScenarioId(scenarioId);
-        var byId = rows.stream().collect(java.util.stream.Collectors.toMap(Thumbnail::getId, t -> t));
-        if (ids == null || ids.size() != rows.size() || ids.stream().anyMatch(java.util.Objects::isNull)
-                || new java.util.HashSet<>(ids).size() != ids.size()
-                || !byId.keySet().equals(new java.util.HashSet<>(ids))) {
+        Map<Long, Thumbnail> byId = rows.stream().collect(Collectors.toMap(Thumbnail::getId, t -> t));
+        // Same count and same set of ids: no scene missing, unknown, or listed twice.
+        boolean everySceneExactlyOnce = ids != null
+                && ids.size() == rows.size()
+                && new HashSet<>(ids).equals(byId.keySet());
+        if (!everySceneExactlyOnce) {
             throw new IllegalArgumentException("Provide every scene in this vignette exactly once");
         }
-        var ordered = new java.util.ArrayList<Thumbnail>();
+        List<Thumbnail> ordered = new ArrayList<>();
         for (int i = 0; i < ids.size(); i++) {
             Thumbnail row = byId.get(ids.get(i));
             row.setIdx(i + 1);
@@ -167,14 +173,8 @@ public class ThumbnailService {
     @Transactional
     public Thumbnail updateTitle(Long id, String title) {
         Thumbnail thumbnail = getThumbnailById(id);
-        String normalized = title == null ? "" : title.trim();
-        if (normalized.isBlank()) {
-            normalized = "Image " + thumbnail.getIdx();
-        }
-        if (normalized.length() > 255) {
-            throw new IllegalArgumentException("Scene title must be 255 characters or fewer");
-        }
-        thumbnail.setTitle(normalized);
+        thumbnail.setTitle(Text.requireMaxLength(
+                Text.trimOrDefault(title, "Image " + thumbnail.getIdx()), 255, "Scene title"));
         return repo.save(thumbnail);
     }
 }

@@ -14,6 +14,7 @@ import org.titiplex.persistence.repo.ScenarioRepository;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -59,7 +60,7 @@ public class ScenarioCollaborationService {
         List<ScenarioCollaborator> pending = collaboratorRepo.findByUserIdAndStatus(userId, CollaborationStatus.PENDING);
 
         Instant now = Instant.now();
-        List<ScenarioCollaborator> stillPending = new java.util.ArrayList<>();
+        List<ScenarioCollaborator> stillPending = new ArrayList<>();
         for (ScenarioCollaborator c : pending) {
             if (c.getExpiresAt() != null && c.getExpiresAt().isBefore(now)) {
                 c.setStatus(CollaborationStatus.EXPIRED);
