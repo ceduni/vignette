@@ -12,17 +12,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.titiplex.api.dto.AudioRowDto;
 import org.titiplex.config.SecurityConfig;
-import org.titiplex.persistence.model.Scenario;
-import org.titiplex.persistence.model.Thumbnail;
-import org.titiplex.persistence.model.User;
 import org.titiplex.service.AudioService;
-import org.titiplex.service.ScenarioService;
-import org.titiplex.service.ThumbnailService;
 import org.titiplex.service.UserService;
 import org.titiplex.service.storage.MediaContent;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -47,29 +44,12 @@ class AudioApiControllerWebMvcTest {
     private JwtDecoder jwtDecoder;
 
     @MockitoBean
-    private ThumbnailService thumbnailService;
-
-    @MockitoBean
-    private ScenarioService scenarioService;
-
-    @MockitoBean
-    private org.titiplex.service.ScenarioAccessService scenarioAccess;
-
-    @MockitoBean
-    private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
+    private org.titiplex.service.AudioManagementService audioManagement;
 
 
     @Test
     void list_isPublic() throws Exception {
-        Thumbnail thumbnail = new Thumbnail();
-        thumbnail.setId(7L);
-        thumbnail.setScenarioId(3L);
-        Scenario scenario = new Scenario();
-        scenario.setId(3L);
-
-        when(thumbnailService.getThumbnailById(7L)).thenReturn(thumbnail);
-        when(scenarioService.getRequiredScenario(3L)).thenReturn(scenario);
-        when(audioService.listForThumbnail(7L)).thenReturn(
+        when(audioManagement.listForThumbnail(eq(7L), any())).thenReturn(
                 List.of(
                         new AudioRowDto(1L, "Audio 1", 1, "audio/webm", 10.0, 20.0, "speaker", null, null, null),
                         new AudioRowDto(2L, "Audio 2", 2, "audio/webm", null, null, null, null, null, null)
@@ -89,7 +69,7 @@ class AudioApiControllerWebMvcTest {
         Resource resource = new ByteArrayResource(new byte[]{9, 8, 7});
         MediaContent media = new MediaContent(resource, "audio/webm", 3L, "\"audio-etag\"");
 
-        when(audioService.loadContent(4L)).thenReturn(media);
+        when(audioManagement.loadContent(eq(4L), any())).thenReturn(media);
 
         mvc.perform(get("/api/audios/4/content"))
                 .andExpect(status().isOk())
@@ -145,16 +125,7 @@ class AudioApiControllerWebMvcTest {
                 new byte[]{1, 2, 3}
         );
 
-        User user = new User();
-        user.setId(12L);
-        user.setUsername("alice");
-
-        when(userService.getUserByUsername("alice")).thenReturn(user);
-        Thumbnail ownerThumbnail = new Thumbnail();
-        ownerThumbnail.setId(9L);
-        ownerThumbnail.setScenarioId(11L);
-        when(thumbnailService.getThumbnailById(9L)).thenReturn(ownerThumbnail);
-        when(audioService.createAudio(9L, "Greeting", 2, 12L, audio, 10.0, 20.0, "speaker"))
+        when(audioManagement.upload(eq(9L), eq("Greeting"), eq(2), any(), eq(10.0), eq(20.0), eq("speaker"), any()))
                 .thenReturn(42L);
 
         mvc.perform(multipart("/api/thumbnails/9/audios")
@@ -169,7 +140,7 @@ class AudioApiControllerWebMvcTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(42));
 
-        verify(audioService).createAudio(9L, "Greeting", 2, 12L, audio, 10.0, 20.0, "speaker");
+        verify(audioManagement).upload(eq(9L), eq("Greeting"), eq(2), any(), eq(10.0), eq(20.0), eq("speaker"), any());
     }
 
     @Test
@@ -200,13 +171,7 @@ class AudioApiControllerWebMvcTest {
                 "audio/webm",
                 new byte[]{4, 5, 6}
         );
-        User user = new User();
-        user.setId(12L);
-        user.setUsername("alice");
-
-        when(userService.getUserByUsername("alice")).thenReturn(user);
-        when(audioService.getScenarioIdForAudio(5L)).thenReturn(9L);
-        when(audioService.replaceAudio(5L, "New take", audio)).thenReturn(5L);
+        when(audioManagement.replace(eq(5L), eq("New take"), any(), any())).thenReturn(5L);
 
         mvc.perform(multipart("/api/audios/5/content")
                         .file(audio)
@@ -220,7 +185,7 @@ class AudioApiControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(5));
 
-        verify(audioService).replaceAudio(5L, "New take", audio);
+        verify(audioManagement).replace(eq(5L), eq("New take"), any(), any());
     }
 
     @Test
@@ -255,11 +220,6 @@ class AudioApiControllerWebMvcTest {
 
     @Test
     void updateMarker_callsServiceWhenAuthenticatedWithCsrf() throws Exception {
-        User user = new User();
-        user.setId(12L);
-        user.setUsername("alice");
-        when(userService.getUserByUsername("alice")).thenReturn(user);
-
         mvc.perform(patch("/api/audios/5/marker")
                         .with(user("alice").roles("USER"))
                         .with(csrf())
@@ -273,7 +233,7 @@ class AudioApiControllerWebMvcTest {
                                 """))
                 .andExpect(status().isOk());
 
-        verify(audioService).updateMarker(5L, 11.0, 22.0, "target");
+        verify(audioManagement).updateMarker(eq(5L), eq(11.0), eq(22.0), eq("target"), any());
     }
 
     @Test
@@ -289,7 +249,7 @@ class AudioApiControllerWebMvcTest {
                                 """))
                 .andExpect(status().isNoContent());
 
-        verify(audioService).selectBackgroundAudio(12L, 99L);
+        verify(audioManagement).selectBackground(eq(12L), eq(99L), any());
     }
 
     @Test
@@ -307,16 +267,11 @@ class AudioApiControllerWebMvcTest {
 
     @Test
     void delete_callsServiceWhenAuthenticatedWithCsrf() throws Exception {
-        User user = new User();
-        user.setId(12L);
-        user.setUsername("alice");
-        when(userService.getUserByUsername("alice")).thenReturn(user);
-
         mvc.perform(delete("/api/audios/6")
                         .with(user("alice").roles("USER"))
                         .with(csrf()))
                 .andExpect(status().isOk());
 
-        verify(audioService).deleteAudio(6L);
+        verify(audioManagement).delete(eq(6L), any());
     }
 }

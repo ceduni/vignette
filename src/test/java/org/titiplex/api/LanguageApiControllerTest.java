@@ -11,14 +11,11 @@ import org.titiplex.api.dto.LanguageOptionDto;
 import org.titiplex.api.dto.LanguageRowDto;
 import org.titiplex.api.dto.ScenarioDto;
 import org.titiplex.persistence.model.Language;
-import org.titiplex.persistence.model.Scenario;
-import org.titiplex.persistence.model.User;
 import org.titiplex.service.LanguageService;
 import org.titiplex.service.ScenarioService;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;

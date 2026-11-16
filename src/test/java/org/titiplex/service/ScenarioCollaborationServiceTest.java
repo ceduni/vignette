@@ -20,13 +20,11 @@ import org.titiplex.persistence.repo.ScenarioInviteLinkRepository;
 import org.titiplex.persistence.repo.ScenarioRepository;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

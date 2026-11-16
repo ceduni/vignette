@@ -11,16 +11,13 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.titiplex.config.SecurityConfig;
-import org.titiplex.persistence.model.Scenario;
 import org.titiplex.persistence.model.Thumbnail;
-import org.titiplex.persistence.model.User;
-import org.titiplex.service.ScenarioService;
-import org.titiplex.service.ThumbnailService;
-import org.titiplex.service.UserService;
 import org.titiplex.service.storage.MediaContent;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -38,19 +35,7 @@ class ThumbnailApiControllerWebMvcTest {
     private MockMvc mvc;
 
     @MockitoBean
-    private ThumbnailService thumbnailService;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private ScenarioService scenarioService;
-
-    @MockitoBean
-    private org.titiplex.service.ScenarioAccessService scenarioAccess;
-
-    @MockitoBean
-    private org.titiplex.service.ScenarioHistoryService scenarioHistoryService;
+    private org.titiplex.service.ThumbnailManagementService thumbnails;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
@@ -68,7 +53,7 @@ class ThumbnailApiControllerWebMvcTest {
         t2.setTitle("Scene 2");
         t2.setIdx(2);
 
-        when(thumbnailService.listByScenarioId(9L)).thenReturn(List.of(t1, t2));
+        when(thumbnails.list(eq(9L), any())).thenReturn(List.of(t1, t2));
 
         mvc.perform(get("/api/scenarios/9/thumbnails"))
                 .andExpect(status().isOk())
@@ -83,10 +68,7 @@ class ThumbnailApiControllerWebMvcTest {
         Resource resource = new ByteArrayResource(new byte[]{1, 2, 3, 4});
         MediaContent media = new MediaContent(resource, "image/png", 4L, "\"thumb-etag\"");
 
-        Thumbnail thumbnail = new Thumbnail();
-        thumbnail.setScenarioId(9L);
-        when(thumbnailService.getThumbnailById(8L)).thenReturn(thumbnail);
-        when(thumbnailService.loadContent(8L)).thenReturn(media);
+        when(thumbnails.loadContent(eq(8L), any())).thenReturn(media);
 
         mvc.perform(get("/api/thumbnails/8/content"))
                 .andExpect(status().isOk())
@@ -137,19 +119,10 @@ class ThumbnailApiControllerWebMvcTest {
                 new byte[]{1, 2, 3}
         );
 
-        User user = new User();
-        user.setId(12L);
-        user.setUsername("alice");
-
-        Scenario scenario = new Scenario();
-        scenario.setId(9L);
-
         Thumbnail saved = new Thumbnail();
         saved.setId(55L);
 
-        when(userService.getUserByUsername("alice")).thenReturn(user);
-        when(scenarioService.getRequiredScenario(9L)).thenReturn(scenario);
-        when(thumbnailService.save("Intro", image, scenario, user)).thenReturn(saved);
+        when(thumbnails.upload(eq(9L), eq("Intro"), any(), any())).thenReturn(saved);
 
         mvc.perform(multipart("/api/scenarios/9/thumbnails")
                         .file(image)
@@ -159,7 +132,7 @@ class ThumbnailApiControllerWebMvcTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(55));
 
-        verify(thumbnailService).save("Intro", image, scenario, user);
+        verify(thumbnails).upload(eq(9L), eq("Intro"), any(), any());
     }
 
     @Test
@@ -170,22 +143,11 @@ class ThumbnailApiControllerWebMvcTest {
 
     @Test
     void delete_allowsOwnerAndReturnsNoContent() throws Exception {
-        Thumbnail existing = new Thumbnail();
-        existing.setId(8L);
-        existing.setScenarioId(9L);
-
-        User user = new User();
-        user.setId(12L);
-        user.setUsername("alice");
-
-        when(thumbnailService.getThumbnailById(8L)).thenReturn(existing);
-        when(userService.getUserByUsername("alice")).thenReturn(user);
-
         mvc.perform(delete("/api/thumbnails/8")
                         .with(user("alice").roles("USER"))
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(thumbnailService).delete(8L);
+        verify(thumbnails).delete(eq(8L), any());
     }
 }
