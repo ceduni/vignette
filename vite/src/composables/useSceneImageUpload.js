@@ -1,13 +1,14 @@
 import {ref} from "vue";
+import {saveScenarioVignette as defaultSaveScenarioVignette} from "../api/vignettes";
 
-const IMAGE_IMPORT_FORMATS_LABEL = "PNG, JPG, WebP, or GIF";
+const IMAGE_IMPORT_FORMATS_LABEL = "PNG, JPG, WebP, GIF, or SVG";
 
 function isSceneImageFile(file) {
     const type = String(file?.type || "").toLowerCase();
     const name = String(file?.name || "").toLowerCase();
-    // SVG and XML are refused by the server (they can carry scripts).
-    if (type === "image/svg+xml" || /\.(svg|xml)$/i.test(name)) return false;
-    return type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(name);
+    // Plain XML is refused by the server; SVG is accepted and sanitized there.
+    if (/\.xml$/i.test(name)) return false;
+    return type.startsWith("image/") || /\.(png|jpe?g|webp|gif|svg)$/i.test(name);
 }
 
 function userErrorMessage(error) {
@@ -37,6 +38,7 @@ export function useSceneImageUpload(options = {}) {
         applyUnclaimedDraftAudio,
         loadThumbs,
         uploadScenarioThumbnail,
+        saveScenarioVignette = defaultSaveScenarioVignette,
         toast,
         fileBaseName,
     } = options;
@@ -66,7 +68,7 @@ export function useSceneImageUpload(options = {}) {
         clearUploadFile();
     }
 
-    function onVignetteMakerInsert(blob) {
+    function onVignetteMakerInsert(blob, makerState = null) {
         vignetteMakerOpen.value = false;
         uploadDialogOpen.value = true;
         const ts = Date.now();
@@ -82,7 +84,9 @@ export function useSceneImageUpload(options = {}) {
             sequence += 1;
         }
         const defaultTitle = `${baseTitle} ${sequence}`;
-        uploadFiles.value = [...uploadFiles.value, {file, title: defaultTitle, previewUrl}];
+        // Keep the drawing so the scene is saved as a vignette that can be reopened later.
+        const sceneJson = makerState ? JSON.stringify(makerState) : null;
+        uploadFiles.value = [...uploadFiles.value, {file, title: defaultTitle, previewUrl, sceneJson}];
     }
 
     function addUploadFiles(fileList) {
@@ -160,11 +164,19 @@ export function useSceneImageUpload(options = {}) {
 
             for (let i = 0; i < entries.length; i++) {
                 const entry = entries[i];
-                const fd = new FormData();
-                fd.append("scenarioId", String(scenario.value.id));
-                fd.append("title", entry.title || "");
-                fd.append("image", entry.file);
-                await uploadScenarioThumbnail(getScenarioId(), fd);
+                if (entry.sceneJson) {
+                    await saveScenarioVignette(getScenarioId(), {
+                        image: entry.file,
+                        sceneJson: entry.sceneJson,
+                        title: entry.title || "",
+                    });
+                } else {
+                    const fd = new FormData();
+                    fd.append("scenarioId", String(scenario.value.id));
+                    fd.append("title", entry.title || "");
+                    fd.append("image", entry.file);
+                    await uploadScenarioThumbnail(getScenarioId(), fd);
+                }
                 uploadingProgress.value = Math.round(((i + 1) / entries.length) * 100);
             }
 

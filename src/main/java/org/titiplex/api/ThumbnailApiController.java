@@ -216,8 +216,8 @@ public class ThumbnailApiController {
                 .contentLength(media.sizeBytes())
                 .eTag(media.etag())
                 .header("Cache-Control", "private, no-store")
-                // SVG files stored before SVG uploads were refused must not run scripts
-                // when the image URL is opened directly.
+                // Second barrier behind SvgSanitizer: even if an SVG kept something active,
+                // opening the image URL directly cannot run scripts or load anything.
                 .header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
                 .body(media.resource());
     }

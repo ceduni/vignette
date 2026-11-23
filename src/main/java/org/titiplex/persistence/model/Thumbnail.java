@@ -79,4 +79,8 @@ public class Thumbnail {
 
     @Column(name = "image_height")
     private Integer imageHeight;
+
+    /** Editable Vignette Maker drawing this image was exported from; null for uploaded files. */
+    @Column(name = "vignette_scene_json", columnDefinition = "text")
+    private String vignetteSceneJson;
 }

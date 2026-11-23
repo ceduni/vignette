@@ -38,13 +38,43 @@ class FileStorageServiceTest {
         assertTrue(Files.exists(root.resolve(stored.relativePath())));
     }
 
-    /** SVG and XML can carry scripts and uploads are served back as-is, so they are refused. */
-    @ParameterizedTest
-    @ValueSource(strings = {"image/svg+xml", "text/xml", "application/xml", "image/svg+xml; charset=utf-8"})
-    void storeThumbnail_refusesSvgAndXml(String contentType) {
-        MockMultipartFile svg = new MockMultipartFile("image", "scene.svg", contentType,
-                "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>".getBytes());
+    @Test
+    void storeThumbnail_acceptsSvg_andStoresTheSanitizedVersion() throws Exception {
+        MockMultipartFile svg = new MockMultipartFile("image", "scene.svg", "image/svg+xml; charset=utf-8",
+                "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script><rect width=\"4\" onclick=\"alert(2)\"/></svg>".getBytes());
+
+        StoredFile stored = storage.storeThumbnail(svg, 1L);
+
+        assertEquals("image/svg+xml", stored.contentType());
+        assertTrue(stored.relativePath().endsWith(".svg"));
+        String content = Files.readString(root.resolve(stored.relativePath()));
+        assertTrue(content.contains("<rect"));
+        assertFalse(content.contains("script"));
+        assertFalse(content.contains("onclick"));
+    }
+
+    @Test
+    void storeThumbnail_refusesMalformedSvg() {
+        MockMultipartFile svg = new MockMultipartFile("image", "scene.svg", "image/svg+xml", "<svg><g>".getBytes());
 
         assertThrows(IllegalArgumentException.class, () -> storage.storeThumbnail(svg, 1L));
+    }
+
+    /** Plain XML is still refused; SVG is only accepted for images, not for audio. */
+    @ParameterizedTest
+    @ValueSource(strings = {"text/xml", "application/xml"})
+    void storeThumbnail_refusesXml(String contentType) {
+        MockMultipartFile xml = new MockMultipartFile("image", "scene.xml", contentType,
+                "<svg xmlns=\"http://www.w3.org/2000/svg\"/>".getBytes());
+
+        assertThrows(IllegalArgumentException.class, () -> storage.storeThumbnail(xml, 1L));
+    }
+
+    @Test
+    void storeAudio_refusesSvg() {
+        MockMultipartFile svg = new MockMultipartFile("audio", "a.svg", "image/svg+xml",
+                "<svg xmlns=\"http://www.w3.org/2000/svg\"/>".getBytes());
+
+        assertThrows(IllegalArgumentException.class, () -> storage.storeAudio(svg, 1L, 2L));
     }
 }

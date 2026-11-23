@@ -22,7 +22,9 @@ public record ThumbnailRowDto(
         @Schema(description = "Stored image width")
         Integer imageWidth,
         @Schema(description = "Stored image height")
-        Integer imageHeight
+        Integer imageHeight,
+        @Schema(description = "True when the image was made with the Vignette Maker and can be reopened in it")
+        boolean vignette
 ) {
     public static ThumbnailRowDto from(Thumbnail t) {
         return new ThumbnailRowDto(
@@ -34,7 +36,8 @@ public record ThumbnailRowDto(
                 t.getGridColumnSpan(),
                 t.getGridRowSpan(),
                 t.getImageWidth(),
-                t.getImageHeight()
+                t.getImageHeight(),
+                t.getVignetteSceneJson() != null
         );
     }
 }

@@ -189,6 +189,7 @@ public class ScenarioForkService {
         copy.setGridRowSpan(source.getGridRowSpan());
         copy.setImageWidth(source.getImageWidth());
         copy.setImageHeight(source.getImageHeight());
+        copy.setVignetteSceneJson(source.getVignetteSceneJson());
         return copy;
     }
 

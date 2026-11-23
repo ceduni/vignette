@@ -47,6 +47,13 @@ public class ThumbnailService {
 
     @Transactional
     public Thumbnail save(String title, MultipartFile image, Scenario scenario, User user) throws Exception {
+        return save(title, image, scenario, user, null);
+    }
+
+    /** Saves a scene image; {@code vignetteSceneJson} is the Vignette Maker drawing, or null for a plain upload. */
+    @Transactional
+    public Thumbnail save(String title, MultipartFile image, Scenario scenario, User user,
+                          String vignetteSceneJson) throws Exception {
         // Lock the scenario so that concurrent uploads compute max(idx) + 1 one after the other.
         scenarioRepo.lockById(scenario.getId());
         int nextIdx = repo.maxIdx(scenario.getId()) + 1;
@@ -79,7 +86,50 @@ public class ThumbnailService {
 
         thumbnail.setGridColumnSpan(1);
         thumbnail.setGridRowSpan(1);
+        thumbnail.setVignetteSceneJson(vignetteSceneJson);
+        readDimensions(image, thumbnail);
 
+        return repo.save(thumbnail);
+    }
+
+    /**
+     * Replaces the image and the drawing of a Vignette Maker scene, keeping its place, title,
+     * layout and audios. The previous file is deleted after commit unless another scene uses it.
+     */
+    @Transactional
+    public Thumbnail replaceVignette(Long id, MultipartFile image, String vignetteSceneJson) throws Exception {
+        repo.lockById(id);
+        Thumbnail thumbnail = getThumbnailById(id);
+        String previousPath = thumbnail.getStoragePath();
+
+        StoredFile stored = storage.storeThumbnail(image, thumbnail.getScenarioId());
+        if (!stored.sha256().equals(thumbnail.getImageSha256())
+                && repo.existsByScenarioIdAndImageSha256(thumbnail.getScenarioId(), stored.sha256())) {
+            if (!repo.existsByStoragePathAndIdNot(stored.relativePath(), -1L)) {
+                storage.deleteQuietly(stored.relativePath());
+            }
+            throw new IllegalStateException("This image is already used in this scenario");
+        }
+
+        thumbnail.setContentType(stored.contentType());
+        thumbnail.setImageSha256(stored.sha256());
+        thumbnail.setStoragePath(stored.relativePath());
+        thumbnail.setSizeBytes(stored.sizeBytes());
+        thumbnail.setOriginalFilename(stored.originalFilename());
+        thumbnail.setVignetteSceneJson(vignetteSceneJson);
+        thumbnail.setImageWidth(null);
+        thumbnail.setImageHeight(null);
+        readDimensions(image, thumbnail);
+        Thumbnail saved = repo.save(thumbnail);
+
+        if (!previousPath.equals(stored.relativePath())
+                && !repo.existsByStoragePathAndIdNot(previousPath, id)) {
+            storage.deleteAfterCommit(previousPath);
+        }
+        return saved;
+    }
+
+    private static void readDimensions(MultipartFile image, Thumbnail thumbnail) throws Exception {
         try (InputStream inputStream = image.getInputStream()) {
             BufferedImage bufferedImage = ImageIO.read(inputStream);
             if (bufferedImage != null) {
@@ -87,8 +137,6 @@ public class ThumbnailService {
                 thumbnail.setImageHeight(bufferedImage.getHeight());
             }
         }
-
-        return repo.save(thumbnail);
     }
 
     public List<Thumbnail> listByScenarioId(Long scenarioId) {

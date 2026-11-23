@@ -28,6 +28,7 @@ function setup(overrides = {}) {
         applyUnclaimedDraftAudio: vi.fn(async () => {}),
         loadThumbs: vi.fn(async () => {}),
         uploadScenarioThumbnail: vi.fn(async () => ({})),
+        saveScenarioVignette: vi.fn(async () => ({})),
         toast: makeToast(),
         fileBaseName: (file, fallback) => file?.name?.replace(/\.[^.]+$/, "") || fallback,
         ...overrides,
@@ -178,5 +179,31 @@ describe("useSceneImageUpload", () => {
         expect(api.uploadDialogOpen.value).toBe(false);
         expect(api.uploadFiles.value).toHaveLength(0);
         expect(URL.revokeObjectURL).toHaveBeenCalled();
+    });
+
+    it("saves a Vignette Maker insert as a vignette with its drawing", async () => {
+        const {api, deps} = setup();
+        const state = {people: [{id: 1}], nextId: 2};
+
+        api.onVignetteMakerInsert(new Blob(["png"], {type: "image/png"}), state);
+        expect(api.uploadFiles.value[0].sceneJson).toBe(JSON.stringify(state));
+
+        await api.uploadImage();
+
+        expect(deps.saveScenarioVignette).toHaveBeenCalledWith(42, expect.objectContaining({
+            sceneJson: JSON.stringify(state),
+            title: expect.stringContaining("My scenario"),
+        }));
+        expect(deps.uploadScenarioThumbnail).not.toHaveBeenCalled();
+    });
+
+    it("uploads plain image files as regular scenes", async () => {
+        const {api, deps} = setup();
+
+        api.onImageChange({target: {files: [makeFile("scene.png")], value: "x"}});
+        await api.uploadImage();
+
+        expect(deps.uploadScenarioThumbnail).toHaveBeenCalledTimes(1);
+        expect(deps.saveScenarioVignette).not.toHaveBeenCalled();
     });
 });

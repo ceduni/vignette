@@ -1588,8 +1588,8 @@ onBeforeUnmount(() => {
                         </svg>
                       </div>
                       <p class="ud-dropzone__label">{{ pendingRouteDraft ? 'Choose a scene image' : 'Drop images here' }}</p>
-                      <p class="ud-dropzone__sub">Drop here or click to browse · PNG, JPG, WebP, GIF</p>
-                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple class="ud-file-input" @change="onImageChange"/>
+                      <p class="ud-dropzone__sub">Drop here or click to browse · PNG, JPG, WebP, GIF, SVG</p>
+                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple class="ud-file-input" @change="onImageChange"/>
                     </label>
 
                     <button
@@ -1641,7 +1641,7 @@ onBeforeUnmount(() => {
                           <path d="M12 5v14M5 12h14"/>
                         </svg>
                         Add more images
-                        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple class="ud-file-input" @change="onImageChange"/>
+                        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple class="ud-file-input" @change="onImageChange"/>
                       </label>
 
                       <button

@@ -440,6 +440,18 @@ but no Flyway history:
 - a database that still has the history of the former `V1`–`V16` migrations must drop it first
   (`DROP TABLE flyway_schema_history;`), after a backup.
 
+**Databases created by the first version of `V1__baseline.sql`.** `V1` was rewritten in a compact
+form (same tables, constraints and names) and now also creates `thumbnail.vignette_scene_json`.
+A database where the first version ran (`type = 'SQL'` in its history) refuses to start until
+it is updated once, after a backup:
+
+```sql
+ALTER TABLE thumbnail ADD COLUMN IF NOT EXISTS vignette_scene_json text;
+UPDATE flyway_schema_history SET checksum = 1589308254 WHERE version = '1' AND type = 'SQL';
+```
+
+A database marked as `BASELINE` at `V1` only needs the `ALTER TABLE` line.
+
 ### Deploying on Supabase
 
 Supabase is hosted PostgreSQL, so the `prod` profile only needs the right connection settings.

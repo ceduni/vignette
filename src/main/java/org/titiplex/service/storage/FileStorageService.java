@@ -8,7 +8,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.titiplex.config.StorageProperties;
+import org.titiplex.util.SvgSanitizer;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,8 +23,12 @@ import java.util.Map;
 @Service
 public class FileStorageService {
 
-    // Raster images and audio only. SVG and XML are refused on purpose: they can carry
-    // scripts, and uploads are served back as-is (stored XSS).
+    private static final String SVG = "image/svg+xml";
+    /** An SVG is parsed in memory to be sanitized, so it gets a tighter limit than other uploads. */
+    private static final long SVG_MAX_BYTES = 5L * 1024 * 1024;
+
+    // Raster images and audio. SVG is accepted for thumbnails only, and only after
+    // SvgSanitizer removed everything that could run code (generic XML stays refused).
     private static final Map<String, String> EXTENSIONS = Map.ofEntries(
             Map.entry("image/jpeg", ".jpg"),
             Map.entry("image/png", ".png"),
@@ -59,25 +65,26 @@ public class FileStorageService {
     }
 
     public StoredFile storeThumbnail(MultipartFile file, long scenarioId) throws Exception {
-        return store(file, "thumbnails/scenario-" + scenarioId);
+        return store(file, "thumbnails/scenario-" + scenarioId, true);
     }
 
     public StoredFile storeAudio(MultipartFile file, long scenarioId, long thumbnailId) throws Exception {
-        return store(file, "audios/scenario-" + scenarioId + "/thumbnail-" + thumbnailId);
+        return store(file, "audios/scenario-" + scenarioId + "/thumbnail-" + thumbnailId, false);
     }
 
     public StoredFile storeScenarioAudio(MultipartFile file, long scenarioId) throws Exception {
-        return store(file, "audios/scenario-" + scenarioId + "/background");
+        return store(file, "audios/scenario-" + scenarioId + "/background", false);
     }
 
-    private StoredFile store(MultipartFile file, String logicalDir) throws Exception {
+    private StoredFile store(MultipartFile file, String logicalDir, boolean allowSvg) throws Exception {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("file is empty");
         }
 
         Files.createDirectories(root);
         String contentType = normalizeContentType(file.getContentType());
-        String extension = EXTENSIONS.get(contentType);
+        boolean svg = allowSvg && SVG.equals(contentType);
+        String extension = svg ? ".svg" : EXTENSIONS.get(contentType);
         if (extension == null) {
             throw new IllegalArgumentException("unsupported content type: " + contentType);
         }
@@ -87,7 +94,7 @@ public class FileStorageService {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         long size;
 
-        try (InputStream in = new DigestInputStream(file.getInputStream(), digest);
+        try (InputStream in = new DigestInputStream(svg ? sanitizedSvg(file) : file.getInputStream(), digest);
              OutputStream out = Files.newOutputStream(tmp, StandardOpenOption.TRUNCATE_EXISTING)) {
             size = in.transferTo(out);
         } catch (Exception e) {
@@ -121,6 +128,14 @@ public class FileStorageService {
                 contentType,
                 normalizedOriginalFilename(file.getOriginalFilename())
         );
+    }
+
+    /** The SVG with scripts, event handlers and external links removed (see SvgSanitizer). */
+    private static InputStream sanitizedSvg(MultipartFile file) throws IOException {
+        if (file.getSize() > SVG_MAX_BYTES) {
+            throw new IllegalArgumentException("SVG images must be 5 MB or smaller");
+        }
+        return new ByteArrayInputStream(SvgSanitizer.sanitize(file.getBytes()));
     }
 
     public MediaContent load(String relativePath, String contentType, String sha256) {
