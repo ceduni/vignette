@@ -1,24 +1,40 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+| Version | Supported |
+|---------|-----------|
+| `master` branch (1.0.x) | :white_check_mark: |
+| Older commits and forks | :x: |
 
-| Version     | Supported          |
-| -------     | ------------------ |
-| 1.0.0-BETA  | :white_check_mark: |
+## Reporting a vulnerability
 
-## Reporting a Vulnerability
+**Please do not describe an exploitable vulnerability in a public issue.**
 
-To report a vulnerability, you can:
-- open an issue in this repository
-- write an email to <a href="titouan.johanny@umontreal.ca" >titouan.johanny@umontreal.ca</a>
+1. Email **titouan.johanny@umontreal.ca** with:
+   - what is affected (endpoint, page, file),
+   - the steps to reproduce it,
+   - the impact you expect (data read, account takeover, code execution…).
+2. You will get an answer whether the report is accepted or not.
+3. Once a fix is released, the issue can be discussed publicly.
 
-A mod will answer to your report in any case, could it be accepted or rejected.
+For minor problems that cannot be exploited (outdated dependency without a known attack path,
+missing header…), a regular issue or a pull request is fine. Document the change in the pull
+request and in the code; a maintainer will review it.
 
-You can also submit a pull request. 
-However, in that case you have to thoroughly document your modifications in the pull request message, commit message and/or in the code.
-A moderator will answer you, you will also see in your github notifications whether your pull request has been merged or rejected.
+Improvements to this policy are also welcome through pull requests.
 
-You can also submit pull requests in order to propose modifications to this security protocole.
+## What the project already does
+
+Useful to know before reporting, and to keep in mind when changing the code:
+
+| Area | Protection | Where |
+|------|------------|-------|
+| Authentication | JWT bearer tokens; CSRF token (cookie → `X-XSRF-TOKEN`) for cookie sessions | `config/SecurityConfig`, `config/JwtConfig` |
+| Authorization | Who may view or edit a scenario is checked in one place | `service/ScenarioAccessService` |
+| Accounts | Usernames and emails unique regardless of case; hashed passwords | `service/UserService` |
+| Uploads | Allow-list of image and audio types; files named by SHA-256, kept inside the storage root | `service/storage/FileStorageService` |
+| SVG | Scripts, event handlers, external links and DTDs removed before storage | `util/SvgSanitizer` |
+| Serving images | `Content-Security-Policy: sandbox` on image content | `api/ThumbnailApiController` |
+| Database | Schema changed by Flyway only; Supabase Data API must stay off (see the README) | `src/main/resources/db/migration` |
+| Secrets | `APP_JWT_SECRET`, database and SMTP passwords come from environment variables or an untracked `.env` | `application*.properties` |

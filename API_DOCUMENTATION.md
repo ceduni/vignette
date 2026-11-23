@@ -1,45 +1,44 @@
-# Documentation API (Java / Spring Boot)
+# API documentation
 
-Automatically generated API documentation with **springdoc-openapi** for backend, then **statically published on
-GitHub Pages**.
+The backend documents its API automatically with **springdoc-openapi**. The same documentation is
+published as a static page on **GitHub Pages**.
 
-## 1) Local documentation (auto-updated)
+## Local documentation
 
-When the app is launched :
+Start the backend (`mvn spring-boot:run -Dspring-boot.run.profiles=dev`), then open:
 
-- Swagger UI : `http://localhost:8081/api/docs`
-- OpenAPI JSON : `http://localhost:8081/api/docs/openapi`
+| Page | URL |
+|------|-----|
+| Swagger UI | http://localhost:8081/api/docs |
+| OpenAPI JSON | http://localhost:8081/api/docs/openapi |
 
-```bash
-mvn spring-boot:run
-```
+springdoc scans the controllers at each start, so the documentation always matches the code.
 
-`springdoc-openapi` scans springs controllers at each launch, so the doc is updated automatically when Java endpoints
-change.
+## Documenting an endpoint
 
-## 2) Publishing on GitHub Pages
+Each endpoint should have:
 
-A GitHub Actions workflow has been added :
+- `@Operation(summary, description)`;
+- **one** access annotation from `api/security` (`@PublicOperation`, `@AuthenticatedOperation`,
+  `@OwnerOrAdminOperation`, `@AdminOperation`…), which shows who may call it;
+- the error responses it can return, from `api/docs` (`@BadRequestResponse`, `@NotFoundResponse`…);
+- `@Schema` descriptions on the fields of its DTOs.
 
-- File : `.github/workflows/publish-api-docs.yml`
-- Trigger :
-    - manual (`workflow_dispatch`)
-    - pushes on `main`
+See [`src/main/java/org/titiplex/api/README.md`](src/main/java/org/titiplex/api/README.md).
 
-Ce workflow :
+## Publishing on GitHub Pages
 
-1. build + launches API,
-2. exports `http://127.0.0.1:8081/api/docs/openapi` towards `docs/openapi.json`,
-3. publishes the folder `docs/` on **GitHub Pages**.
+Workflow: [`.github/workflows/publish-api-docs.yml`](.github/workflows/publish-api-docs.yml).
 
-The published page is rendered by `docs/index.html` (Redoc), which reads `./openapi.json`.
+- **Runs on:** every push to `master`, or manually (`workflow_dispatch`).
+- **Steps:** builds and starts the API, exports `/api/docs/openapi` to `docs/openapi.json`, then
+  publishes the `docs/` folder.
+- The published page is `docs/index.html` (Redoc), which reads `./openapi.json`.
 
-## 3) Activation on the GitHub repo's side
+### One-time setup on GitHub
 
-In GitHub :
+1. **Settings → Pages → Source:** select **GitHub Actions**.
+2. Run the **Publish API docs** workflow once.
 
-1. `Settings` $\rightarrow$ `Pages`
-2. Source : **GitHub Actions**
-3. Launches **Publish API docs** workflow
-
-Then the documentation is available on the repo Pages' URL.
+The documentation is then available at the repository's Pages URL
+(https://titiplex.github.io/vignette/).
