@@ -43,6 +43,7 @@ import {useSceneImageUpload} from "../composables/useSceneImageUpload";
 import {useBackgroundAmbience} from "../composables/useBackgroundAmbience";
 import { useBookmarkCategories } from "../composables/useBookmarkCategories";
 import {draftAudioStorageKey} from "../utils/draftAudioStorage";
+import {downloadSceneSvg} from "../utils/sceneDownload";
 import ThumbnailCard from "../components/ThumbnailCard.vue";
 import StudioRecorderPanel from "../components/StudioRecorderPanel.vue";
 import VignetteMakerModal from "../components/VignetteMakerModal.vue";
@@ -735,6 +736,20 @@ async function replaceAudioContent(...args) {
   const result = await apiReplaceAudioContent(...args);
   markEditedIfPublished();
   return result;
+}
+
+const downloadingThumbId = ref(null);
+
+async function downloadThumbSvg(item) {
+  if (downloadingThumbId.value != null) return;
+  downloadingThumbId.value = item.id;
+  try {
+    await downloadSceneSvg(scenario.value?.title ?? "scenario", item, item._sceneNumber ?? (item.idx ?? 0) + 1);
+  } catch (e) {
+    toast.error(`Download failed: ${e?.message || "unknown error"}`);
+  } finally {
+    downloadingThumbId.value = null;
+  }
 }
 
 async function deleteThumbnail(...args) {
@@ -2819,6 +2834,18 @@ onBeforeUnmount(() => {
                           </div>
 
                           <div class="fiche-body">
+                            <button
+                                type="button"
+                                class="fiche-download"
+                                title="Download scene as SVG"
+                                aria-label="Download scene as SVG"
+                                :disabled="downloadingThumbId === item.id"
+                                @click.stop="downloadThumbSvg(item)"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+                                <path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+                              </svg>
+                            </button>
                             <button type="button" class="fiche-delete" title="Delete scene" aria-label="Delete scene" @click.stop="deleteThumb(item)">
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
                                 <polyline points="3 6 5 6 21 6"/>
