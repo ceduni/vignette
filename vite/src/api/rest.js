@@ -104,8 +104,9 @@ function buildErrorMessage(data, fallback) {
 export async function apiFetch(path, options = {}, meta = {}) {
     const allowRefresh = meta.allowRefresh ?? true;
 
+    const asBlob = meta.responseType === "blob";
     const headers = new Headers(options.headers || {});
-    headers.set("Accept", "application/json");
+    headers.set("Accept", asBlob ? "*/*" : "application/json");
 
     let body = options.body;
     const method = (options.method || "GET").toUpperCase();
@@ -147,13 +148,13 @@ export async function apiFetch(path, options = {}, meta = {}) {
         if (allowRefresh) {
             const refreshed = await requestAccessTokenRefresh();
             if (refreshed) {
-                return apiFetch(path, options, {allowRefresh: false});
+                return apiFetch(path, options, {...meta, allowRefresh: false});
             }
         }
 
         if (meta.allowAnonymousRetry ?? true) {
             setAccessToken(null);
-            return apiFetch(path, options, {allowRefresh: false, allowAnonymousRetry: false});
+            return apiFetch(path, options, {...meta, allowRefresh: false, allowAnonymousRetry: false});
         }
     }
 
@@ -175,6 +176,7 @@ export async function apiFetch(path, options = {}, meta = {}) {
     }
 
     if (res.status === 204) return null;
+    if (asBlob) return res.blob();
 
     const ct = res.headers.get("content-type") || "";
     if (ct.includes("application/json")) return res.json();

@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { fetchScenarioBackgroundAudios, fetchScenarioThumbnails, fetchThumbnailAudios } from "../../api/scenarios";
 import { buildApiUrl } from "../../api/rest";
 import { buildStoryboardItems, storyboardItemStyle } from "../../utils/scenarioStoryboard.js";
+import { downloadAllScenesSvg, downloadSceneSvg } from "../../utils/sceneDownload.js";
 
 const props = defineProps({
   scenario: { type: Object, default: null },
@@ -464,6 +465,33 @@ function onKeyDown(e) {
   else if (e.key === "f" || e.key === "F") toggleFullscreen();
 }
 
+const downloading = ref(false);
+const downloadError = ref("");
+
+const downloadLabel = computed(() => {
+  if (downloading.value) return "Downloading…";
+  if (viewMode.value === "scene") return "Download SVG";
+  return totalScenes.value > 1 ? "Download all (SVG)" : "Download SVG";
+});
+
+async function downloadImages() {
+  if (downloading.value || !thumbnails.value.length) return;
+  downloading.value = true;
+  downloadError.value = "";
+  const title = props.scenario?.title ?? "scenario";
+  try {
+    if (viewMode.value === "scene" && currentThumb.value) {
+      await downloadSceneSvg(title, currentThumb.value, currentIndex.value + 1);
+    } else {
+      await downloadAllScenesSvg(title, thumbnails.value);
+    }
+  } catch (e) {
+    downloadError.value = `Download failed: ${e?.message || "unknown error"}`;
+  } finally {
+    downloading.value = false;
+  }
+}
+
 function close() {
   stopAutoplay();
   if (isFullscreen.value) document.exitFullscreen?.();
@@ -547,6 +575,20 @@ onUnmounted(() => {
               </button>
 
               <button
+                v-if="thumbnails.length"
+                type="button"
+                class="reader-btn"
+                :disabled="downloading"
+                :title="viewMode === 'scene' ? 'Save this scene as SVG' : 'Save every scene as SVG'"
+                @click="downloadImages"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+                </svg>
+                {{ downloadLabel }}
+              </button>
+
+              <button
                 type="button"
                 class="reader-icon-btn"
                 :title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
@@ -567,6 +609,8 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
+
+          <p v-if="downloadError" class="reader-download-error" role="alert">{{ downloadError }}</p>
 
           <div v-if="viewMode === 'scene'" class="reader-progress-bar">
             <div
@@ -955,6 +999,16 @@ onUnmounted(() => {
   background: var(--primary-strong);
   border-color: var(--primary-strong);
   color: #fff;
+}
+
+.reader-btn:disabled { opacity: 0.6; cursor: progress; }
+
+.reader-download-error {
+  margin: 0;
+  padding: 0.5rem 1.5rem;
+  color: #b42318;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .reader-btn--primary {
