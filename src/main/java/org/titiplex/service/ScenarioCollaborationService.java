@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import static org.titiplex.security.AuthUtils.*;
+import static org.titiplex.util.AuthUtils.*;
 
 @Service
 public class ScenarioCollaborationService {

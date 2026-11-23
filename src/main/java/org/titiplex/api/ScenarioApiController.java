@@ -18,7 +18,7 @@ import org.titiplex.api.docs.ConflictResponse;
 import org.titiplex.api.docs.ForbiddenResponse;
 import org.titiplex.api.docs.NotFoundResponse;
 import org.titiplex.api.docs.UnauthorizedResponse;
-import org.titiplex.security.AuthUtils;
+import org.titiplex.util.AuthUtils;
 import org.springframework.web.bind.annotation.*;
 import org.titiplex.api.dto.*;
 import org.titiplex.api.security.OwnerOrAdminOperation;

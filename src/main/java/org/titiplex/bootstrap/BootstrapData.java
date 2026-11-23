@@ -1,5 +1,6 @@
 package org.titiplex.bootstrap;
 
+import org.titiplex.util.Text;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -78,8 +79,8 @@ public class BootstrapData implements ApplicationRunner {
             return;
         }
 
-        String username = trimmedOrEmpty(bootstrapAdminUsername);
-        String email = trimmedOrEmpty(bootstrapAdminEmail);
+        String username = Text.trimmedOrEmpty(bootstrapAdminUsername);
+        String email = Text.trimmedOrEmpty(bootstrapAdminEmail);
         String password = bootstrapAdminPassword == null ? "" : bootstrapAdminPassword;
 
         if (username.isEmpty() || email.isEmpty() || password.isBlank()) {
@@ -106,7 +107,4 @@ public class BootstrapData implements ApplicationRunner {
         }
     }
 
-    private static String trimmedOrEmpty(String value) {
-        return value == null ? "" : value.trim();
-    }
 }

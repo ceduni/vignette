@@ -1,5 +1,6 @@
 package org.titiplex.service;
 
+import org.titiplex.util.AuthUtils;
 import org.titiplex.util.Text;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,7 @@ import org.titiplex.api.dto.LanguageOptionDto;
 import org.titiplex.api.dto.LanguageRowDto;
 import org.titiplex.api.dto.UpdateLanguageRequest;
 import org.titiplex.persistence.model.AccreditationPermissionType;
+import org.titiplex.persistence.model.AccreditationScope;
 import org.titiplex.persistence.model.AccreditationScopeType;
 import org.titiplex.persistence.model.Language;
 import org.titiplex.persistence.model.User;
@@ -156,7 +158,7 @@ public class LanguageService {
         User user = userRepository.findByUsername(username).orElse(null);
         if (user == null) return false;
 
-        boolean isAdmin = user.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getName()));
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> AuthUtils.ROLE_ADMIN.equals(r.getName()));
         if (isAdmin) return true;
 
         Language language = repo.findById(languageId).orElse(null);
@@ -164,30 +166,24 @@ public class LanguageService {
 
         Long userId = user.getId();
 
-        boolean hasGlobalEdit = accreditationRepository.existsByUserIdAndPermissionTypeAndScopeTypeAndTargetId(
+        boolean hasGlobalEdit = accreditationRepository.hasGrant(
                 userId,
-                AccreditationPermissionType.LANGUAGE_EDIT,
-                AccreditationScopeType.GLOBAL,
-                null
+                new AccreditationScope(AccreditationPermissionType.LANGUAGE_EDIT, AccreditationScopeType.GLOBAL, null)
         );
         if (hasGlobalEdit) return true;
 
-        boolean hasDirectLanguageEdit = accreditationRepository.existsByUserIdAndPermissionTypeAndScopeTypeAndTargetId(
+        boolean hasDirectLanguageEdit = accreditationRepository.hasGrant(
                 userId,
-                AccreditationPermissionType.LANGUAGE_EDIT,
-                AccreditationScopeType.LANGUAGE,
-                languageId
+                new AccreditationScope(AccreditationPermissionType.LANGUAGE_EDIT, AccreditationScopeType.LANGUAGE, languageId)
         );
         if (hasDirectLanguageEdit) return true;
 
         String familyId = language.getFamilyId();
         if (familyId != null && !familyId.isBlank()) {
-            return accreditationRepository.existsByUserIdAndPermissionTypeAndScopeTypeAndTargetId(
-                    userId,
-                    AccreditationPermissionType.LANGUAGE_EDIT,
-                    AccreditationScopeType.LANGUAGE_FAMILY,
-                    familyId
-            );
+            return accreditationRepository.hasGrant(
+                userId,
+                new AccreditationScope(AccreditationPermissionType.LANGUAGE_EDIT, AccreditationScopeType.LANGUAGE_FAMILY, familyId)
+        );
         }
 
         return false;

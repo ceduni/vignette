@@ -1,4 +1,4 @@
-package org.titiplex.security;
+package org.titiplex.util;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;

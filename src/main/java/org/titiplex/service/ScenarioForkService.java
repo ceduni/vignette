@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import static org.titiplex.security.AuthUtils.requireAuthenticated;
+import static org.titiplex.util.AuthUtils.requireAuthenticated;
 
 /**
  * Copies of scenarios ("forks"): creating a copy of a published scenario, with its images

@@ -171,12 +171,9 @@ class CommunityServiceTest {
     void createRequest_rejectsDuplicatePendingRequest() {
         when(userRepository.existsById(12L)).thenReturn(true);
         when(languageRepository.existsById("chuj")).thenReturn(true);
-        when(requestRepo.existsByRequestedByUserIdAndPermissionTypeAndScopeTypeAndTargetIdAndStatus(
+        when(requestRepo.existsPending(
                 12L,
-                AccreditationPermissionType.LANGUAGE_EDIT,
-                AccreditationScopeType.LANGUAGE,
-                "chuj",
-                AccreditationRequestStatus.PENDING
+                new AccreditationScope(AccreditationPermissionType.LANGUAGE_EDIT, AccreditationScopeType.LANGUAGE, "chuj")
         )).thenReturn(true);
 
         IllegalArgumentException ex = assertThrows(
@@ -242,12 +239,9 @@ class CommunityServiceTest {
         family.setLevel("family");
 
         when(languageRepository.findById("mayan")).thenReturn(Optional.of(family));
-        when(requestRepo.existsByRequestedByUserIdAndPermissionTypeAndScopeTypeAndTargetIdAndStatus(
+        when(requestRepo.existsPending(
                 12L,
-                AccreditationPermissionType.LANGUAGE_EDIT,
-                AccreditationScopeType.LANGUAGE_FAMILY,
-                "mayan",
-                AccreditationRequestStatus.PENDING
+                new AccreditationScope(AccreditationPermissionType.LANGUAGE_EDIT, AccreditationScopeType.LANGUAGE_FAMILY, "mayan")
         )).thenReturn(false);
         when(requestRepo.save(any(AccreditationRequest.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -305,11 +299,9 @@ class CommunityServiceTest {
         existing.setScopeType(AccreditationScopeType.GLOBAL);
         existing.setTargetId(null);
 
-        when(accreditationRepo.findByUserIdAndPermissionTypeAndScopeTypeAndTargetId(
+        when(accreditationRepo.findGrant(
                 9L,
-                AccreditationPermissionType.LANGUAGE_EDIT,
-                AccreditationScopeType.GLOBAL,
-                null
+                new AccreditationScope(AccreditationPermissionType.LANGUAGE_EDIT, AccreditationScopeType.GLOBAL, null)
         )).thenReturn(Optional.of(existing));
 
         CommunityAccreditation result = service.grantAccreditation(
@@ -329,11 +321,9 @@ class CommunityServiceTest {
     void grantAccreditation_savesNewLanguageScopedGrant() {
         when(userRepository.existsById(9L)).thenReturn(true);
         when(languageRepository.existsById("chuj")).thenReturn(true);
-        when(accreditationRepo.findByUserIdAndPermissionTypeAndScopeTypeAndTargetId(
+        when(accreditationRepo.findGrant(
                 9L,
-                AccreditationPermissionType.LANGUAGE_EDIT,
-                AccreditationScopeType.LANGUAGE,
-                "chuj"
+                new AccreditationScope(AccreditationPermissionType.LANGUAGE_EDIT, AccreditationScopeType.LANGUAGE, "chuj")
         )).thenReturn(Optional.empty());
         when(accreditationRepo.save(any(CommunityAccreditation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -358,12 +348,9 @@ class CommunityServiceTest {
 
     @Test
     void createRequest_acceptsScenarioEdit_onScenarioScope() {
-        when(requestRepo.existsByRequestedByUserIdAndPermissionTypeAndScopeTypeAndTargetIdAndStatus(
+        when(requestRepo.existsPending(
                 1L,
-                AccreditationPermissionType.SCENARIO_EDIT,
-                AccreditationScopeType.SCENARIO,
-                "12",
-                AccreditationRequestStatus.PENDING
+                new AccreditationScope(AccreditationPermissionType.SCENARIO_EDIT, AccreditationScopeType.SCENARIO, "12")
         )).thenReturn(false);
 
         AccreditationRequest persisted = new AccreditationRequest();
@@ -396,12 +383,9 @@ class CommunityServiceTest {
 
     @Test
     void createRequest_acceptsScenarioModerate_onScenarioScope() {
-        when(requestRepo.existsByRequestedByUserIdAndPermissionTypeAndScopeTypeAndTargetIdAndStatus(
+        when(requestRepo.existsPending(
                 1L,
-                AccreditationPermissionType.SCENARIO_MODERATE,
-                AccreditationScopeType.SCENARIO,
-                "12",
-                AccreditationRequestStatus.PENDING
+                new AccreditationScope(AccreditationPermissionType.SCENARIO_MODERATE, AccreditationScopeType.SCENARIO, "12")
         )).thenReturn(false);
 
         AccreditationRequest persisted = new AccreditationRequest();
@@ -491,11 +475,9 @@ class CommunityServiceTest {
 
     @Test
     void grantAccreditation_acceptsScenarioEdit_onScenarioScope() {
-        when(accreditationRepo.findByUserIdAndPermissionTypeAndScopeTypeAndTargetId(
+        when(accreditationRepo.findGrant(
                 2L,
-                AccreditationPermissionType.SCENARIO_EDIT,
-                AccreditationScopeType.SCENARIO,
-                "12"
+                new AccreditationScope(AccreditationPermissionType.SCENARIO_EDIT, AccreditationScopeType.SCENARIO, "12")
         )).thenReturn(Optional.empty());
 
         CommunityAccreditation saved = new CommunityAccreditation();
@@ -543,10 +525,8 @@ class CommunityServiceTest {
 
     @Test
     void listRequests_acceptsScenarioEdit_onScenarioScope() {
-        when(requestRepo.findByPermissionTypeAndScopeTypeAndTargetIdOrderByCreatedAtDesc(
-                AccreditationPermissionType.SCENARIO_EDIT,
-                AccreditationScopeType.SCENARIO,
-                "12"
+        when(requestRepo.listByScope(
+                new AccreditationScope(AccreditationPermissionType.SCENARIO_EDIT, AccreditationScopeType.SCENARIO, "12")
         )).thenReturn(List.of());
         when(scenarioRepository.existsById(12L)).thenReturn(true);
 
@@ -557,10 +537,8 @@ class CommunityServiceTest {
         );
 
         assertNotNull(result);
-        verify(requestRepo).findByPermissionTypeAndScopeTypeAndTargetIdOrderByCreatedAtDesc(
-                AccreditationPermissionType.SCENARIO_EDIT,
-                AccreditationScopeType.SCENARIO,
-                "12"
+        verify(requestRepo).listByScope(
+                new AccreditationScope(AccreditationPermissionType.SCENARIO_EDIT, AccreditationScopeType.SCENARIO, "12")
         );
     }
 
@@ -585,10 +563,8 @@ class CommunityServiceTest {
 
     @Test
     void listAccreditations_acceptsScenarioModerate_onScenarioScope() {
-        when(accreditationRepo.findByPermissionTypeAndScopeTypeAndTargetIdOrderByGrantedAtDesc(
-                AccreditationPermissionType.SCENARIO_MODERATE,
-                AccreditationScopeType.SCENARIO,
-                "12"
+        when(accreditationRepo.listByScope(
+                new AccreditationScope(AccreditationPermissionType.SCENARIO_MODERATE, AccreditationScopeType.SCENARIO, "12")
         )).thenReturn(List.of());
         when(scenarioRepository.existsById(12L)).thenReturn(true);
 
@@ -599,10 +575,8 @@ class CommunityServiceTest {
         );
 
         assertNotNull(result);
-        verify(accreditationRepo).findByPermissionTypeAndScopeTypeAndTargetIdOrderByGrantedAtDesc(
-                AccreditationPermissionType.SCENARIO_MODERATE,
-                AccreditationScopeType.SCENARIO,
-                "12"
+        verify(accreditationRepo).listByScope(
+                new AccreditationScope(AccreditationPermissionType.SCENARIO_MODERATE, AccreditationScopeType.SCENARIO, "12")
         );
     }
 
@@ -618,11 +592,9 @@ class CommunityServiceTest {
 
         when(requestRepo.findById(55L)).thenReturn(Optional.of(pending));
         when(requestRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(accreditationRepo.findByUserIdAndPermissionTypeAndScopeTypeAndTargetId(
+        when(accreditationRepo.findGrant(
                 2L,
-                AccreditationPermissionType.SCENARIO_EDIT,
-                AccreditationScopeType.SCENARIO,
-                "12"
+                new AccreditationScope(AccreditationPermissionType.SCENARIO_EDIT, AccreditationScopeType.SCENARIO, "12")
         )).thenReturn(Optional.empty());
         when(accreditationRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.existsById(2L)).thenReturn(true);

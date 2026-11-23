@@ -1,4 +1,4 @@
-package org.titiplex.security;
+package org.titiplex.util;
 
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
@@ -6,7 +6,7 @@ import org.springframework.security.core.Authentication;
 
 /**
  * Single place for the small authentication checks used across services and controllers.
- * Use with a static import: {@code import static org.titiplex.security.AuthUtils.*;}
+ * Use with a static import: {@code import static org.titiplex.util.AuthUtils.*;}
  */
 public final class AuthUtils {
 

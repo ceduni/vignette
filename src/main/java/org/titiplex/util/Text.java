@@ -31,4 +31,18 @@ public final class Text {
     public static String optional(String value, int max, String field) {
         return requireMaxLength(blankToNull(value), max, field);
     }
+
+    /** Trimmed text, or an empty string when the value is null. */
+    public static String trimmedOrEmpty(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    /** First value that is neither null nor blank, or an empty string when there is none. */
+    public static String firstNonBlank(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (value != null && !value.isBlank()) return value;
+        }
+        return "";
+    }
 }

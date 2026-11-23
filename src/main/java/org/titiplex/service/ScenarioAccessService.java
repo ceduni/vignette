@@ -17,7 +17,7 @@ import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import static org.titiplex.security.AuthUtils.*;
+import static org.titiplex.util.AuthUtils.*;
 
 /**
  * Single source of truth for who may view, edit, publish or delete a scenario

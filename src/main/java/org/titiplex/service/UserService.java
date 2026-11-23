@@ -1,5 +1,6 @@
 package org.titiplex.service;
 
+import org.titiplex.util.AuthUtils;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -56,7 +57,7 @@ public class UserService {
      * @return true if the user was not admin before
      */
     public boolean grantAdminRole(User user) {
-        boolean wasAdmin = hasRole(user, "ROLE_ADMIN");
+        boolean wasAdmin = hasRole(user, AuthUtils.ROLE_ADMIN);
         boolean changed = false;
         if (!wasAdmin) {
             user.getRoles().add(roles.getAdminRole());
@@ -138,7 +139,7 @@ public class UserService {
             throw new IllegalArgumentException("Roles are required");
         }
 
-        if (roleNames.contains("ROLE_ADMIN")) {
+        if (roleNames.contains(AuthUtils.ROLE_ADMIN)) {
             throw new IllegalArgumentException("ROLE_ADMIN cannot be modified from this endpoint");
         }
 

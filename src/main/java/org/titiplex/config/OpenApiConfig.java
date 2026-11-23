@@ -1,5 +1,6 @@
 package org.titiplex.config;
 
+import org.titiplex.util.Text;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -151,7 +152,7 @@ public class OpenApiConfig {
 
     private static String primarySummary(PathItem pathItem) {
         return readOperations(pathItem).stream()
-                .map(op -> firstNonBlank(op.getSummary(), op.getOperationId()))
+                .map(op -> Text.firstNonBlank(op.getSummary(), op.getOperationId()))
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
@@ -164,19 +165,6 @@ public class OpenApiConfig {
         return operations == null ? List.of() : operations;
     }
 
-    private static String firstNonBlank(String... values) {
-        if (values == null) {
-            return "";
-        }
-
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-
-        return "";
-    }
 
 
     @Bean

@@ -10,7 +10,7 @@ import org.titiplex.persistence.repo.LanguageFollowRepository;
 
 import java.util.List;
 
-import static org.titiplex.security.AuthUtils.*;
+import static org.titiplex.util.AuthUtils.*;
 
 @Service
 public class LanguageFollowService {

@@ -1,5 +1,6 @@
 package org.titiplex.service;
 
+import org.titiplex.util.Text;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -61,7 +62,7 @@ public class CountryGeoService {
                 continue;
             }
 
-            String name = firstNonBlank(geometry.path("properties").path("name").asText(null), meta.name());
+            String name = Text.firstNonBlank(geometry.path("properties").path("name").asText(null), meta.name());
             countryShapes.add(new CountryShape(meta.isoA3(), name, polygons));
         }
 
@@ -123,14 +124,6 @@ public class CountryGeoService {
         }
     }
 
-    private static String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "";
-    }
 
     private record CountryMeta(String isoA3, String name) {
     }

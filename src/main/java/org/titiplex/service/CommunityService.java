@@ -9,8 +9,8 @@ import org.titiplex.persistence.repo.*;
 import java.time.Instant;
 import java.util.List;
 
-import static org.titiplex.security.AuthUtils.authenticatedUsername;
-import static org.titiplex.security.AuthUtils.isAdmin;
+import static org.titiplex.util.AuthUtils.authenticatedUsername;
+import static org.titiplex.util.AuthUtils.isAdmin;
 
 @Service
 public class CommunityService {
@@ -96,12 +96,9 @@ public class CommunityService {
         validateAccreditationTarget(scopeType, targetId);
         validatePermissionScope(permissionType, scopeType);
 
-        boolean pendingExists = requestRepo.existsByRequestedByUserIdAndPermissionTypeAndScopeTypeAndTargetIdAndStatus(
+        boolean pendingExists = requestRepo.existsPending(
                 requesterId,
-                permissionType,
-                scopeType,
-                normalizeTargetId(scopeType, targetId),
-                AccreditationRequestStatus.PENDING
+                new AccreditationScope(permissionType, scopeType, normalizeTargetId(scopeType, targetId))
         );
         if (pendingExists) throw new IllegalArgumentException("A pending request already exists");
 
@@ -123,13 +120,8 @@ public class CommunityService {
         validateAccreditationTarget(scopeType, targetId);
         validatePermissionScope(permissionType, scopeType);
 
-        String normalizedTargetId = normalizeTargetId(scopeType, targetId);
-        if (scopeType == AccreditationScopeType.GLOBAL) {
-            return requestRepo.findByPermissionTypeAndScopeTypeOrderByCreatedAtDesc(permissionType, scopeType);
-        }
-        return requestRepo.findByPermissionTypeAndScopeTypeAndTargetIdOrderByCreatedAtDesc(
-                permissionType, scopeType, normalizedTargetId
-        );
+        return requestRepo.listByScope(
+                new AccreditationScope(permissionType, scopeType, normalizeTargetId(scopeType, targetId)));
     }
 
     public AccreditationRequest getRequest(Long requestId) {
@@ -178,7 +170,7 @@ public class CommunityService {
         String normalizedTargetId = normalizeTargetId(scopeType, targetId);
 
         CommunityAccreditation existing = accreditationRepo
-                .findByUserIdAndPermissionTypeAndScopeTypeAndTargetId(userId, permissionType, scopeType, normalizedTargetId)
+                .findGrant(userId, new AccreditationScope(permissionType, scopeType, normalizedTargetId))
                 .orElse(null);
         if (existing != null) return existing;
 
@@ -200,13 +192,8 @@ public class CommunityService {
         validateAccreditationTarget(scopeType, targetId);
         validatePermissionScope(permissionType, scopeType);
 
-        String normalizedTargetId = normalizeTargetId(scopeType, targetId);
-        if (scopeType == AccreditationScopeType.GLOBAL) {
-            return accreditationRepo.findByPermissionTypeAndScopeTypeOrderByGrantedAtDesc(permissionType, scopeType);
-        }
-        return accreditationRepo.findByPermissionTypeAndScopeTypeAndTargetIdOrderByGrantedAtDesc(
-                permissionType, scopeType, normalizedTargetId
-        );
+        return accreditationRepo.listByScope(
+                new AccreditationScope(permissionType, scopeType, normalizeTargetId(scopeType, targetId)));
     }
 
     /**

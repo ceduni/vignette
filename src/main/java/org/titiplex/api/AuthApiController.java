@@ -18,7 +18,7 @@ import org.titiplex.api.docs.BadRequestResponse;
 import org.titiplex.api.docs.ConflictResponse;
 import org.titiplex.api.docs.NotFoundResponse;
 import org.titiplex.api.docs.UnauthorizedResponse;
-import org.titiplex.security.AuthUtils;
+import org.titiplex.util.AuthUtils;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;

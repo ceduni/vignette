@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.titiplex.security.AuthUtils.requireAuthenticated;
+import static org.titiplex.util.AuthUtils.requireAuthenticated;
 
 /**
  * Decides who gets notified of what, stores the notifications, and lets users read and

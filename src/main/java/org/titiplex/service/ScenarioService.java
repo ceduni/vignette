@@ -29,9 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import static org.titiplex.security.AuthUtils.authenticatedUsername;
-import static org.titiplex.security.AuthUtils.isAdmin;
-import static org.titiplex.security.AuthUtils.requireAuthenticated;
+import static org.titiplex.util.AuthUtils.authenticatedUsername;
+import static org.titiplex.util.AuthUtils.isAdmin;
+import static org.titiplex.util.AuthUtils.requireAuthenticated;
 
 /**
  * Scenarios themselves: creating them, finding and listing them, editing their description
