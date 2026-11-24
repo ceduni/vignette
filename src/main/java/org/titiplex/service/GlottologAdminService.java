@@ -95,16 +95,12 @@ public class GlottologAdminService {
         settings.setUpdatedByUsername(username);
         settingsRepository.save(settings);
 
-        GlottologUpdateRequestDto enqueued = null;
         if (Boolean.TRUE.equals(request.verifyImmediately())) {
-            enqueued = createManualUpdateRequest(username);
+            // Side-effect only: enqueue a manual update; the returned DTO is unchanged.
+            createManualUpdateRequest(username);
         }
 
-        GlottologAdminSettingsDto dto = toSettingsDto(settings, loadPipelineState());
-        if (enqueued != null) {
-            // DTO unchanged; caller can also hit /update/request. Kept for side-effect only.
-        }
-        return dto;
+        return toSettingsDto(settings, loadPipelineState());
     }
 
     @Transactional

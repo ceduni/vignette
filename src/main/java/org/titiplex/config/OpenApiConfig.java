@@ -153,7 +153,6 @@ public class OpenApiConfig {
     private static String primarySummary(PathItem pathItem) {
         return readOperations(pathItem).stream()
                 .map(op -> Text.firstNonBlank(op.getSummary(), op.getOperationId()))
-                .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
                 .min(String.CASE_INSENSITIVE_ORDER)

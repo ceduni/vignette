@@ -370,7 +370,7 @@ public class AudioService {
                 a.getSourceUrl(),
                 Objects.equals(a.getId(), activeAudioId),
                 a.getBackgroundVolume() == null ? 22 : a.getBackgroundVolume(),
-                a.getBackgroundLoop() == null ? true : a.getBackgroundLoop()
+                a.getBackgroundLoop() == null || a.getBackgroundLoop()
         );
     }
 }

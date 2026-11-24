@@ -14,11 +14,8 @@ public class OpenApiAccessCustomizer implements OperationCustomizer {
 
     @Override
     public Operation customize(Operation operation, HandlerMethod handlerMethod) {
-        ApiAccess access = findAccess(handlerMethod);
-
-        if (access == null) {
-            access = new DefaultPublicAccess();
-        }
+        ApiAccess annotation = findAccess(handlerMethod);
+        AccessSpec access = annotation == null ? AccessSpec.DEFAULT_PUBLIC : AccessSpec.of(annotation);
 
         applySecurity(operation, access);
         applyDescription(operation, access);
@@ -36,7 +33,7 @@ public class OpenApiAccessCustomizer implements OperationCustomizer {
         return AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(), ApiAccess.class);
     }
 
-    private void applySecurity(Operation operation, ApiAccess access) {
+    private void applySecurity(Operation operation, AccessSpec access) {
         if (access.level() == ApiAccessLevel.PUBLIC) {
             operation.setSecurity(java.util.List.of());
             return;
@@ -47,7 +44,7 @@ public class OpenApiAccessCustomizer implements OperationCustomizer {
         }
     }
 
-    private void applyDescription(Operation operation, ApiAccess access) {
+    private void applyDescription(Operation operation, AccessSpec access) {
         String prefix = switch (access.level()) {
             case PUBLIC -> "Access: Public endpoint.";
             case AUTHENTICATED -> "Access: Authenticated users only.";
@@ -70,7 +67,7 @@ public class OpenApiAccessCustomizer implements OperationCustomizer {
         operation.setDescription(out.toString());
     }
 
-    private void applyResponses(Operation operation, ApiAccess access) {
+    private void applyResponses(Operation operation, AccessSpec access) {
         if (operation.getResponses() == null) {
             operation.setResponses(new io.swagger.v3.oas.models.responses.ApiResponses());
         }
@@ -89,7 +86,7 @@ public class OpenApiAccessCustomizer implements OperationCustomizer {
         }
     }
 
-    private void applyExtensions(Operation operation, ApiAccess access) {
+    private void applyExtensions(Operation operation, AccessSpec access) {
         Map<String, Object> ext = operation.getExtensions();
         if (ext == null) {
             ext = new LinkedHashMap<>();
@@ -105,25 +102,11 @@ public class OpenApiAccessCustomizer implements OperationCustomizer {
         }
     }
 
-    private static final class DefaultPublicAccess implements ApiAccess {
-        @Override
-        public ApiAccessLevel level() {
-            return ApiAccessLevel.PUBLIC;
-        }
+    private record AccessSpec(ApiAccessLevel level, String rule, String ownerResource) {
+        static final AccessSpec DEFAULT_PUBLIC = new AccessSpec(ApiAccessLevel.PUBLIC, "Public endpoint.", "");
 
-        @Override
-        public String rule() {
-            return "Public endpoint.";
-        }
-
-        @Override
-        public String ownerResource() {
-            return "";
-        }
-
-        @Override
-        public Class<ApiAccess> annotationType() {
-            return ApiAccess.class;
+        static AccessSpec of(ApiAccess annotation) {
+            return new AccessSpec(annotation.level(), annotation.rule(), annotation.ownerResource());
         }
     }
 }

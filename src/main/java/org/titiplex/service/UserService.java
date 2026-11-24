@@ -127,7 +127,7 @@ public class UserService {
         if (query == null || query.isBlank()) return List.of();
         return users.findTop10ByUsernameContainingIgnoreCaseOrderByUsernameAsc(query.trim())
                 .stream()
-                .filter(u -> excludeUsername == null || !u.getUsername().equalsIgnoreCase(excludeUsername))
+                .filter(u -> !u.getUsername().equalsIgnoreCase(excludeUsername))
                 .toList();
     }
 
