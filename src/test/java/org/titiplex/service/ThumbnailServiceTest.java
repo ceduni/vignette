@@ -124,6 +124,28 @@ class ThumbnailServiceTest {
     }
 
     @Test
+    void save_svgVignette_readsSizeFromDrawingAndKeepsSceneJson() throws Exception {
+        Scenario scenario = new Scenario();
+        scenario.setId(5L);
+        User user = new User();
+        user.setId(7L);
+        StoredFile stored = new StoredFile("thumbnails/scenario-5/ab/cd/hash.svg", "hash", 90L, "image/svg+xml", "v.svg");
+        when(storage.storeThumbnail(image, 5L)).thenReturn(stored);
+        when(thumbnailRepository.maxIdx(5L)).thenReturn(0);
+        when(image.getBytes()).thenReturn(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 700 500\" width=\"700\" height=\"500\"/>".getBytes());
+        when(thumbnailRepository.save(any(Thumbnail.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Thumbnail result = thumbnailService.save("scene", image, scenario, user, "{\"people\":[]}");
+
+        assertEquals("image/svg+xml", result.getContentType());
+        assertEquals("thumbnails/scenario-5/ab/cd/hash.svg", result.getStoragePath());
+        assertEquals(700, result.getImageWidth());
+        assertEquals(500, result.getImageHeight());
+        assertEquals("{\"people\":[]}", result.getVignetteSceneJson());
+    }
+
+    @Test
     void listByScenarioId_delegatesToRepository() {
         Thumbnail thumbnail = new Thumbnail();
         thumbnail.setTitle("t1");

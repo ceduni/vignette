@@ -17,6 +17,8 @@ import org.titiplex.service.storage.MediaContent;
 import org.titiplex.service.storage.StoredFile;
 
 
+import org.titiplex.util.SvgSanitizer;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
@@ -130,6 +132,14 @@ public class ThumbnailService {
     }
 
     private static void readDimensions(MultipartFile image, Thumbnail thumbnail) throws Exception {
+        if ("image/svg+xml".equals(thumbnail.getContentType())) {
+            SvgSanitizer.Size size = SvgSanitizer.size(image.getBytes());
+            if (size != null) {
+                thumbnail.setImageWidth(size.width());
+                thumbnail.setImageHeight(size.height());
+            }
+            return;
+        }
         try (InputStream inputStream = image.getInputStream()) {
             BufferedImage bufferedImage = ImageIO.read(inputStream);
             if (bufferedImage != null) {

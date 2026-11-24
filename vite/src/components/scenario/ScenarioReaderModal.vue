@@ -4,6 +4,8 @@ import { fetchScenarioBackgroundAudios, fetchScenarioThumbnails, fetchThumbnailA
 import { buildApiUrl } from "../../api/rest";
 import { buildStoryboardItems, storyboardItemStyle } from "../../utils/scenarioStoryboard.js";
 import { downloadAllScenesSvg, downloadSceneSvg } from "../../utils/sceneDownload.js";
+import { downloadSceneZip, downloadScenarioZip } from "../../utils/scenarioExport.js";
+import DownloadMenu from "../ui/DownloadMenu.vue";
 
 const props = defineProps({
   scenario: { type: Object, default: null },
@@ -468,19 +470,21 @@ function onKeyDown(e) {
 const downloading = ref(false);
 const downloadError = ref("");
 
-const downloadLabel = computed(() => {
-  if (downloading.value) return "Downloading…";
-  if (viewMode.value === "scene") return "Download SVG";
-  return totalScenes.value > 1 ? "Download all (SVG)" : "Download SVG";
-});
+const downloadLabel = computed(() =>
+  viewMode.value === "scene" || totalScenes.value <= 1 ? "Download" : "Download all");
 
-async function downloadImages() {
+async function download(format) {
   if (downloading.value || !thumbnails.value.length) return;
   downloading.value = true;
   downloadError.value = "";
-  const title = props.scenario?.title ?? "scenario";
+  const scenario = props.scenario;
+  const title = scenario?.title ?? "scenario";
+  const single = viewMode.value === "scene" && currentThumb.value;
   try {
-    if (viewMode.value === "scene" && currentThumb.value) {
+    if (format === "zip") {
+      if (single) await downloadSceneZip(scenario, currentThumb.value, currentIndex.value + 1);
+      else await downloadScenarioZip(scenario, thumbnails.value);
+    } else if (single) {
       await downloadSceneSvg(title, currentThumb.value, currentIndex.value + 1);
     } else {
       await downloadAllScenesSvg(title, thumbnails.value);
@@ -574,19 +578,15 @@ onUnmounted(() => {
                 {{ isAutoplay ? "Stop" : "Autoplay" }}
               </button>
 
-              <button
+              <DownloadMenu
                 v-if="thumbnails.length"
-                type="button"
-                class="reader-btn"
-                :disabled="downloading"
-                :title="viewMode === 'scene' ? 'Save this scene as SVG' : 'Save every scene as SVG'"
-                @click="downloadImages"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-                </svg>
-                {{ downloadLabel }}
-              </button>
+                button-class="reader-btn"
+                :label="downloadLabel"
+                :busy="downloading"
+                :title="viewMode === 'scene' ? 'Download this scene' : 'Download every scene'"
+                @svg="download('svg')"
+                @zip="download('zip')"
+              />
 
               <button
                 type="button"

@@ -3,6 +3,7 @@ import {onMounted, onUnmounted, ref} from "vue";
 import {useToast} from "../composables/useToast";
 import {deleteScene, fetchMyScenes, saveScene, updateScene} from "../api/vignetteScenes";
 import {SCENES, drawScene} from "../utils/vignetteBackgrounds";
+import {buildVignetteSvg, renderBackground} from "../utils/sceneDownload";
 import {
   SKINS, HAIR_COLS, CLOTH_COLS, MOUTHS, MOUTH_LBL, EYES, EYES_LBL, ALL_HAIRS, HAIR_LBL,
   CHARS, POSES, BUBBLE_THEMES, ageScale, escXML, personSVG, bubbleSVG,
@@ -38,15 +39,13 @@ function addBubbleFn() { maker?.addBubble(); }
 
 async function insertIntoFrame() {
   if (!maker) return;
-  maker.exportPNG(async (dataUrl) => {
-    try {
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      emit("insert", blob, maker.getState());
-    } catch {
-      toast.error("Export failed. Please try again.");
-    }
-  });
+  try {
+    const svg = maker.exportSVG();
+    if (!svg) throw new Error("empty export");
+    emit("insert", new Blob([svg], {type: "image/svg+xml"}), maker.getState());
+  } catch {
+    toast.error("Export failed. Please try again.");
+  }
 }
 
 async function openScenesPanel() {
@@ -486,30 +485,18 @@ ${sl("Size","scale",.5,2,p.scale,1)}
   buildLeftBar();
   setTimeout(()=>{render();flushSnapshot();updateHistBtns();},100);
 
-  function exportPNG(callback) {
-    const stageEl=$("vmStage"); if(!stageEl)return;
-    const W=stageEl.clientWidth||700, H=stageEl.clientHeight||500, S=2;
-    const out=document.createElement("canvas"); out.width=W*S; out.height=H*S;
-    const ctx=out.getContext("2d");
-    const bgC=document.createElement("canvas"); bgC.width=W*S; bgC.height=H*S;
-    drawScene(currentSceneId,bgC,true); ctx.drawImage(bgC,0,0);
-    if(!people.length){callback(out.toDataURL("image/png"));return;}
+  function exportSVG() {
+    const stageEl=$("vmStage"); if(!stageEl)return null;
+    const W=Math.round(stageEl.clientWidth||700), H=Math.round(stageEl.clientHeight||500);
     const sorted=[...people].sort((a,b)=>a.z-b.z);
-    const svgStr=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W*S}" height="${H*S}">`
-      +sorted.map(p=>personSVG(p,false)).join("")
-      +sorted.map(p=>bubbleSVG(p,false)).join("")
-      +"</svg>";
-    const img=new Image();
-    img.onload=()=>{ctx.drawImage(img,0,0,W*S,H*S);callback(out.toDataURL("image/png"));};
-    img.onerror=()=>callback(null);
-    img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svgStr);
+    return buildVignetteSvg({sceneId:currentSceneId,people:sorted}, W, H, renderBackground(currentSceneId, W, H));
   }
 
   return {
     undo, redo,
     clear() { flushSnapshot(); people=[]; selected=null; renderP(); buildPanel(); },
     addBubble,
-    exportPNG,
+    exportSVG,
     getState() { return {sceneId:currentSceneId,people:JSON.parse(JSON.stringify(people)),nextId}; },
     setState(state) {
       currentSceneId=state.sceneId||currentSceneId;

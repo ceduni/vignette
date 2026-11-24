@@ -69,7 +69,7 @@ public class VignetteApiController {
             @Parameter(description = "Vignette Maker drawing (JSON object)", required = true)
             @RequestParam String sceneJson,
 
-            @Parameter(description = "Exported image of the vignette (PNG)", required = true)
+            @Parameter(description = "Exported image of the vignette (SVG)", required = true)
             @RequestPart("image") MultipartFile image,
 
             @Parameter(hidden = true) Authentication auth
@@ -126,7 +126,7 @@ public class VignetteApiController {
             @Parameter(description = "Vignette Maker drawing (JSON object)", required = true)
             @RequestParam String sceneJson,
 
-            @Parameter(description = "New exported image of the vignette (PNG)", required = true)
+            @Parameter(description = "New exported image of the vignette (SVG)", required = true)
             @RequestPart("image") MultipartFile image,
 
             @Parameter(hidden = true) Authentication auth

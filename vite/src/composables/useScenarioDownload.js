@@ -1,14 +1,14 @@
 import {ref} from "vue";
 import {fetchScenarioThumbnails} from "../api/scenarios";
 import {downloadAllScenesSvg} from "../utils/sceneDownload";
+import {downloadScenarioZip} from "../utils/scenarioExport";
 import {useToast} from "./useToast";
 
-/** Downloads every scene of a scenario as SVG files, from a scenario list card. */
-export function useScenarioSvgDownload() {
+export function useScenarioDownload() {
     const toast = useToast();
     const downloadingScenarioId = ref(null);
 
-    async function downloadScenarioSvg(scenario) {
+    async function downloadScenario(scenario, format) {
         if (!scenario?.id || downloadingScenarioId.value != null) return;
         downloadingScenarioId.value = scenario.id;
         try {
@@ -18,7 +18,8 @@ export function useScenarioSvgDownload() {
                 return;
             }
             const sorted = [...thumbs].sort((a, b) => (a.idx ?? a.id) - (b.idx ?? b.id));
-            await downloadAllScenesSvg(scenario.title ?? "scenario", sorted);
+            if (format === "zip") await downloadScenarioZip(scenario, sorted);
+            else await downloadAllScenesSvg(scenario.title ?? "scenario", sorted);
         } catch (e) {
             toast.error(`Download failed: ${e?.message || "unknown error"}`);
         } finally {
@@ -26,5 +27,5 @@ export function useScenarioSvgDownload() {
         }
     }
 
-    return {downloadingScenarioId, downloadScenarioSvg};
+    return {downloadingScenarioId, downloadScenario};
 }

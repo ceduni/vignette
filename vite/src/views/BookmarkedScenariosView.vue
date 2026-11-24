@@ -7,7 +7,8 @@ import { useScenarioInteractions } from "../composables/useScenarioInteractions"
 import { useBookmarkCategories, SUGGESTED_CATEGORIES } from "../composables/useBookmarkCategories";
 import { useScenarioReader } from "../composables/useScenarioReader";
 import { useAuth } from "../composables/useAuth";
-import {useScenarioSvgDownload} from "../composables/useScenarioSvgDownload";
+import {useScenarioDownload} from "../composables/useScenarioDownload";
+import DownloadMenu from "../components/ui/DownloadMenu.vue";
 import BaseLoader from "../components/ui/BaseLoader.vue";
 import ScenarioReaderModal from "../components/scenario/ScenarioReaderModal.vue";
 import ScenarioDiscussionModal from "../components/community/ScenarioDiscussionModal.vue";
@@ -19,7 +20,7 @@ const { openReader, activeScenario, closeReader } = useScenarioReader();
 const { isAuthenticated, currentUser } = useAuth();
 const router = useRouter();
 
-const {downloadingScenarioId, downloadScenarioSvg} = useScenarioSvgDownload();
+const {downloadingScenarioId, downloadScenario} = useScenarioDownload();
 const copyingId = ref(null);
 const copyError = ref("");
 const copyTarget = ref(null);
@@ -425,18 +426,14 @@ onMounted(load);
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>
               </button>
-              <button
-                type="button"
-                class="bk-card__icon-btn"
-                :disabled="downloadingScenarioId === s.id"
-                :title="downloadingScenarioId === s.id ? 'Downloading…' : 'Download scenes (SVG)'"
-                :aria-label="downloadingScenarioId === s.id ? 'Downloading…' : 'Download scenes (SVG)'"
-                @click="downloadScenarioSvg(s)"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-                </svg>
-              </button>
+              <DownloadMenu
+                button-class="bk-card__icon-btn"
+                title="Download scenario"
+                placement="up"
+                :busy="downloadingScenarioId === s.id"
+                @svg="downloadScenario(s, 'svg')"
+                @zip="downloadScenario(s, 'zip')"
+              />
               <button
                 type="button"
                 class="bk-card__icon-btn"

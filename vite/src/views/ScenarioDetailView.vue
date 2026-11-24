@@ -44,6 +44,8 @@ import {useBackgroundAmbience} from "../composables/useBackgroundAmbience";
 import { useBookmarkCategories } from "../composables/useBookmarkCategories";
 import {draftAudioStorageKey} from "../utils/draftAudioStorage";
 import {downloadSceneSvg} from "../utils/sceneDownload";
+import {downloadSceneZip} from "../utils/scenarioExport";
+import DownloadMenu from "../components/ui/DownloadMenu.vue";
 import ThumbnailCard from "../components/ThumbnailCard.vue";
 import StudioRecorderPanel from "../components/StudioRecorderPanel.vue";
 import VignetteMakerModal from "../components/VignetteMakerModal.vue";
@@ -76,7 +78,7 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
-const {currentUser, isAuthenticated, loadMe} = useAuth();
+const {currentUser, isAuthenticated, isAdmin, loadMe} = useAuth();
 const toast = useToast();
 const {activeScenario: readerScenario, openReader, closeReader} = useScenarioReader();
 const { isLiked, toggleLike, isBookmarked, toggleBookmark, fetchStatus } = useScenarioInteractions();
@@ -142,6 +144,7 @@ const scenarioIdRef = computed(() => props.id);
 const authorUsernameRef = computed(() => scenario.value?.authorUsername ?? "");
 const collab = useCollaborators(scenarioIdRef, {authorUsername: authorUsernameRef});
 const canEditScenario = computed(() => isOwner.value || collab.canEdit.value);
+const canDeleteScenario = computed(() => isOwner.value || isAdmin.value);
 const hasAnyRole = computed(() => isOwner.value || !!collab.myRole.value);
 
 function openCollaboratorsPanel() {
@@ -740,11 +743,13 @@ async function replaceAudioContent(...args) {
 
 const downloadingThumbId = ref(null);
 
-async function downloadThumbSvg(item) {
+async function downloadThumb(item, format) {
   if (downloadingThumbId.value != null) return;
   downloadingThumbId.value = item.id;
+  const position = item._sceneNumber ?? (item.idx ?? 0) + 1;
   try {
-    await downloadSceneSvg(scenario.value?.title ?? "scenario", item, item._sceneNumber ?? (item.idx ?? 0) + 1);
+    if (format === "zip") await downloadSceneZip(scenario.value, item, position);
+    else await downloadSceneSvg(scenario.value?.title ?? "scenario", item, position);
   } catch (e) {
     toast.error(`Download failed: ${e?.message || "unknown error"}`);
   } finally {
@@ -2126,7 +2131,7 @@ onBeforeUnmount(() => {
                     </p>
                   </div>
 
-                  <div v-if="isOwner" class="ss-danger">
+                  <div v-if="canDeleteScenario" class="ss-danger">
                     <p class="ss-section__label">Danger zone</p>
                     <button
                         type="button"
@@ -2356,7 +2361,7 @@ onBeforeUnmount(() => {
                       </svg>
                     </button>
                     <button
-                        v-if="canEditScenario && storyboardView === 'global'"
+                        v-if="(canEditScenario || canDeleteScenario) && storyboardView === 'global'"
                         type="button"
                         class="vg-icon-btn"
                         title="Storyboard settings"
@@ -2834,18 +2839,14 @@ onBeforeUnmount(() => {
                           </div>
 
                           <div class="fiche-body">
-                            <button
-                                type="button"
-                                class="fiche-download"
-                                title="Download scene as SVG"
-                                aria-label="Download scene as SVG"
-                                :disabled="downloadingThumbId === item.id"
-                                @click.stop="downloadThumbSvg(item)"
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
-                                <path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-                              </svg>
-                            </button>
+                            <DownloadMenu
+                                class="fiche-download-wrap"
+                                button-class="fiche-download"
+                                title="Download scene"
+                                :busy="downloadingThumbId === item.id"
+                                @svg="downloadThumb(item, 'svg')"
+                                @zip="downloadThumb(item, 'zip')"
+                            />
                             <button type="button" class="fiche-delete" title="Delete scene" aria-label="Delete scene" @click.stop="deleteThumb(item)">
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
                                 <polyline points="3 6 5 6 21 6"/>

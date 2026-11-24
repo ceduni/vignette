@@ -70,6 +70,42 @@ public final class SvgSanitizer {
         return serialize(document);
     }
 
+    public record Size(int width, int height) {
+    }
+
+    private static final Pattern LENGTH = Pattern.compile("^\\s*([0-9]*\\.?[0-9]+)\\s*(px)?\\s*$");
+
+    public static Size size(byte[] svg) {
+        Element root;
+        try {
+            root = parse(svg).getDocumentElement();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        if (!"svg".equals(root.getLocalName()) || !SVG_NS.equals(root.getNamespaceURI())) {
+            return null;
+        }
+        Integer width = length(root.getAttribute("width"));
+        Integer height = length(root.getAttribute("height"));
+        if (width != null && height != null) {
+            return new Size(width, height);
+        }
+        String[] box = root.getAttribute("viewBox").trim().split("[\\s,]+");
+        if (box.length == 4) {
+            Integer w = length(box[2]);
+            Integer h = length(box[3]);
+            if (w != null && h != null) return new Size(w, h);
+        }
+        return null;
+    }
+
+    private static Integer length(String value) {
+        Matcher matcher = LENGTH.matcher(value == null ? "" : value);
+        if (!matcher.matches()) return null;
+        long rounded = Math.round(Double.parseDouble(matcher.group(1)));
+        return rounded > 0 && rounded <= 100_000 ? (int) rounded : null;
+    }
+
     // --- parsing / writing ---------------------------------------------------
 
     private static Document parse(byte[] svg) {

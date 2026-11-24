@@ -39,7 +39,7 @@ class VignetteApiControllerWebMvcTest {
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
-    private final MockMultipartFile image = new MockMultipartFile("image", "v.png", "image/png", new byte[]{1, 2, 3});
+    private final MockMultipartFile image = new MockMultipartFile("image", "v.svg", "image/svg+xml", "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"700\" height=\"500\"/>".getBytes());
 
     private static Thumbnail vignette() {
         Thumbnail t = new Thumbnail();

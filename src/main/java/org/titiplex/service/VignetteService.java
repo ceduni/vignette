@@ -12,6 +12,7 @@ import org.titiplex.persistence.model.Thumbnail;
 import org.titiplex.persistence.model.User;
 
 import java.util.NoSuchElementException;
+import java.util.Locale;
 
 /**
  * Vignette Maker scenes saved into a scenario: the exported image becomes a scene image
@@ -89,9 +90,16 @@ public class VignetteService {
         return saved;
     }
 
+    static final String VIGNETTE_IMAGE_TYPE = "image/svg+xml";
+
     private static void requireImage(MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw new IllegalArgumentException("Image is required");
+        }
+        String type = image.getContentType() == null ? ""
+                : image.getContentType().split(";")[0].trim().toLowerCase(Locale.ROOT);
+        if (!VIGNETTE_IMAGE_TYPE.equals(type)) {
+            throw new IllegalArgumentException("A vignette must be an SVG image");
         }
     }
 

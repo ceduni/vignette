@@ -55,6 +55,8 @@ const apiMocks = vi.hoisted(() => ({
     toastInfo: vi.fn(),
 }));
 
+const authState = vi.hoisted(() => ({isAdmin: {value: false}}));
+
 const autoplayApi = vi.hoisted(() => ({
     currentIndex: {value: -1},
     currentItem: {value: null},
@@ -126,6 +128,7 @@ vi.mock("@/composables/useAuth", () => ({
             },
         },
         isAuthenticated: {value: true},
+        isAdmin: authState.isAdmin,
         loadMe: apiMocks.loadMe,
     }),
 }));
@@ -404,6 +407,7 @@ describe("ScenarioDetailView", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         localStorage.clear();
+        authState.isAdmin.value = false;
 
         autoplayApi.currentIndex.value = -1;
         autoplayApi.currentItem.value = null;
@@ -411,6 +415,28 @@ describe("ScenarioDetailView", () => {
         autoplayApi.duration.value = 0;
         autoplayApi.autoContinue.value = true;
         autoplayApi.loopScenario.value = false;
+    });
+
+    it("lets an admin delete a scenario written by someone else", async () => {
+        authState.isAdmin.value = true;
+        apiMocks.deleteScenario.mockResolvedValue(null);
+        const {wrapper, router} = await mountScenarioView({scenario: baseScenario({authorUsername: "alice"})});
+
+        await wrapper.find('button[title="Storyboard settings"]').trigger("click");
+        await flushPromises();
+        await clickButtonByText(wrapper, "Delete this scenario");
+        await clickButtonByText(wrapper, "Yes, delete");
+
+        expect(apiMocks.deleteScenario).toHaveBeenCalledWith("77");
+        await flushPromises();
+        expect(router.currentRoute.value.path).toBe("/scenarios");
+    });
+
+    it("hides scenario deletion from a reader who is neither the author nor an admin", async () => {
+        const {wrapper} = await mountScenarioView({scenario: baseScenario({authorUsername: "alice"})});
+
+        expect(wrapper.find('button[title="Storyboard settings"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain("Delete this scenario");
     });
 
     it("loads scenario, language, thumbnails and audios on mount", async () => {

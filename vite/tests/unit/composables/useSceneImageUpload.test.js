@@ -94,7 +94,7 @@ describe("useSceneImageUpload", () => {
         const {api} = setup();
         api.vignetteMakerOpen.value = true;
 
-        api.onVignetteMakerInsert(new Blob(["x"], {type: "image/png"}));
+        api.onVignetteMakerInsert(new Blob(["<svg/>"], {type: "image/svg+xml"}));
 
         expect(api.vignetteMakerOpen.value).toBe(false);
         expect(api.uploadDialogOpen.value).toBe(true);
@@ -102,11 +102,20 @@ describe("useSceneImageUpload", () => {
         expect(api.uploadFiles.value[0].title).toBe("My scenario – scene 1");
     });
 
+    it("onVignetteMakerInsert keeps an SVG export as an SVG file", () => {
+        const {api} = setup();
+        api.onVignetteMakerInsert(new Blob(["<svg/>"], {type: "image/svg+xml"}), {people: []});
+        const entry = api.uploadFiles.value[0];
+        expect(entry.file.type).toBe("image/svg+xml");
+        expect(entry.file.name).toMatch(/\.svg$/);
+        expect(entry.sceneJson).toBe(JSON.stringify({people: []}));
+    });
+
     it("onVignetteMakerInsert gives each generated scene a distinct title", () => {
         const {api} = setup();
 
-        api.onVignetteMakerInsert(new Blob(["first"], {type: "image/png"}));
-        api.onVignetteMakerInsert(new Blob(["second"], {type: "image/png"}));
+        api.onVignetteMakerInsert(new Blob(["<svg/>"], {type: "image/svg+xml"}));
+        api.onVignetteMakerInsert(new Blob(["<svg/>"], {type: "image/svg+xml"}));
 
         expect(api.uploadFiles.value.map((entry) => entry.title)).toEqual([
             "My scenario – scene 1",
@@ -185,7 +194,7 @@ describe("useSceneImageUpload", () => {
         const {api, deps} = setup();
         const state = {people: [{id: 1}], nextId: 2};
 
-        api.onVignetteMakerInsert(new Blob(["png"], {type: "image/png"}), state);
+        api.onVignetteMakerInsert(new Blob(["<svg/>"], {type: "image/svg+xml"}), state);
         expect(api.uploadFiles.value[0].sceneJson).toBe(JSON.stringify(state));
 
         await api.uploadImage();

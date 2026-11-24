@@ -36,9 +36,33 @@ describe("SVG builders", () => {
             "data:image/png;base64,AAA");
         expect(svg).toContain('viewBox="0 0 700 500"');
         expect(svg).toContain('<image href="data:image/png;base64,AAA"');
-        // The character is a vector group drawn after the background image.
         expect(svg.indexOf('data-uid="1"')).toBeGreaterThan(svg.indexOf("<image"));
         expect(svg.trim().endsWith("</svg>")).toBe(true);
+    });
+
+    it("produces well-formed XML, so the server sanitizer accepts it", () => {
+        const original = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = () => ({font: "", measureText: (t) => ({width: String(t).length * 7})});
+        try {
+            const ch = CHARS[0];
+            const person = {
+                uid: 1, charId: ch.id, x: 100, y: 200, scale: 1, z: 0, flip: false,
+                skinIdx: 1, hairId: ch.hair, hairCol: ch.hcol || 0, mouthId: "smile", eyes: "open",
+                glasses: !!ch.glasses, topCol: "", botCol: "",
+                bubble: {text: 'Bonjour <Alice> & "Bob"', style: "speech", theme: "classic", side: "left", w: 160, dx: -180, dy: -220},
+                lsh: -20, lel: 0, rsh: -20, rel: 0, ll: 0, lk: 0, rl: 0, rk: 0, ht: 0, bl: 0, eb: 0,
+            };
+            const svg = buildVignetteSvg({sceneId: "living", people: [person]}, 700, 500, "data:image/png;base64,AAA=");
+            const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+            expect(doc.getElementsByTagName("parsererror")).toHaveLength(0);
+            expect(doc.documentElement.getAttribute("width")).toBe("700");
+            const text = doc.documentElement.textContent.replace(/\s+/g, " ");
+            expect(text).toContain("<Alice>");
+            expect(text).toContain('"Bob"');
+            expect(text).toContain("&");
+        } finally {
+            HTMLCanvasElement.prototype.getContext = original;
+        }
     });
 
     it("wraps other images in an SVG of the same size", () => {
@@ -69,17 +93,11 @@ describe("downloading scenes as SVG", () => {
         vi.restoreAllMocks();
     });
 
-    it("rebuilds a Vignette Maker scene from its drawing", async () => {
-        const fetchVignette = vi.fn().mockResolvedValue({
-            sceneJson: JSON.stringify({sceneId: "living", people: [], nextId: 1}),
-        });
-        const renderBackground = vi.fn(() => "data:image/png;base64,BG");
-        await downloadSceneSvg("essai1", {id: 7, vignette: true, imageWidth: 1400, imageHeight: 1000}, 1,
-            {fetchVignette, renderBackground});
-        expect(fetchVignette).toHaveBeenCalledWith(7);
-        expect(renderBackground).toHaveBeenCalledWith("living", 700, 500);
-        expect(saved[0].name).toBe("essai1 - scene 01.svg");
-        expect(saved[0].blob.type).toBe("image/svg+xml");
+    it("saves a vignette stored as SVG as it is, without rebuilding it", async () => {
+        const stored = new Blob(["<svg/>"], {type: "image/svg+xml"});
+        const fetchBlob = vi.fn().mockResolvedValue(stored);
+        await downloadSceneSvg("essai1", {id: 7, vignette: true}, 1, {fetchBlob});
+        expect(saved[0].blob).toBe(stored);
     });
 
     it("keeps an uploaded SVG as it is", async () => {

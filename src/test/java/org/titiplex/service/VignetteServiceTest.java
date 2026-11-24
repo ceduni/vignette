@@ -45,7 +45,7 @@ class VignetteServiceTest {
     private VignetteService service;
 
     private final Authentication auth = new UsernamePasswordAuthenticationToken("alice", "N/A", List.of());
-    private final MockMultipartFile image = new MockMultipartFile("image", "v.png", "image/png", new byte[]{1, 2, 3});
+    private final MockMultipartFile image = new MockMultipartFile("image", "v.svg", "image/svg+xml", "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"700\" height=\"500\"/>".getBytes());
     private Scenario scenario;
     private Thumbnail thumbnail;
     private User alice;
@@ -88,9 +88,18 @@ class VignetteServiceTest {
 
     @Test
     void create_requiresImage() {
-        MockMultipartFile empty = new MockMultipartFile("image", "v.png", "image/png", new byte[0]);
+        MockMultipartFile empty = new MockMultipartFile("image", "v.svg", "image/svg+xml", new byte[0]);
 
         assertThrows(IllegalArgumentException.class, () -> service.create(9L, "", empty, DRAWING, auth));
+        verifyNoInteractions(thumbnailService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"image/png", "image/jpeg", "image/gif", "application/xml", "text/html"})
+    void create_refusesOtherImageTypes(String contentType) {
+        MockMultipartFile other = new MockMultipartFile("image", "v.bin", contentType, new byte[]{1, 2, 3});
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(9L, "", other, DRAWING, auth));
         verifyNoInteractions(thumbnailService);
     }
 
